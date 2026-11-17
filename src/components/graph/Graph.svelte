@@ -1,6 +1,7 @@
 <script>
-  // Connection map coordinator: camera (pan/zoom/fit), pointer gestures,
+  // Connection map coordinator: camera (pan/zoom/fit/recenter), pointer gestures,
   // right-click menus, inline rename, saved layouts, and corkboard images.
+  import { onDestroy } from 'svelte';
   import {
     state,
     update,
@@ -13,6 +14,7 @@
     beginTransaction,
     commitTransaction,
     notify,
+    cameraCommand,
   } from '../../lib/state.js';
   import * as M from '../../lib/core.js';
   import { clamp } from '../../lib/util.js';
@@ -151,8 +153,14 @@
       if (menu) { menu = null; return; }
       if ($state.selectedEdge) { update((s) => (s.selectedEdge = null), { skipHistory: true }); return; }
       if ($state.focusViewIds) update((s) => exitFocusView(s), { skipHistory: true });
-    } else if (e.key.toLowerCase() === 'f' && !e.ctrlKey && !e.metaKey) {
+    } else if (e.key.toLowerCase() === 'f' && !e.ctrlKey && !e.metaKey && !e.altKey) {
       fitView();
+    } else if (e.key.toLowerCase() === 'c' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      centerOnSelectedSmooth();
+    } else if (e.key === 'Home' || ((e.key === '0' || e.code === 'Numpad0') && !e.ctrlKey && !e.metaKey && !e.altKey)) {
+      e.preventDefault();
+      resetCameraSmooth();
     } else if ((e.key === 'Delete' || e.key === 'Backspace') && !editing) {
       const deletable = [...$state.selectedIds].filter((id) => id !== hubId);
       if (deletable.length) {
@@ -194,14 +202,69 @@
     );
   }
 
-  /* ================= camera helpers ================= */
+  /* ================= camera animation & helpers ================= */
+  let animFrameId = null;
+
+  function cancelCameraAnim() {
+    if (animFrameId) {
+      cancelAnimationFrame(animFrameId);
+      animFrameId = null;
+    }
+  }
+
+  onDestroy(() => {
+    cancelCameraAnim();
+  });
+
+  function easeInOutCubic(t) {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  }
+
+  function animateViewTo(targetX, targetY, targetK, duration = 320) {
+    cancelCameraAnim();
+    if (!wrapEl) return;
+    const startX = view.x;
+    const startY = view.y;
+    const startK = view.k;
+    const dx = targetX - startX;
+    const dy = targetY - startY;
+    const dk = targetK - startK;
+
+    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5 && Math.abs(dk) < 0.005) {
+      view = { x: targetX, y: targetY, k: targetK };
+      return;
+    }
+
+    const startTime = performance.now();
+
+    function step(now) {
+      const elapsed = now - startTime;
+      const progress = Math.min(1, elapsed / duration);
+      const ease = easeInOutCubic(progress);
+
+      view = {
+        x: startX + dx * ease,
+        y: startY + dy * ease,
+        k: startK + dk * ease,
+      };
+
+      if (progress < 1) {
+        animFrameId = requestAnimationFrame(step);
+      } else {
+        animFrameId = null;
+      }
+    }
+
+    animFrameId = requestAnimationFrame(step);
+  }
+
   function zoomBy(factor) {
     if (!wrapEl) return;
     const cx = wrapEl.clientWidth / 2;
     const cy = wrapEl.clientHeight / 2;
     const before = { x: (cx - view.x) / view.k, y: (cy - view.y) / view.k };
     const k = clamp(view.k * factor, 0.25, 2.5);
-    view = { k, x: cx - before.x * k, y: cy - before.y * k };
+    animateViewTo(cx - before.x * k, cy - before.y * k, k, 180);
   }
 
   function zoomReset() {
@@ -209,10 +272,52 @@
     const cx = wrapEl.clientWidth / 2;
     const cy = wrapEl.clientHeight / 2;
     const before = { x: (cx - view.x) / view.k, y: (cy - view.y) / view.k };
-    view = { k: 1, x: cx - before.x, y: cy - before.y };
+    animateViewTo(cx - before.x, cy - before.y, 1, 260);
   }
 
-  function fitView() {
+  function resetCameraSmooth() {
+    if (!wrapEl) return;
+    animateViewTo(30, 20, 1, 320);
+  }
+
+  function centerOnNode(id, smooth = true) {
+    if (!wrapEl) return;
+    const targetId = id || $state.selectedId || (P.areas[0] ? P.areas[0].id : null);
+    if (!targetId) {
+      notify('No area to center on.', 'info');
+      return;
+    }
+    const a = byId(targetId);
+    if (!a) return;
+    const cx = a.x + NW / 2;
+    const cy = a.y + NH / 2;
+    const vw = wrapEl.clientWidth;
+    const vh = wrapEl.clientHeight;
+    const targetX = vw / 2 - cx * view.k;
+    const targetY = vh / 2 - cy * view.k;
+
+    if (smooth) {
+      animateViewTo(targetX, targetY, view.k, 300);
+    } else {
+      cancelCameraAnim();
+      view = { ...view, x: targetX, y: targetY };
+    }
+  }
+
+  function centerOnSelectedSmooth() {
+    if (!$state.selectedId) {
+      if (P.areas.length) {
+        update((s) => selectOnly(s, P.areas[0].id), { skipHistory: true });
+        centerOnNode(P.areas[0].id, true);
+      } else {
+        notify('Select an area first to center on it.', 'info');
+      }
+      return;
+    }
+    centerOnNode($state.selectedId, true);
+  }
+
+  function fitView(smooth = true) {
     if (!wrapEl) return;
     const visible = P.areas.filter((a) => !hiddenIds.has(a.id) && (!inFocus || focusIds.has(a.id)));
     if (!visible.length) return;
@@ -225,11 +330,26 @@
     const vw = wrapEl.clientWidth;
     const vh = wrapEl.clientHeight;
     const k = clamp(Math.min(vw / bw, vh / bh), 0.25, 1.5);
-    view = {
-      k,
-      x: (vw - bw * k) / 2 - minX * k,
-      y: (vh - bh * k) / 2 - minY * k,
-    };
+    const targetX = (vw - bw * k) / 2 - minX * k;
+    const targetY = (vh - bh * k) / 2 - minY * k;
+    if (smooth) {
+      animateViewTo(targetX, targetY, k, 340);
+    } else {
+      cancelCameraAnim();
+      view = { k, x: targetX, y: targetY };
+    }
+  }
+
+  let lastCmdTs = 0;
+  $: if ($cameraCommand && $cameraCommand.ts !== lastCmdTs) {
+    lastCmdTs = $cameraCommand.ts;
+    if ($cameraCommand.type === 'center') {
+      centerOnNode($cameraCommand.id, true);
+    } else if ($cameraCommand.type === 'reset') {
+      resetCameraSmooth();
+    } else if ($cameraCommand.type === 'fit') {
+      fitView(true);
+    }
   }
 
   /* ================= shared area actions ================= */
@@ -417,7 +537,9 @@
       { label: 'Add area here', run: () => addAreaAt(w) },
       { label: 'Add group here', run: () => addGroupAt(w) },
       { label: 'Add image…', run: () => pickImageAt(w) },
-      { label: 'Fit all in view', run: fitView },
+      { label: 'Center on selected (C)', run: centerOnSelectedSmooth },
+      { label: 'Reset view (Home / 0)', run: resetCameraSmooth },
+      { label: 'Fit all in view (F)', run: fitView },
       { label: 'Auto-arrange map', run: arrange },
     ]);
   }
@@ -425,6 +547,7 @@
   function onNodeMenu(e, a) {
     update((s) => selectOnly(s, a.id), { skipHistory: true });
     openMenu(e, [
+      { label: 'Center camera here', run: () => centerOnNode(a.id, true) },
       { label: 'Rename', run: () => startRename('area', a) },
       { label: 'Duplicate', run: () => duplicateFlow(a.id) },
       { label: 'Isolate neighbourhood', run: () => update((s) => { selectOnly(s, a.id); enterFocusView(s); }, { skipHistory: true }) },
@@ -475,6 +598,7 @@
   }
 
   function startPan(e) {
+    cancelCameraAnim();
     drag = { kind: 'pan', sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y };
     attachWindowDrag();
   }
@@ -488,6 +612,7 @@
   }
 
   function onNodeDown(e, a) {
+    cancelCameraAnim();
     if (e.button === 1 || (e.button === 0 && (panTool || spaceHeld))) {
       e.preventDefault();
       e.stopPropagation();
@@ -525,6 +650,7 @@
   }
 
   function onGroupDown(e, g, mode) {
+    cancelCameraAnim();
     if (e.button === 1 || (e.button === 0 && (panTool || spaceHeld))) {
       e.preventDefault();
       e.stopPropagation();
@@ -558,6 +684,7 @@
   }
 
   function onImageDown(e, im, mode) {
+    cancelCameraAnim();
     if (e.button === 1 || (e.button === 0 && (panTool || spaceHeld))) {
       e.preventDefault();
       e.stopPropagation();
@@ -573,6 +700,7 @@
   }
 
   function onSvgDown(e) {
+    cancelCameraAnim();
     if (e.button === 1 || (e.button === 0 && (panTool || spaceHeld))) {
       e.preventDefault();
       startPan(e);
@@ -726,6 +854,7 @@
   }
 
   function onWheel(e) {
+    cancelCameraAnim();
     e.preventDefault();
     const r = svgElRef.getBoundingClientRect();
     const mx = (e.clientX - r.left) / uiScale.value;
@@ -775,6 +904,8 @@
   onToggleHideAll={(v) => (hideAll = v)}
   onToggleAllMesh={(v) => (showAllMesh = v)}
   onTogglePanTool={() => (panTool = !panTool)}
+  onResetCamera={resetCameraSmooth}
+  onCenterSelected={centerOnSelectedSmooth}
   onToggleFocus={toggleFocus}
   onSaveLayout={saveLayout}
   onApplyLayout={applyLayout}

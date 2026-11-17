@@ -25,6 +25,9 @@ This editor lets you build and maintain a TsuMNN `areas.yaml` visually without f
 | Connect two areas | Drag from a node's **right-edge port** or **Shift+drag** between nodes |
 | Edit link direction | Click any connection line to open its **Direction Card** |
 | Pan map | **Middle-mouse drag**, **Space + drag**, or toggle **✋ Pan** |
+| Reset camera & zoom | **Home** or **0** (or toolbar **⟲ Reset**) |
+| Center on selected area | **C** (or toolbar **⌖ Center**) |
+| Jump & center on area | **Double-click** area row in left list |
 | Zoom / Fit | **Mouse wheel** or bottom-right **− / % / + / Fit** (`F` key) |
 | Rename on map | **Double-click** a node or group |
 | Delete selected area(s) | **Delete / Backspace** (or **✕** in list) |

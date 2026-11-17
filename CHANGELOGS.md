@@ -126,16 +126,27 @@
 - `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **66 passed, 0 failed**.
 - `npm run build:both`: rebuilt `export/yuzu_area_maker.html` and `export/yuzu_area_maker_nomusic.html`.
 
-## v2.0.4 — Header Branding & Area Counter Hierarchy
+## v2.0.4 — Header Branding, Area Counter Hierarchy & Extended Graph QoLs
 
-### UI Polish
+### UI Polish & Extended Graph QoLs
 
 - **Updated header brand (`src/components/Header.svelte`, `src/styles/chrome.css`, `index.html`):**
     - Renamed header title to **MNN Area List YAML Maker** (with the `Made by Yuzu` tooltip), removed the `TsuMNN` badge, and moved the blinking terminal cursor (`_`) onto the end of **YAML Maker**.
 - **Prominent area counter (`src/components/panels/AreaList.svelte`, `src/styles/panels.css`):**
     - Enlarged the sidebar area count (`18px` accented count + `14px` bold `AREAS` label) so it stands out cleanly above the action buttons.
+- **Smooth ease-in/out camera transitions (`src/components/graph/Graph.svelte`):**
+    - Added cubic ease-in-out (`easeInOutCubic`) `requestAnimationFrame` interpolation across programmatic camera moves (`fitView`, `zoomReset`, camera reset, and center-on-node).
+    - Gracefully halts animation upon user pointer input (`onSvgDown`, `onNodeDown`, `onWheel`, etc.) so controls never stutter or fight the user.
+- **Camera Reset button & shortcuts (`src/components/graph/GraphToolbar.svelte`, `Graph.svelte`):**
+    - Added **⟲ Reset** beside the ✋ Pan button on the graph toolbar to smoothly return zoom to 100% and view to default coordinates.
+    - Bound to keyboard shortcuts `Home` and `0` (or `Numpad0`).
+- **Center-on-node camera navigation (`src/components/graph/GraphToolbar.svelte`, `Graph.svelte`, `AreaList.svelte`, `src/lib/state.js`):**
+    - Added **⌖ Center** toolbar button to smoothly reposition the camera over the selected area without altering the current zoom level.
+    - Bound to shortcut `C`.
+    - **Double-clicking** any area in the left sidebar `AreaList` smoothly flies the camera to that node on the map.
+    - Added **Center on selected (C)** and **Reset view (Home / 0)** to the canvas context menu, and **Center camera here** to node right-click menus.
 
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **66 passed, 0 failed**.
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **69 passed, 0 failed** (including camera command bus tests).
 - `npm run build:both`: rebuilt `export/yuzu_area_maker.html`, `export/yuzu_area_maker_nomusic.html`, and `docs/index.html`.

@@ -1,5 +1,5 @@
 <script>
-  import { state, update, selectOnly, uiScale, refocusView, notify } from '../../lib/state.js';
+  import { state, update, selectOnly, uiScale, refocusView, notify, centerCameraOn } from '../../lib/state.js';
   import * as M from '../../lib/core.js';
 
   export let onAddArea;
@@ -31,7 +31,16 @@
     if (dups.has(M.strip(a.area))) t.push('Duplicate name — area names must be unique.');
     if (i === 0) t.push("Area 0 is the hub — it can't be deleted or moved");
     else t.push('Ctrl+drag or use ↑/↓ to reorder');
+    t.push('Double-click to center on map');
     return t.join(' · ');
+  }
+
+  function dblClickArea(a) {
+    update((s) => {
+      selectOnly(s, a.id);
+      refocusView(s);
+    });
+    centerCameraOn(a.id);
   }
 
   function pick(a) {
@@ -177,6 +186,7 @@
       class="area-item {a.id === $state.selectedId ? 'sel' : ''} {dups.has(M.strip(a.area)) ? 'dup' : ''}"
       title={itemTitle(a, i)}
       on:click={() => pick(a)}
+      on:dblclick={() => dblClickArea(a)}
       on:pointerdown={(e) => i > 0 && startReorder(e, i, e.currentTarget)}
     >
       <div class="li-row">

@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import * as M from '../src/lib/core.js';
 import { edgeEndpoints } from '../src/lib/graphGeom.js';
+import { cameraCommand, centerCameraOn, resetCamera, fitCamera } from '../src/lib/state.js';
 
 let pass = 0;
 let fail = 0;
@@ -256,6 +257,17 @@ const wslReport = M.parseYamlWithReport(wslRaw);
 eq(wslReport.errors, [], 'bundled wsl_ch3.yaml parses with no errors');
 eq(wslReport.warnings, [], 'bundled wsl_ch3.yaml parses with no warnings');
 eq(wslReport.areas.length, 47, 'bundled wsl_ch3.yaml has 47 areas');
+
+/* ---- camera commands ---- */
+let lastCmd = null;
+const unsub = cameraCommand.subscribe((v) => (lastCmd = v));
+centerCameraOn('node-42');
+ok(lastCmd && lastCmd.type === 'center' && lastCmd.id === 'node-42' && typeof lastCmd.ts === 'number', 'centerCameraOn dispatches center command with target node ID and timestamp');
+resetCamera();
+ok(lastCmd && lastCmd.type === 'reset' && typeof lastCmd.ts === 'number', 'resetCamera dispatches reset command with timestamp');
+fitCamera();
+ok(lastCmd && lastCmd.type === 'fit' && typeof lastCmd.ts === 'number', 'fitCamera dispatches fit command with timestamp');
+unsub();
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

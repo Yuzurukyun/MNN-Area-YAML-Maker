@@ -232,6 +232,21 @@ export function exitFocusView(s) {
   s.focusViewIds = null;
 }
 
+/* ================= camera command bus ================= */
+export const cameraCommand = writable(null);
+
+export function centerCameraOn(nodeId) {
+  cameraCommand.set({ type: 'center', id: nodeId, ts: Date.now() });
+}
+
+export function resetCamera() {
+  cameraCommand.set({ type: 'reset', ts: Date.now() });
+}
+
+export function fitCamera() {
+  cameraCommand.set({ type: 'fit', ts: Date.now() });
+}
+
 export function download(name, text, type) {
   const blob = new Blob([text], { type: type || 'text/plain' });
   const url = URL.createObjectURL(blob);

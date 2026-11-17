@@ -13,6 +13,8 @@
   export let onToggleHideAll;
   export let onToggleAllMesh;
   export let onTogglePanTool;
+  export let onResetCamera = () => {};
+  export let onCenterSelected = () => {};
   export let onToggleFocus;
   export let onSaveLayout;
   export let onApplyLayout;
@@ -80,6 +82,12 @@
 
   <button class="mini-btn {panTool ? 'primary' : ''}" title="Toggle drag-to-pan tool (Space + drag or Middle-mouse also pans)" on:click={onTogglePanTool}>
     ✋ Pan
+  </button>
+  <button class="mini-btn" title="Reset camera zoom & position to default 100% (Home or 0)" on:click={onResetCamera}>
+    ⟲ Reset
+  </button>
+  <button class="mini-btn" title="Center camera on selected area without changing zoom (C)" on:click={onCenterSelected}>
+    ⌖ Center
   </button>
 
   <span class="drop-wrap">
