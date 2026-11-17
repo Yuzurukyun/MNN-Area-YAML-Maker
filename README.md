@@ -22,7 +22,9 @@ Everything runs **100% locally in your browser** with automatic `localStorage` s
 
 ### Online (GitHub Pages)
 
-Once GitHub Pages is enabled for this repository (**Settings → Pages → Source: GitHub Actions**), every push automatically builds and publishes the web app (without the local music asset) so anyone can open and use it directly in a browser with no download required.
+The compiled no-music web app is published in `docs/index.html` and can be hosted directly via **GitHub Pages** (**Settings → Pages → Deploy from a branch → `main` → `/docs`** — or via **GitHub Actions** using `.github/workflows/deploy.yml`).
+
+Live URL (once Pages is enabled): **`https://yuzurukyun.github.io/MNN-Area-YAML-Maker/`**
 
 ### Offline Single-File HTML
 
