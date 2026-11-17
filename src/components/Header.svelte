@@ -163,10 +163,9 @@
 <svelte:window on:click={() => { newMenu = false; exampleMenu = false; importMenu = false; exportMenu = false; }} />
 
 <header>
-  <div class="brand" title="✦ Made by Yuzuru ✦">
-    <span class="brand-mark">&gt;<span class="cursor">_</span></span>
-    <h1>Area List <span>YAML</span> Maker</h1>
-    <span class="tsu-tag" title="Format target: TsuMNN areas.yaml">TsuMNN</span>
+  <div class="brand" title="Made by Yuzu">
+    <span class="brand-mark">&gt;</span>
+    <h1>MNN Area List <span>YAML Maker</span><span class="cursor">_</span></h1>
   </div>
   <div class="grp">
     <span class="drop-wrap">

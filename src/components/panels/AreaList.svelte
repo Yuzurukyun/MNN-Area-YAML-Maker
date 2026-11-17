@@ -139,7 +139,7 @@
     on:input={(e) => update((s) => (s.query = e.target.value), { skipHistory: true })}
   />
   <div class="list-meta">
-    <span class="count-pill" title="Total number of areas in the project">{P.areas.length} Areas</span>
+    <span class="count-pill" title="Total number of areas in the project"><span class="count-num">{P.areas.length}</span> Areas</span>
     {#if q}<button class="mini-btn" title="Clear search filter" on:click={() => update((s) => (s.query = ''), { skipHistory: true })}>Clear</button>{/if}
   </div>
   <div class="hint" style="margin-top:2px" title="The list position IS the Area ID written to YAML">Index = Area ID (file order) · Ctrl+drag or ↑/↓ reorders</div>
