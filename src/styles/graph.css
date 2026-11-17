@@ -1,0 +1,221 @@
+/* Graph: centre board, dot-matrix canvas with subtle vignette, segmented toolbar, SVG nodes & edges. */
+
+#centre {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+#graphBar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 7px 11px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+#graphBar .sp {
+  flex: 1;
+}
+
+#graphBar .tgl {
+  padding: 3px 6px;
+  font-size: 12px;
+}
+
+.tab-group {
+  display: inline-flex;
+  background: var(--input-bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.tab {
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  padding: 3px 11px;
+  font-size: 12px;
+  color: var(--dim);
+}
+
+.tab:hover:not(.on) {
+  background: var(--hover);
+  color: var(--text-strong);
+}
+
+.tab.on {
+  background: var(--accent-solid);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px -2px var(--glow);
+}
+
+#graphWrap {
+  flex: 1;
+  position: relative;
+  background-color: var(--bg);
+  background-image: radial-gradient(circle, var(--grid-dot) 1px, transparent 1.3px);
+  box-shadow: inset 0 0 72px var(--vignette);
+  overflow: hidden;
+}
+
+#graphWrap.pan-mode {
+  cursor: grab;
+}
+
+#graphWrap.pan-mode:active {
+  cursor: grabbing;
+}
+
+svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+
+svg text {
+  user-select: none;
+}
+
+.node {
+  transition: opacity 0.2s ease;
+  cursor: pointer;
+}
+
+.node rect.body {
+  fill: var(--node-bg);
+  stroke: var(--node-stroke);
+  stroke-width: 1.2;
+  filter: drop-shadow(0 4px 10px var(--node-shadow));
+  transition: stroke 0.14s ease, filter 0.14s ease;
+}
+
+.node-wrap:hover .node rect.body {
+  stroke: var(--line2);
+}
+
+.node-accent {
+  fill: var(--line2);
+  transition: fill 0.15s ease;
+}
+
+.node.hub .node-accent,
+.node.sel .node-accent {
+  fill: var(--accent);
+}
+
+.node.dup .node-accent {
+  fill: var(--danger);
+}
+
+rect.mask {
+  fill: var(--bg);
+  stroke: none;
+}
+
+.node.sel rect.body {
+  stroke: var(--accent);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 12px var(--glow));
+}
+
+.node.dup rect.body {
+  stroke: var(--danger);
+}
+
+.node.multi rect.body {
+  stroke: var(--node-multi);
+  stroke-width: 1.8;
+}
+
+.node text {
+  fill: var(--text);
+  pointer-events: none;
+}
+
+.node.sel text.title {
+  fill: var(--text-strong);
+}
+
+.node .sub {
+  fill: var(--dim);
+}
+
+.node .tags {
+  fill: var(--accent2);
+}
+
+.node-port {
+  fill: var(--panel2);
+  stroke: var(--accent);
+  stroke-width: 1.8;
+  cursor: crosshair;
+  opacity: 0;
+  transition: opacity 0.14s ease, fill 0.12s ease, transform 0.12s ease;
+}
+
+.node-wrap:hover .node-port,
+.node-port:hover {
+  opacity: 1;
+}
+
+.node-port:hover {
+  fill: var(--accent);
+}
+
+.edge {
+  stroke: var(--edge-both);
+  stroke-width: 1.6;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.edge.sel {
+  stroke: var(--edge-sel);
+  stroke-width: 2.7;
+}
+
+.edge.oneway {
+  stroke: var(--edge-oneway);
+  stroke-width: 1.9;
+}
+
+.edge.oneway-in {
+  stroke: var(--edge-oneway-in);
+  stroke-width: 1.9;
+}
+
+.edge.derived {
+  stroke-dasharray: 4 4;
+}
+
+.edge.all-mesh {
+  stroke-dasharray: 2 4;
+  opacity: 0.4;
+}
+
+.edge-hit {
+  stroke: transparent;
+  stroke-width: 16;
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+  fill: none;
+}
+
+.edge.ghost {
+  stroke: var(--edge-sel);
+  stroke-dasharray: 5 4;
+}
+
+#bandRect {
+  fill: color-mix(in srgb, var(--accent) 14%, transparent);
+  stroke: var(--accent);
+  stroke-width: 1;
+}

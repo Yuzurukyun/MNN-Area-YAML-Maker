@@ -1,0 +1,1365 @@
+- area: "WS Lambda RP Hub"
+  background: WS Lambda/Roleplay Hub
+  iniswap_allowed: True
+  locking_allowed: True
+  lobby_area: False
+  rp_getareas_allowed: True
+  song_switch_allowed: True
+  reachable_areas: <ALL>
+  default_description: Understanding the Heart is worth more than the Universe we live in.
+
+- area: "Testing Labs"
+  background: "Bio Lab_HD"
+  iniswap_allowed: True
+  locking_allowed: True
+  lobby_area: False
+  rp_getareas_allowed: True
+  song_switch_allowed: True
+  reachable_areas: <ALL>
+  default_description: "Testing Areas."
+
+- area: "Like Hotel"
+  background: "V3 Love Hotel_HD"
+  iniswap_allowed: True
+  locking_allowed: True
+  lobby_area: False
+  rp_getareas_allowed: True
+  song_switch_allowed: True
+  reachable_areas: <ALL>
+  default_description: "ERP is banned so it is not love anymore. OOC Hangout mostly."
+
+- area: "Private FTE Suite"
+  background: "WS Lambda/Montreal/Fountain [Day]"
+  iniswap_allowed: True
+  locking_allowed: True
+  lobby_area: False
+  rp_getareas_allowed: True
+  song_switch_allowed: True
+  reachable_areas: <ALL>
+  default_description: "Change the BG to your desire. This exist in its own plane."
+
+- area: "Narration Area"
+  background: "WS Lambda/Blackout"
+  iniswap_allowed: True
+  locking_allowed: True
+  lobby_area: False
+  rp_getareas_allowed: True
+  song_switch_allowed: True
+  reachable_areas: <ALL>
+  scream_range: <REACHABLE_AREAS>
+  default_description: "The Narration Area."
+
+- area: M-Airport Mall
+  background: WS Lambda/Montreal/Airport Mall [Day]
+  background_tod:
+    day: WS Lambda/Montreal/Airport Mall [Day]
+    evening: WS Lambda/Montreal/Airport Mall [Day]
+    night: WS Lambda/Montreal/Airport Mall [Day]
+  reachable_areas: WS Lambda RP Hub, M-Fountain
+  scream_range: <REACHABLE_AREAS>
+  default_description: "Montr\xE9al-Pierre Elliott Trudeau International Airport,\
+    \ the meeting point of this expedition. Not much to do here besides tuning in\
+    \ its bustling ambience."
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: M-Fountain
+  background: WS Lambda/Montreal/Fountain [Day]
+  background_tod:
+    day: WS Lambda/Montreal/Fountain [Day]
+    evening: WS Lambda/Montreal/Fountain [Day]
+    night: WS Lambda/Montreal/Fountain [Day]
+  reachable_areas: WS Lambda RP Hub, M-Hotel Lobby, M-Plaza
+  scream_range: <REACHABLE_AREAS>
+  default_description: "A clear fountain sparkles in the sun, surrounded by several\
+    \ buildings. One of them is the Hotel L'archipel des Tra\xEEtres, a luxurious\
+    \ establishment you are currently residing in and the other is a path that leads\
+    \ to the Plaza, a popular spot for the locals. This place seems like an ideal\
+    \ destination for relaxation and entertainment. On the streets, a gossip magazine\
+    \ catches your eye.\n\nThe Akaikami Family Heist and the Secret of Lambda Archipelago.\
+    \ \nTwo headlines that have nothing in common, except for their mystery and intrigue.\
+    \ The magazine does not offer much detail, as usual, but it hints at some fascinating\
+    \ stories. The former is about an influential Japanese family in the business\
+    \ world, who suffered a huge loss in 1935. Someone stole about 10,000 US Dollars\
+    \ from them (converted from Japanese Currency), which would be equivalent to 225,000\
+    \ dollars in 2020, accounting for inflation. The culprit was never found, but\
+    \ some speculate that it was the disgraced younger brother, who was banished from\
+    \ the family but still carried the Akaikami name.\n\nThe latter is about a remote\
+    \ island that is off-limits to most people. Anyone who tries to enter without\
+    \ authorised access could face imprisonment, or worse. But over the years, especially\
+    \ after the 1980s, such a warning has become more of a formality it seems."
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: M-Hotel Lobby
+  background: WS Lambda/Montreal/Hotel Lobby [Day]
+  background_tod:
+    day: WS Lambda/Montreal/Hotel Lobby [Day]
+    evening: WS Lambda/Montreal/Hotel Lobby [Evening]
+    night: WS Lambda/Montreal/Hotel Lobby [Night]
+  reachable_areas: WS Lambda RP Hub, M-Fountain, M-Hotel Room 1, M-Hotel Room 2, M-Hotel
+    Room 3, M-Hotel Room Kayode
+  scream_range: <REACHABLE_AREAS>
+  default_description: "The hotel was a masterpiece of whimsy, adorned with lavish\
+    \ furniture and ornaments that exuded class and elegance. As you walked past the\
+    \ bustling reception desk, you caught a glimpse of a high-end restaurant, where\
+    \ well-dressed patrons savoured exquisite dishes. You felt a pang of envy, knowing\
+    \ that the Oracle and Commander had only booked everyone the standard rooms, and\
+    \ that you were barred from entering the exclusive lounge. You shrugged it off,\
+    \ telling yourself that you would have more fun exploring the city than staying\
+    \ in the hotel.\n\nThe hotel had a unique feature: it was designed to resemble\
+    \ an island resort... even though it was located in the heart of Montreal, far\
+    \ from any coast. The windows, except for the main ones, were actually screens\
+    \ that created a realistic illusion of a tropical paradise. At the end of the\
+    \ hall, you noticed a golden plaque that displayed the history of the hotel and\
+    \ a quirky motto.\n\nHistory of Hotel L'archipel des Tra\xEEtres\n-> 1976 - Agreed\
+    \ to Locate at an Island\n-> 1977 - Plans Cancelled\n-> Open for Business on December,\
+    \ 1979 \n\n\"When life gives you lemons, punch life in the throat.\"\n"
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: M-Hotel Room 1
+  background: WS Lambda/Montreal/Hotel Room [Day]
+  background_tod:
+    day: WS Lambda/Montreal/Hotel Room [Day]
+    evening: WS Lambda/Montreal/Hotel Room [Evening]
+    night: WS Lambda/Montreal/Hotel Room [Night]
+  reachable_areas: WS Lambda RP Hub, M-Hotel Lobby
+  scream_range: <REACHABLE_AREAS>
+  default_description: 'You reached your hotel room after a brief stroll from the
+    lobby, passing through a long corridor. The room was spacious and cosy, with a
+    touch of tropical flair. On the wall was not a real window, but a clever projection
+    that simulated the scenery of an island. You could see the sun rise and set, the
+    waves crash and recede, and the palm trees sway and rustle. But beyond the screen
+    itself there is a window whose curtains you can draw if you want some privacy.
+
+
+    On a counter next to the door, you found some coffee sachets and a kettle to make
+    yourself a hot drink. There was no TV in the room, which you found odd, but there
+    were two double beds, even though you couldn''t see the other one from this view.
+    They were soft and bouncy, and the air-conditioning was superb.'
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: M-Hotel Room 2
+  background: WS Lambda/Montreal/Hotel Room [Day]
+  background_tod:
+    day: WS Lambda/Montreal/Hotel Room [Day]
+    evening: WS Lambda/Montreal/Hotel Room [Evening]
+    night: WS Lambda/Montreal/Hotel Room [Night]
+  reachable_areas: WS Lambda RP Hub, M-Hotel Lobby
+  scream_range: <REACHABLE_AREAS>
+  default_description: 'You reached your hotel room after a brief stroll from the
+    lobby, passing through a long corridor. The room was spacious and cosy, with a
+    touch of tropical flair. On the wall was not a real window, but a clever projection
+    that simulated the scenery of an island. You could see the sun rise and set, the
+    waves crash and recede, and the palm trees sway and rustle. But beyond the screen
+    itself there is a window whose curtains you can draw if you want some privacy.
+
+
+    On a counter next to the door, you found some coffee sachets and a kettle to make
+    yourself a hot drink. There was no TV in the room, which you found odd, but there
+    were two double beds, even though you couldn''t see the other one from this view.
+    They were soft and bouncy, and the air-conditioning was superb.'
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: M-Hotel Room 3
+  background: WS Lambda/Montreal/Hotel Room [Day]
+  background_tod:
+    day: WS Lambda/Montreal/Hotel Room [Day]
+    evening: WS Lambda/Montreal/Hotel Room [Evening]
+    night: WS Lambda/Montreal/Hotel Room [Night]
+  reachable_areas: WS Lambda RP Hub, M-Hotel Lobby
+  scream_range: <REACHABLE_AREAS>
+  default_description: 'You reached your hotel room after a brief stroll from the
+    lobby, passing through a long corridor. The room was spacious and cosy, with a
+    touch of tropical flair. On the wall was not a real window, but a clever projection
+    that simulated the scenery of an island. You could see the sun rise and set, the
+    waves crash and recede, and the palm trees sway and rustle. But beyond the screen
+    itself there is a window whose curtains you can draw if you want some privacy.
+
+
+    On a counter next to the door, you found some coffee sachets and a kettle to make
+    yourself a hot drink. There was no TV in the room, which you found odd, but there
+    were two double beds, even though you couldn''t see the other one from this view.
+    They were soft and bouncy, and the air-conditioning was superb.'
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: M-Hotel Room Kayode
+  background: WS Lambda/Montreal/Hotel Room [Day]
+  background_tod:
+    day: WS Lambda/Montreal/Hotel Room [Day]
+    evening: WS Lambda/Montreal/Hotel Room [Evening]
+    night: WS Lambda/Montreal/Hotel Room [Night]
+  reachable_areas: WS Lambda RP Hub, M-Hotel Lobby
+  scream_range: <REACHABLE_AREAS>
+  default_description: 'You reached your hotel room after a brief stroll from the
+    lobby, passing through a long corridor. The room was spacious and cosy, with a
+    touch of tropical flair. On the wall was not a real window, but a clever projection
+    that simulated the scenery of an island. You could see the sun rise and set, the
+    waves crash and recede, and the palm trees sway and rustle. But beyond the screen
+    itself there is a window whose curtains you can draw if you want some privacy.
+
+
+    The room is barren and devoid of any amenities. There is no kettle to make a hot
+    drink, no comfort to ease the chill. The door has a weak lock that could be easily
+    broken, but it still works for now. A dusty TV sits on a wooden stand, flickering
+    with static and noise. The only furniture is a double bed with coarse sheets and
+    a thin blanket. The air-conditioning unit rattles and groans, barely keeping the
+    temperature bearable.'
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: M-Plaza
+  background: WS Lambda/Montreal/Plaza [Day]
+  background_tod:
+    day: WS Lambda/Montreal/Plaza [Day]
+    evening: WS Lambda/Montreal/Plaza [Day]
+    night: WS Lambda/Montreal/Plaza [Day]
+  reachable_areas: WS Lambda RP Hub, M-Fountain, M-McRonalds, M-Recreational Facility,
+    M-Souvenir Shop, M-Ballmart
+  scream_range: <REACHABLE_AREAS>
+  default_description: 'Ignore the Japanese signs as they are simply for show. This
+    is Montreal as always, but with a twist. It seems to indicate that all of these
+    are part of the Delta event, as explained by a large signboard in the centre of
+    the plaza. The signboard also defines Delta as a difference or a change of something.
+    The event will last for a month, and the person who makes the most change will
+    win a prize.
+
+
+    Besides that,there are many places to choose from but you can only enter so many.
+    Enjoy the Plaza of Montreal!'
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: M-McRonalds
+  background: WS Lambda/Montreal/McRonalds [Day]
+  background_tod:
+    day: WS Lambda/Montreal/McRonalds [Day]
+    evening: WS Lambda/Montreal/McRonalds [Day]
+    night: WS Lambda/Montreal/McRonalds [Day]
+  reachable_areas: WS Lambda RP Hub, M-Plaza
+  scream_range: <REACHABLE_AREAS>
+  default_description: 'No matter where you come from, it''s always the same. McRonalds
+    hasn''t changed at all, you see. It''s the same old crowded place with countless
+    customers eager to get their hands on the finest cuisine of fast food at the lowest
+    possible price.
+
+
+    They have a promotion, it seems. It''s called "The Resigned McCage". It''s supposed
+    to be the grandiose meal that a bird ate during its time in the cage. The meal
+    is so delicious that even when the cage is open, the bird stays there. That is
+    the gist of it. The meal set consists of two cheeseburgers, a drink, and large
+    fries. A set is only for $9.99.'
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: M-Recreational Facility
+  background: WS Lambda/Montreal/Recreational Facility [Day]
+  background_tod:
+    day: WS Lambda/Montreal/Recreational Facility [Day]
+    evening: WS Lambda/Montreal/Recreational Facility [Day]
+    night: WS Lambda/Montreal/Recreational Facility [Day]
+  reachable_areas: WS Lambda RP Hub, M-Plaza
+  scream_range: <REACHABLE_AREAS>
+  default_description: 'The scene is a bustling recreational facility that offers
+    a variety of fun activities. From the entrance, one can see customers enjoying
+    pool and bowling, among other things. There is much more to explore, but it would
+    take too long to list them all.
+
+
+    Near the cashier, a stack of books is on sale. The title reads "Mysterical Arguments",
+    a peculiar name indeed. The author is Layla Fischer, a German Practitioner who
+    writes as a hobby. The book is quite popular for a piece of literature that was
+    written over 85 years ago. It is a mystery novel with an unusual premise: a storyteller
+    and a group of participants argue about how a murder occurred. It is essentially
+    a debate-based mystery with a touch of social deduction.
+
+
+    The storyteller uses "Red Statements" to convey facts that are perfectly correct
+    and is whenever they are required to. The storyteller must respond to "Blue Statements"
+    made by participants with Red Statements, as long as the Blue Statements are valid.
+    Their validity depends on whether the Blue Statement is relevant to the mystery
+    and not game-breaking. For example, a Blue Statement like "Who is the murderer?"
+    is invalid. There are also rare "Purple Statements" that can only be used during
+    the storyteller''s narration. They indicate that something is important, and that
+    it is either a complete truth or a complete lie, with no middle ground.
+
+
+    The novel does not provide the answers to the mystery, but challenges the reader
+    to solve it on their own. It also hints at where the real truth can be found.
+    To this day, the real truth has never been revealed, as the author went missing
+    in 1941 and it was speculated that World War 2 had destroyed the remaining clues
+    and possibly the author herself.'
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: M-Souvenir Shop
+  background: WS Lambda/Montreal/Souvenir Shop [Day]
+  background_tod:
+    day: WS Lambda/Montreal/Souvenir Shop [Day]
+    evening: WS Lambda/Montreal/Souvenir Shop [Day]
+    night: WS Lambda/Montreal/Souvenir Shop [Day]
+  reachable_areas: WS Lambda RP Hub, M-Plaza
+  scream_range: <REACHABLE_AREAS>
+  default_description: 'This was previously thrashed, but seems to be fixed. 
+
+
+    The setting is a souvenir shop, what more is there to say?
+    Despite its impressive architecture, cheap trinkets are scattered around the store
+    that are up for grabs. One of the more expensive souvenirs is a model of a Canadian
+    ship. It appears to be the HMCS Avant-Garde Delta, a rather old-fashioned vessel
+    that looks more like a pirate ship than a modern warship. It is mostly made of
+    wood, unlike the metal-coated ships that were common in World War 2. Perhaps that
+    is why it was named "Avant-Garde Delta", as a contrast to the norm. This ship
+    was first used in late 1940, as a means of transporting people from one place
+    to another. Its wooden structure was supposed to signal its neutrality, as it
+    was not involved in the war. However, that is only a theory.
+
+
+    The ship was last seen in the middle of the Atlantic Ocean, on its way from Europe
+    to North America, in 1941. It was rumoured to have carried an important hostage,
+    but no one ever found out who it was.'
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: M-Ballmart
+  background: WS Lambda/Montreal/Supermarket [Day]
+  background_tod:
+    day: WS Lambda/Montreal/Supermarket [Day]
+    evening: WS Lambda/Montreal/Supermarket [Day]
+    night: WS Lambda/Montreal/Supermarket [Day]
+  reachable_areas: WS Lambda RP Hub, M-Plaza
+  scream_range: <REACHABLE_AREAS>
+  default_description: "You are in Ballmart, a place of \u201Cwonder and variety\u201D\
+    . There are so many aisles that you could easily get lost among the countless\
+    \ items for sale. There is no need to explain what Ballmart is, as its nature\
+    \ is obvious.\n\nOn the discount aisle, you spot an image puzzle. It looks like\
+    \ a fun challenge, and you are tempted to buy it, if no one else has already.\
+    \ The puzzle is dedicated to person named Benjamin Beaulieu, a prominent figure\
+    \ from Quebec and the founder of Beaulieu Solars. You are familiar with Beaulieu\
+    \ Solars, especially as a Canadian. It is the leading solar panel energy provider\
+    \ of the past and present.\n\nAccording to history, Beaulieu Solars was on the\
+    \ verge of bankruptcy due to its poor start and frequent failures, but it managed\
+    \ to find a foreign investor who helped the company to revive and generate hundreds\
+    \ of thousands of revenues in a few years. This success continues to this day,\
+    \ although Beaulieu Solars is not as widely used as it was before the war.\n\n\
+    Not much is known about what happened to Benjamin Beaulieu after he vanished without\
+    \ a trace in 1939."
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: M-Coastline
+  background: WS Lambda/Montreal/Coastline [Day]
+  background_tod:
+    day: WS Lambda/Montreal/Coastline [Day]
+    evening: WS Lambda/Montreal/Coastline [Evening]
+    night: WS Lambda/Montreal/Coastline [Night]
+  reachable_areas: WS Lambda RP Hub, M-Lambda Islands Coast
+  scream_range: <REACHABLE_AREAS>
+  default_description: Far from the heart of Quebec, this lies in the northern reaches,
+    far from approaching the threshold where the arctic snows would reign. Thankfully,
+    it's summer, so the chill is not as daunting, certainly not akin to the snowfall
+    one might expect in this vicinity. Nearing the border of another Canadian province,
+    this coastal stretch presents a splendid, balmy panorama. Further along, an amusement
+    park awaits the delight of the locals, alongside a teleporter in close proximity.
+    Naturally, the teleporter leads towards the sea.
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: M-Lambda Islands Coast
+  background: WS Lambda/Montreal/Lambda Islands Coast [Day]
+  background_tod:
+    day: WS Lambda/Montreal/Lambda Islands Coast [Day]
+    evening: WS Lambda/Montreal/Lambda Islands Coast [Day]
+    night: WS Lambda/Montreal/Lambda Islands Coast [Day]
+  reachable_areas: WS Lambda RP Hub, E-Southside Beach
+  scream_range: <REACHABLE_AREAS>
+  default_description: "Welcome to Lambda Islands, where the sea rivals the beauty\
+    \ of the island itself, which, from this position hides it from view. And here\
+    \ you stand, upon a small rocky platform barely above the ocean's surface. The\
+    \ island doesn\u2019t appear to be too distant; it seems one could swim there.\n\
+    \nSurveying your surroundings, it becomes evident that this is indeed an archipelago,\
+    \ with multiple islands strewn about, yet only a select few seem to hold significance.\
+    \ It might be wise to seek counsel from the Oracle on this matter."
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+
+- area: E-Southside Beach
+  background: WS Lambda/East Island/Southside Beach [Day] [Campfire]
+  background_tod:
+    day: WS Lambda/East Island/Southside Beach [Day] [Campfire]
+    evening: WS Lambda/East Island/Southside Beach [Evening] [Campfire]
+    night: WS Lambda/East Island/Southside Beach [Night] [Campfire]
+  reachable_areas: WS Lambda RP Hub, E-Southside Forest, E-Tent, E-Eastside Beach,
+    E-Westside Beach
+  scream_range: <REACHABLE_AREAS>
+  default_description: 'On the desolate shore stretches an expanse of sand, gradually
+    giving way to lush greenery that meanders towards the looming forests. Apart from
+    the remnants of oceanic detritus littering the beach, there is little else of
+    significance to be found in this forlorn location.
+
+
+    Having made her decision, the Oracle decreed that this was the ideal location
+    to establish a base and encampment. The tent appeared resilient, yet there lingered
+    a hope that it would withstand the forceful winds that often swept through the
+    shores. The comforting heat from the campfire shields one from the biting chill
+    of the blustery nights.
+
+    '
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: E-Tent
+  background: WS Lambda/East Island/Tent [Day]
+  background_tod:
+    day: WS Lambda/East Island/Tent [Day]
+    evening: WS Lambda/East Island/Tent [Evening]
+    night: WS Lambda/East Island/Tent [Night]
+  reachable_areas: WS Lambda RP Hub, E-Southside Beach
+  scream_range: <REACHABLE_AREAS>
+  default_description: A rather snug spot for a good night's rest, far preferable
+    to bedding down on rocky terrain with insects ambling across your face. It appears
+    to comfortably accommodate only 12 normal individuals. On the off-chance these
+    12 specifically include 11 girls and a boy of monumental proportions, in this
+    case, it might necessitate sacrificing space for three girls to make room for
+    the colossal lad, unless the gentleman in question dares to brave the elements
+    and slumber under the open sky.
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: E-Southside Forest
+  background: WS Lambda/East Island/Southside Forest [Day]
+  background_tod:
+    day: WS Lambda/East Island/Southside Forest [Day]
+    evening: WS Lambda/East Island/Southside Forest [Evening]
+    night: WS Lambda/East Island/Southside Forest [Night]
+  reachable_areas: WS Lambda RP Hub, E-Southside Beach, E-Inner Forest, R-Random Forest B
+  scream_range: <REACHABLE_AREAS>
+  default_description: The luxuriant greenery here is unlike any you've encountered
+    before. The forests on the route from Montreal to the north are nothing in comparison.
+    This is nature at its most magnificent, and there are scarcely any defined paths
+    to traverse. Proceeding with caution is the wisest choice. The camp lies around
+    an open exit, marking this forest as an unforgettable spot. 
+    It seems you can go deeper into this forest section.
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: E-Northside Beach
+  background: WS Lambda/East Island/Northside Beach [Day]
+  background_tod:
+    day: WS Lambda/East Island/Northside Beach [Day]
+    evening: WS Lambda/East Island/Northside Beach [Evening]
+    night: WS Lambda/East Island/Northside Beach [Night]
+  reachable_areas: WS Lambda RP Hub, E-Northside Forest, E-Eastside Beach, E-Westside
+    Beach
+  scream_range: <REACHABLE_AREAS>
+  default_description: On the shore, amidst the natural debris and coconut palms,
+    a solitary boat lay abandoned. Its story is untold with an item on its wooden
+    skeleton. There are holes and cracks within the boat, ensuring that if rain falls,
+    the water would be drained.
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: E-Northside Forest
+  background: WS Lambda/East Island/Northside Forest [Day]
+  background_tod:
+    day: WS Lambda/East Island/Northside Forest [Day]
+    evening: WS Lambda/East Island/Northside Forest [Evening]
+    night: WS Lambda/East Island/Northside Forest [Night]
+  reachable_areas: WS Lambda RP Hub, E-Northside Beach, E-Shrine, E-Inner Forest
+  scream_range: <REACHABLE_AREAS>
+  default_description: The forest gave way to a shrine, nestled beside a gentle waterfall
+    cascading from the rocky heights, feeding a tranquil river below. The water, pure
+    and untainted, flowed with a quiet persistence.
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: E-Shrine
+  background: WS Lambda/East Island/Shrine [Day]
+  background_tod:
+    day: WS Lambda/East Island/Shrine [Day]
+    evening: WS Lambda/East Island/Shrine [Evening]
+    night: WS Lambda/East Island/Shrine [Night]
+  reachable_areas: WS Lambda RP Hub, E-Northside Forest
+  scream_range: <REACHABLE_AREAS>
+  default_description: One might expect a shrine to exude a sense of sanctity, a refuge
+    from the world's chaos. Yet, this one harboured an aura of the spectral, as if
+    haunted by unseen presences. The mood was disquieting, the air thick with the
+    weight of untold stories. Wild grasses, emboldened by neglect, encroached upon
+    the land, threatening to engulf the solitary bloom in their midst. There are artefacts
+    worth observing in the region.
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: E-Westside Beach
+  background: WS Lambda/East Island/Westside Beach [Day]
+  background_tod:
+    day: WS Lambda/East Island/Westside Beach [Day]
+    evening: WS Lambda/East Island/Westside Beach [Evening]
+    night: WS Lambda/East Island/Westside Beach [Night]
+  reachable_areas: WS Lambda RP Hub, W-West Island Entrance, E-Westside Forest, E-Northside
+    Beach, E-Southside Beach
+  scream_range: <REACHABLE_AREAS>
+  default_description: The beach presented a commonplace scene, dotted with coconut
+    trees standing like sentinels. Caution was advised against the treacherous fruits
+    above. Beyond the sandy expanse, another island loomed, its shores cleaved by
+    a chasm of surprisingly deep waters. Overhead, a wire reminiscent of a powerline
+    stretched towards the distant land, its purpose unclear. A fractured bridge connecting
+    the two islands offered a silent invitation for restoration.
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: E-Westside Forest
+  background: WS Lambda/East Island/Westside Forest [Day]
+  background_tod:
+    day: WS Lambda/East Island/Westside Forest [Day]
+    evening: WS Lambda/East Island/Westside Forest [Evening]
+    night: WS Lambda/East Island/Westside Forest [Night]
+  reachable_areas: WS Lambda RP Hub, E-Westside Beach, E-Inner Forest
+  scream_range: <REACHABLE_AREAS>
+  default_description: A forsaken hut stood defiant against the encroaching wilderness.
+    Within its walls, a safe of considerable size housed what appeared to be a car
+    battery. Steel wires, once connecting westward to the beach and eastward beyond,
+    lay severed, rendering the contraption inert. The hut, devoid of further contents,
+    whispered tales of its past as a shelter from tempests or a sentinel's post.
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: E-Eastside Beach
+  background: WS Lambda/East Island/Eastside Beach [Day]
+  background_tod:
+    day: WS Lambda/East Island/Eastside Beach [Day]
+    evening: WS Lambda/East Island/Eastside Beach [Evening]
+    night: WS Lambda/East Island/Eastside Beach [Night]
+  reachable_areas: WS Lambda RP Hub, E-Eastside Forest, E-Northside Beach, E-Southside
+    Beach
+  scream_range: <REACHABLE_AREAS>
+  default_description: Quite a sight, is it not? It is bigger than it looks. The ship,
+    a behemoth in repose, lay grounded beside an unremarkable beach. Its wooden skeleton,
+    weakened by time, threatened to crumble upon the slightest collision.
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: E-Eastside Forest
+  background: WS Lambda/East Island/Eastside Forest [Day]
+  background_tod:
+    day: WS Lambda/East Island/Eastside Forest [Day]
+    evening: WS Lambda/East Island/Eastside Forest [Evening]
+    night: WS Lambda/East Island/Eastside Forest [Night]
+  reachable_areas: WS Lambda RP Hub, E-Eastside Beach, E-Manor Exterior, E-Inner Forest
+  scream_range: <REACHABLE_AREAS>
+  default_description: "A rather empty area, but has a pathway towards a point to\
+    \ another. Naturally, there\u2019s overgrown greeneries but the pathway was not\
+    \ maintained in the slightest, not like anyone could. Still, a path could still\
+    \ be able to follow, and that pathway leads towards the beach and a section where\
+    \ it intersects with a concrete fence-esque wall.\n\nTraverse further into the\
+    \ forest areas here?"
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: E-Manor Exterior
+  background: WS Lambda/East Island/Manor/Manor Exterior [Day]
+  background_tod:
+    day: WS Lambda/East Island/Manor/Manor Exterior [Day]
+    evening: WS Lambda/East Island/Manor/Manor Exterior [Evening]
+    night: WS Lambda/East Island/Manor/Manor Exterior [Night]
+  reachable_areas: WS Lambda RP Hub, E-Eastside Forest, E-Manor Interior
+  scream_range: <REACHABLE_AREAS>
+  default_description: 'Embarking on a journey through the once idyllic sanctuary,
+    you find yourself amidst a forest that has succumbed to decay. The ground is a
+    tapestry of overgrown grass, while rotting timber and moss-clad concrete walls
+    stand as silent witnesses to the relentless march of nature. Unkempt hedges, perilously
+    dense, deter any approach.
+
+
+    This desolate abode, seemingly forsaken by time itself, offers little in the way
+    of discovery.'
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: E-Manor Interior
+  background: WS Lambda/East Island/Manor/Manor Interior [Day]
+  background_tod:
+    day: WS Lambda/East Island/Manor/Manor Interior [Day]
+    evening: WS Lambda/East Island/Manor/Manor Interior [Evening]
+    night: WS Lambda/East Island/Manor/Manor Interior [Night]
+  reachable_areas: WS Lambda RP Hub, E-Manor Exterior, E-Manor Second Floor
+  scream_range: <REACHABLE_AREAS>
+  default_description: 'Crossing the threshold, your senses are assailed by the musty
+    odour of neglect. The absence of ventilation has allowed the stale air to become
+    thick with dust, cobwebs draping even the most mundane objects like the door handle.
+    The adjoining kitchen and lavatory, cloaked in equal measures of filth, offer
+    no allure for further scrutiny.
+
+
+    Yet, amidst the decay, certain curiosities beckon.'
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: E-Manor Second Floor
+  background: WS Lambda/East Island/Manor/Manor Second Floor [Day]
+  background_tod:
+    day: WS Lambda/East Island/Manor/Manor Second Floor [Day]
+    evening: WS Lambda/East Island/Manor/Manor Second Floor [Evening]
+    night: WS Lambda/East Island/Manor/Manor Second Floor [Night]
+  reachable_areas: WS Lambda RP Hub, E-Manor Interior, E-Manor Room 1, E-Manor Room
+    2, E-Manor Room 3
+  scream_range: <REACHABLE_AREAS>
+  default_description: "Ascending to the manor\u2019s upper echelon, you encounter\
+    \ a space less marred by decay. An ajar window permits the elements to cast their\
+    \ touch upon the dampened floor. Despite the pervasive rot, this chamber retains\
+    \ a semblance of order, perhaps once a refuge from the desolation below.\n\nA\
+    \ series of doors line the corridor, each leading to realms untold. The first\
+    \ two, labelled as the Servant's Quarters and \"Wyatt's\" domain, reveal nothing\
+    \ beyond mundane schedules of domestic routine. The remaining portals, devoid\
+    \ of any identifying marks, stand as silent guardians to their own forgotten tales."
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: E-Manor Room 1
+  background: WS Lambda/East Island/Manor/Manor Room 1 [Day]
+  background_tod:
+    day: WS Lambda/East Island/Manor/Manor Room 1 [Day]
+    evening: WS Lambda/East Island/Manor/Manor Room 1 [Evening]
+    night: WS Lambda/East Island/Manor/Manor Room 1 [Night]
+  reachable_areas: WS Lambda RP Hub, E-Manor Second Floor
+  scream_range: <REACHABLE_AREAS>
+  default_description: In the shadowed confines of a room, chaos reigned supreme.
+    The space was shrouded in darkness, its position relative to the sun denying it
+    any natural light. Amidst the disarray, a few peculiarities beckoned for attention.
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: E-Manor Room 2
+  background: WS Lambda/East Island/Manor/Manor Room 2 [Day]
+  background_tod:
+    day: WS Lambda/East Island/Manor/Manor Room 2 [Day]
+    evening: WS Lambda/East Island/Manor/Manor Room 2 [Evening]
+    night: WS Lambda/East Island/Manor/Manor Room 2 [Night]
+  reachable_areas: WS Lambda RP Hub, E-Manor Second Floor
+  scream_range: <REACHABLE_AREAS>
+  default_description: In a forsaken chamber, the concrete is rife with mould, each
+    wall seemingly on the cusp of merging back into the encroaching forest. The reality
+    is grimmer than one might expect, with every nook brimming with dust. This room
+    harbours numerous artefacts awaiting scrutiny.
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: E-Manor Room 3
+  background: WS Lambda/East Island/Manor/Manor Room 3 [Day]
+  background_tod:
+    day: WS Lambda/East Island/Manor/Manor Room 3 [Day]
+    evening: WS Lambda/East Island/Manor/Manor Room 3 [Evening]
+    night: WS Lambda/East Island/Manor/Manor Room 3 [Night]
+  reachable_areas: WS Lambda RP Hub, E-Manor Second Floor
+  scream_range: <REACHABLE_AREAS>
+  default_description: A room lay in silence, its windows stubbornly sealed against
+    the world. Dust ruled over every surface, and the walls bore the decay of neglect.
+    Yet, amidst the desolation, a bed offered a semblance of warmth, a wardrobe stood
+    guard over garments long forgotten, and a clock continued its relentless march
+    through time. Nothing more disturbed the stillness.
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: E-Inner Forest
+  background: WS Lambda/East Island/Inner Forest [Day]
+  background_tod:
+    day: WS Lambda/East Island/Inner Forest [Day]
+    evening: WS Lambda/East Island/Inner Forest [Evening]
+    night: WS Lambda/East Island/Inner Forest [Night]
+  reachable_areas: WS Lambda RP Hub, E-Northside Forest, E-Eastside Forest, E-Westside
+    Forest, E-Southside Forest
+  scream_range: <REACHABLE_AREAS>
+  default_description: The splendour of nature at its peak. It's no surprise that
+    things are bustling around here, nestled deep within the forest. The birds' chorus
+    resonates louder during the day, while the crickets orchestrate their own symphony
+    at night. Aside from the nearby skeletal remains, this place appears to be nothing
+    more than a thick, impenetrable forest. Caution is advised for anyone venturing
+    through this area.
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: W-West Island Entrance
+  background: WS Lambda/West Island/West Island Entrance [Day]
+  background_tod:
+    day: WS Lambda/West Island/West Island Entrance [Day]
+    evening: WS Lambda/West Island/West Island Entrance [Evening]
+    night: WS Lambda/West Island/West Island Entrance [Night]
+  reachable_areas: WS Lambda RP Hub, E-Westside Beach, W-House Exterior
+  scream_range: <REACHABLE_AREAS>
+  default_description: Welcome to the West Islands, modest in size yet rich in mystery.
+    The only path forward was a trail, barely discernible beneath the riotous growth.
+    The beach lay littered with detritus, a testament to neglect. Suspended from a
+    lofty tree, a wire hung ominously, a silent admonition to those who might dare
+    to disturb it.
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: W-House Exterior
+  background: WS Lambda/West Island/House/House Exterior [Day]
+  background_tod:
+    day: WS Lambda/West Island/House/House Exterior [Day]
+    evening: WS Lambda/West Island/House/House Exterior [Evening]
+    night: WS Lambda/West Island/House/House Exterior [Night]
+  reachable_areas: WS Lambda RP Hub, W-West Island Entrance, W-House Backyard
+  scream_range: <REACHABLE_AREAS>
+  default_description: An isolated edifice stood within this domain, its exterior
+    bereft of windows on the lower level, yet the upper story gazed out through glassless
+    frames. The building's size belied its outward appearance, revealing two storeys
+    upon closer inspection. A semi-formed path trailed behind, hinting at hidden recesses.
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: W-House Backyard
+  background: WS Lambda/West Island/House/House Backyard [Day]
+  background_tod:
+    day: WS Lambda/West Island/House/House Backyard [Day]
+    evening: WS Lambda/West Island/House/House Backyard [Evening]
+    night: WS Lambda/West Island/House/House Backyard [Night]
+  reachable_areas: WS Lambda RP Hub, W-House Exterior, W-House Interior
+  scream_range: <REACHABLE_AREAS>
+  default_description: Beyond the gate, an array of solar panels lay in ruin, their
+    glass shattered, and the connecting steel wires severed. A large battery, once
+    the heart of the house's power, was disconnected. From this desolate scene, a
+    tangle of wires began an upward journey towards the trees, perhaps reaching towards
+    the East Island.
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: W-House Interior
+  background: WS Lambda/West Island/House/House Interior [Day]
+  background_tod:
+    day: WS Lambda/West Island/House/House Interior [Day]
+    evening: WS Lambda/West Island/House/House Interior [Evening]
+    night: WS Lambda/West Island/House/House Interior [Night]
+  reachable_areas: WS Lambda RP Hub, W-House Exterior, W-House Backyard, W-House Room
+    1, W-House Room 2, W-House Room 3
+  scream_range: <REACHABLE_AREAS>
+  default_description: Nothing on the first floor, ultimately. The second floor's
+    design, however, though marred by disarray, was clearly deliberate. Amidst the
+    clutter, the living quarters, kitchen, and other rooms lay in disuse. Among the
+    scattered remnants, only the personal chambers held significance. There are artefacts
+    worth investigating.
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: W-House Room 1
+  background: WS Lambda/West Island/House/House Room 1 [Day]
+  background_tod:
+    day: WS Lambda/West Island/House/House Room 1 [Day]
+    evening: WS Lambda/West Island/House/House Room 1 [Evening]
+    night: WS Lambda/West Island/House/House Room 1 [Night]
+  reachable_areas: WS Lambda RP Hub, W-House Interior
+  scream_range: <REACHABLE_AREAS>
+  default_description: "The room was a paradox, wondrous yet suffocating, the lack\
+    \ of ventilation leaving the air heavy with humidity. Puddles formed beneath a\
+    \ ceiling marred by holes, and the scent of decay lingered. \n\nWithin the confines\
+    \ of a cabinet desk, a letter lay dormant, its contents a testament to thwarted\
+    \ ambitions. The author, poised to become a resort proprietor on the Lambda Islands,\
+    \ expressed dismay and ire in equal measure. The cancellation of their hotel project,\
+    \ a decision shrouded in secrecy, was met with incredulity and scorn. Accusations\
+    \ of governmental manipulation for the sake of the island's clandestine future\
+    \ were levelled, deeming such actions as acts of cowardice, all in the name of\
+    \ securing the island's perpetual isolation."
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: W-House Room 2
+  background: WS Lambda/West Island/House/House Room 2 [Day]
+  background_tod:
+    day: WS Lambda/West Island/House/House Room 2 [Day]
+    evening: WS Lambda/West Island/House/House Room 2 [Evening]
+    night: WS Lambda/West Island/House/House Room 2 [Night]
+  reachable_areas: WS Lambda RP Hub, W-House Interior
+  scream_range: <REACHABLE_AREAS>
+  default_description: A miasma of decay hung over the room -- a calamity confined
+    within its walls is all but you could have fathom from a glance. Looking over
+    the room one at a time may prove helpful.
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: W-House Room 3
+  background: WS Lambda/West Island/House/House Room 3 [Day]
+  background_tod:
+    day: WS Lambda/West Island/House/House Room 3 [Day]
+    evening: WS Lambda/West Island/House/House Room 3 [Evening]
+    night: WS Lambda/West Island/House/House Room 3 [Night]
+  reachable_areas: WS Lambda RP Hub, W-House Interior
+  scream_range: <REACHABLE_AREAS>
+  default_description: The room, despite its shattered window, was suffocating with
+    dust and the earthy scent of nature's encroachment. Moss claimed every surface,
+    and grass sprouted from the floorboards. The bed, discoloured with the passage
+    of time, stood in silent testament to decay. Cleaning supplies and a desk, both
+    of no value, were abandoned to the elements. An easel, damp yet resolute against
+    the wind, held the sketch of a woman, reminiscent of a figure from the Manor Interior.
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: R-Random Forest A
+  background: WS Lambda/Misc/Random Forest A [Day]
+  background_tod:
+    day: WS Lambda/Misc/Random Forest A [Day]
+    evening: WS Lambda/Misc/Random Forest A [Evening]
+    night: WS Lambda/Misc/Random Forest A [Night]
+  reachable_areas: WS Lambda RP Hub
+  scream_range: <REACHABLE_AREAS>
+  default_description: You find yourself enveloped by trees in the heart of a forest.
+    Quite the sight! Pray, what brings you to this place?
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: R-Random Forest B
+  background: WS Lambda/Misc/Random Forest B [Day]
+  background_tod:
+    day: WS Lambda/Misc/Random Forest B [Day]
+    evening: WS Lambda/Misc/Random Forest B [Evening]
+    night: WS Lambda/Misc/Random Forest B [Night]
+  reachable_areas: WS Lambda RP Hub, E-Southside Forest
+  scream_range: <REACHABLE_AREAS>
+  default_description: 'As you traverse the dense woodland, you are embraced by an
+    array of towering trees at the forest''s core. The scene before you is nothing
+    short of breathtaking--
+
+
+    Venturing deeper into the expansive forest, your gaze falls upon a macabre tableau:
+    skeletal remains, ensconced in a stained suit, lie in stark contrast to the surrounding
+    verdure. A chilling question lingers in the air, "What transpired here?"
+
+    '
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: R-Random Forest C
+  background: WS Lambda/Misc/Random Forest C [Day]
+  background_tod:
+    day: WS Lambda/Misc/Random Forest C [Day]
+    evening: WS Lambda/Misc/Random Forest C [Day]
+    night: WS Lambda/Misc/Random Forest C [Day]
+  reachable_areas: WS Lambda RP Hub
+  scream_range: <REACHABLE_AREAS>
+  default_description: . . .
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true
+- area: R-Underwater
+  background: WS Lambda/Misc/Underwater [Day]
+  background_tod:
+    day: WS Lambda/Misc/Underwater [Day]
+    evening: WS Lambda/Misc/Underwater [Evening]
+    night: WS Lambda/Misc/Underwater [Night]
+  reachable_areas: WS Lambda RP Hub
+  scream_range: <REACHABLE_AREAS>
+  default_description: Beneath the waves lies a crystal-clear world teeming with an
+    abundance of fish to be caught! Yet, why have you ventured here? Can you truly
+    breathe in this aquatic realm?
+  bglock: false
+  bullet: true
+  cbg_allowed: true
+  change_reachability_allowed: true
+  global_allowed: true
+  gm_iclock_allowed: true
+  has_lights: true
+  iniswap_allowed: true
+  lobby_area: false
+  locking_allowed: true
+  private_area: false
+  rollp_allowed: true
+  rp_getarea_allowed: true
+  rp_getareas_allowed: false
+  song_switch_allowed: true

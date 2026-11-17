@@ -1,0 +1,17 @@
+# Dependencies & build outputs
+node_modules/
+dist/
+dist-nomusic/
+export/
+
+# Local IDE / OS files
+.vscode/
+.DS_Store
+Thumbs.db
+*.log
+
+# Copyrighted audio asset (kept local only; excluded from GitHub)
+src/assets/*.opus
+src/assets/*.mp3
+src/assets/*.ogg
+src/assets/*.wav

@@ -1,0 +1,421 @@
+/* Chrome: header bar, brand, theme picker, music player, dropdown menus,
+   modals and sidebar resizers — the frame around the content. */
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel2) 70%, transparent), transparent),
+    var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  flex-wrap: wrap;
+  position: relative;
+}
+
+/* A hairline of accent along the top edge — the terminal's "power" strip */
+header::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 14px;
+  right: 14px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent) 20%, var(--accent) 80%, transparent);
+  opacity: 0.55;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-right: 4px;
+}
+
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius);
+  background: var(--sel);
+  border: 1px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  flex: none;
+  box-shadow: 0 0 12px -4px var(--glow) inset;
+}
+
+.brand-mark .cursor {
+  animation: cursor-blink 1.15s steps(1) infinite;
+}
+
+header h1 {
+  font-size: 13px;
+  margin: 0;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--text-strong);
+  white-space: nowrap;
+}
+
+header h1 span {
+  color: var(--dim);
+  font-weight: 600;
+}
+
+.tsu-tag {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--sel);
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  border-radius: 3px;
+  padding: 1px 6px;
+}
+
+header .sp {
+  flex: 1;
+}
+
+header .grp {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+header .h-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--line);
+  margin: 0 3px;
+}
+
+header button {
+  font-size: 12.5px;
+}
+
+header select {
+  width: auto;
+}
+
+.theme-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--input-bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1px 2px 1px 9px;
+  font-size: 11px;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: border-color 0.14s ease;
+}
+
+.theme-picker:hover {
+  border-color: var(--line2);
+}
+
+.theme-picker select {
+  border: none;
+  background-color: transparent;
+  padding: 3px 24px 3px 4px;
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text);
+}
+
+.theme-picker select:focus {
+  box-shadow: none;
+}
+
+/* ---------- Music player pill ---------- */
+.music-btn.on {
+  border-color: var(--accent);
+  color: var(--accent);
+  animation: music-pulse 1.8s ease-in-out infinite;
+}
+
+.music-player {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--input-bg);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 11px 2px 3px;
+}
+
+.music-player .music-btn {
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  flex: none;
+  font-size: 10px;
+  line-height: 1;
+}
+
+.music-label {
+  width: 104px;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--dim);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+
+.music-scroll {
+  display: inline-flex;
+  gap: 28px;
+  width: max-content;
+  animation: marquee 16s linear infinite;
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(-50% - 14px)); }
+}
+
+.music-vol {
+  width: 56px;
+  flex: none;
+}
+
+/* ---------- Dropdown menus ---------- */
+.drop-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.drop-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 260px;
+  background: var(--panel2);
+  border: 1px solid var(--line2);
+  border-radius: var(--radius-lg);
+  padding: 5px;
+  z-index: 80;
+  box-shadow: 0 18px 40px -8px var(--shadow), 0 0 0 1px rgba(0, 0, 0, 0.08);
+  animation: pop-in 0.13s ease;
+}
+
+.drop-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-left: 2px solid transparent;
+  border-radius: var(--radius);
+  padding: 7px 10px;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12.5px;
+}
+
+.drop-menu button:hover:not(:disabled) {
+  background: var(--sel);
+  border-left-color: var(--accent);
+  color: var(--text-strong);
+}
+
+.drop-sub-btn {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.drop-sub {
+  margin: 2px 0 4px 10px;
+  padding-left: 6px;
+  border-left: 1px solid var(--line2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.drop-sub button {
+  font-size: 12px;
+  padding: 5px 8px;
+  color: var(--dim);
+}
+
+.drop-hint {
+  padding: 7px 10px 6px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--dim);
+  border-top: 1px solid var(--line);
+  margin-top: 5px;
+}
+
+/* ---------- Modals ---------- */
+.modal-bg {
+  position: fixed;
+  inset: 0;
+  background: var(--scrim);
+  backdrop-filter: blur(4px) saturate(0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  animation: fade-in 0.14s ease-out;
+}
+
+.modal {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--line2);
+  border-radius: var(--radius-lg);
+  width: min(740px, 92vw);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 22px;
+  box-shadow: 0 30px 80px -12px var(--shadow), 0 0 0 1px rgba(0, 0, 0, 0.1);
+  animation: pop-in 0.16s ease-out;
+  overflow-y: auto;
+}
+
+.modal::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 22px;
+  width: 64px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 0 0 2px 2px;
+}
+
+.modal-x {
+  position: absolute;
+  top: 13px;
+  right: 13px;
+  padding: 2px 8px;
+  font-size: 12px;
+  color: var(--dim);
+  background: transparent;
+  border-color: transparent;
+}
+
+.modal-x:hover {
+  color: var(--text-strong);
+}
+
+.modal h3 {
+  margin: 0 32px 12px 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12.5px;
+  letter-spacing: 0.12em;
+  color: var(--text-strong);
+}
+
+.modal h3::before {
+  content: "// ";
+  color: var(--accent);
+}
+
+.modal textarea {
+  flex: 1;
+  min-height: 300px;
+  font-size: 12.5px;
+  white-space: pre;
+  background: var(--input-bg);
+}
+
+.modal .row {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.modal .tpl-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 8px 2px;
+  border-bottom: 1px solid var(--line);
+}
+
+.modal .tpl-row:last-child {
+  border-bottom: none;
+}
+
+.modal .tpl-row .nm {
+  flex: 1;
+  min-width: 0;
+}
+
+.empty {
+  color: var(--dim);
+  text-align: center;
+  padding: 28px 10px;
+  font-size: 12px;
+}
+
+.mini-btn {
+  font-size: 11.5px;
+  padding: 4px 9px;
+}
+
+.btn-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-row > *,
+.row > * {
+  min-width: 0;
+}
+
+/* ---------- Sidebar resizers ---------- */
+.resizer {
+  position: absolute;
+  top: 0;
+  width: 7px;
+  height: 100%;
+  cursor: ew-resize;
+  z-index: 30;
+  touch-action: none;
+}
+
+.resizer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 1px;
+  background: transparent;
+  transition: background 0.14s ease, box-shadow 0.14s ease;
+}
+
+.resizer:hover::after {
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--glow);
+}
+
+#resizeLeft { right: -4px; }
+#resizeRight { left: -4px; }
