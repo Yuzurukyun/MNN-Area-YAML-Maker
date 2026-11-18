@@ -213,7 +213,7 @@
     - Connection line thickness slider (`1.0px` to `6.0px`).
     - Connection line neon glow slider (`0px` to `14px`).
 
-## v2.1.0-dev — Minimap Radar, Smart Route Finder, Network Audit, Line Styles & Group Zone Actions
+## v2.0.6 — Minimap Radar, Smart Route Finder, Network Audit, Line Styles & Group Zone Actions
 
 ### Minimap / Radar HUD
 
