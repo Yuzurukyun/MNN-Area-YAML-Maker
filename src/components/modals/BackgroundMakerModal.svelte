@@ -82,6 +82,66 @@
   $: activeAmbienceVal = usePositions ? activePos?.ambience : activeState?.ambience;
   $: activeTimeVariants = usePositions ? (activePos?.time_variants || {}) : (activeState?.time_variants || {});
 
+  // Folder splitting & smart prefix management
+  function splitFolderPath(folder) {
+    const norm = normalizeBgPath(folder) || '';
+    const lastSlash = norm.lastIndexOf('/');
+    if (lastSlash === -1) {
+      return { subfolder: '', name: norm };
+    }
+    return {
+      subfolder: norm.slice(0, lastSlash),
+      name: norm.slice(lastSlash + 1),
+    };
+  }
+
+  $: currentFolderParts = splitFolderPath(activeBg?.folder || '');
+  $: activeSubfolder = currentFolderParts.subfolder;
+  $: activeBgName = currentFolderParts.name;
+
+  function onSubfolderChange(newSub) {
+    const cleanSub = normalizeBgPath(newSub);
+    const newFull = cleanSub
+      ? `${cleanSub}/${activeBgName || 'Background'}`
+      : (activeBgName || 'Background');
+    updateBg((bg) => (bg.folder = newFull));
+  }
+
+  function onBgNameChange(newName) {
+    const cleanName = newName.replace(/^\/+/, '').replace(/\/+$/, '');
+    const newFull = activeSubfolder
+      ? `${activeSubfolder}/${cleanName || 'Untitled'}`
+      : (cleanName || 'Untitled');
+    updateBg((bg) => (bg.folder = newFull));
+  }
+
+  function createNewBackgroundInCurrentFolder() {
+    const prefix = activeSubfolder ? `${activeSubfolder}/` : '';
+    bgStore.addBackground(`${prefix}NewBackground`);
+  }
+
+  // Known subfolder prefixes gathered across library, project areas & asset pool
+  $: knownSubfolders = (() => {
+    const set = new Set();
+    for (const b of backgrounds) {
+      const p = splitFolderPath(b.folder);
+      if (p.subfolder) set.add(p.subfolder);
+    }
+    for (const a of $state.project.areas) {
+      if (a.background) {
+        const p = splitFolderPath(a.background);
+        if (p.subfolder) set.add(p.subfolder);
+      }
+    }
+    for (const ast of assetPool) {
+      if (ast.fullRelPath && ast.fullRelPath.includes('/')) {
+        const p = splitFolderPath(normalizeBgPath(ast.fullRelPath));
+        if (p.subfolder) set.add(p.subfolder);
+      }
+    }
+    return Array.from(set).sort();
+  })();
+
   function updateBg(mutator) {
     bgStore.updateActiveBg((bg) => {
       mutator(bg);
@@ -300,15 +360,45 @@
     <div class="maker-head">
       <div class="head-left">
         <span class="maker-tag">// BACKGROUND.JSON MAKER</span>
-        <div class="path-bar">
+        <div class="split-path-bar">
           <span class="prefix">base/background/</span>
+
+          <!-- Subfolder / Series picker + input -->
+          <div class="subfolder-box" title="Series / Parent folder prefix (e.g. Umamusume/School)">
+            <input
+              type="text"
+              class="subfolder-input"
+              placeholder="Series / Subfolder"
+              value={activeSubfolder}
+              on:input={(e) => onSubfolderChange(e.target.value)}
+            />
+            {#if knownSubfolders.length > 0}
+              <select
+                class="subfolder-dropdown"
+                title="Pick an existing series folder prefix"
+                on:change={(e) => {
+                  if (e.target.value !== '') onSubfolderChange(e.target.value);
+                  e.target.value = '';
+                }}
+              >
+                <option value="">▾ Folders ({knownSubfolders.length})</option>
+                {#each knownSubfolders as sub}
+                  <option value={sub}>{sub}/</option>
+                {/each}
+              </select>
+            {/if}
+          </div>
+
+          <span class="path-divider">/</span>
+
+          <!-- Room / Background Name -->
           <input
             type="text"
-            class="folder-input"
-            title="Relative folder path inside backgrounds directory"
-            placeholder="Subfolder/BackgroundName"
-            value={activeBg?.folder || ''}
-            on:input={(e) => updateBg((bg) => (bg.folder = normalizeBgPath(e.target.value)))}
+            class="bgname-input"
+            title="Room or scene folder name (e.g. Cafeteria)"
+            placeholder="RoomName"
+            value={activeBgName}
+            on:input={(e) => onBgNameChange(e.target.value)}
           />
         </div>
       </div>
@@ -361,11 +451,16 @@
       <aside class="bg-nav">
         <div class="nav-head">
           <span class="nav-title">BACKGROUNDS ({backgrounds.length})</span>
-          <button class="mini-btn" title="Create a new background folder" on:click={() => bgStore.addBackground('NewFolder/Background')}>+ New</button>
+          <button
+            class="mini-btn"
+            title="Create a new background in the current folder ({activeSubfolder || 'root'})"
+            on:click={createNewBackgroundInCurrentFolder}
+          >+ New</button>
         </div>
 
         <div class="bg-list">
           {#each backgrounds as bg (bg.id)}
+            {@const parts = splitFolderPath(bg.folder)}
             <div
               class="bg-item {bg.id === activeBg?.id ? 'active' : ''}"
               role="button"
@@ -374,7 +469,12 @@
               on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && bgStore.selectBg(bg.id)}
             >
               <div class="bg-item-row">
-                <span class="bg-folder" title={bg.folder}>{bg.folder || 'Untitled'}</span>
+                <div class="bg-item-titles" title={bg.folder}>
+                  {#if parts.subfolder}
+                    <span class="bg-subfolder-tag">{parts.subfolder}/</span>
+                  {/if}
+                  <span class="bg-folder">{parts.name || bg.folder || 'Untitled'}</span>
+                </div>
                 <div class="item-actions">
                   <button
                     class="icon-btn"
@@ -886,31 +986,91 @@
     color: var(--accent);
   }
 
-  .path-bar {
+  .split-path-bar {
     display: flex;
     align-items: center;
     background: var(--input-bg);
     border: 1px solid var(--line2);
     border-radius: var(--radius);
-    padding: 2px 8px;
+    padding: 2px 6px;
     font-family: inherit;
     font-size: 12px;
+    gap: 4px;
   }
 
   .prefix {
     color: var(--dim);
     user-select: none;
+    font-size: 11.5px;
   }
 
-  .folder-input {
+  .subfolder-box {
+    display: flex;
+    align-items: center;
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 1px 3px;
+  }
+
+  .subfolder-input {
     background: transparent;
     border: none;
     outline: none;
     color: var(--text-strong);
     font-weight: 700;
-    font-size: 12px;
-    min-width: 220px;
+    font-size: 11.5px;
+    min-width: 140px;
     padding: 2px 4px;
+  }
+
+  .subfolder-dropdown {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--dim);
+    font-size: 11px;
+    cursor: pointer;
+    padding: 0 2px;
+  }
+  .subfolder-dropdown:hover {
+    color: var(--accent);
+  }
+
+  .path-divider {
+    color: var(--dim);
+    font-weight: 800;
+  }
+
+  .bgname-input {
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    outline: none;
+    color: var(--accent);
+    font-weight: 800;
+    font-size: 11.5px;
+    min-width: 130px;
+    padding: 3px 6px;
+  }
+  .bgname-input:focus, .subfolder-input:focus {
+    border-color: var(--accent);
+  }
+
+  .bg-item-titles {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .bg-subfolder-tag {
+    font-size: 9.5px;
+    color: var(--dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.1;
   }
 
   .head-actions {

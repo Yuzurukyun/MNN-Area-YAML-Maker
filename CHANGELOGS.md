@@ -269,7 +269,8 @@
 
 - **Dedicated visual builder (`src/components/modals/BackgroundMakerModal.svelte`, `src/lib/bgSchema.js`, `src/lib/bgStore.js`):**
     - Added a dedicated 3-column workspace accessible via the header **🖼 Backgrounds** button, the **Export ▾** menu, or directly from the Inspector beside the `background` input field.
-    - **Relative path normalization:** Automatically strips `base/background/` or `background/` prefixes so folders cleanly map to MNN conventions (e.g. `Umamusume/Cafeteria`).
+    - **Relative path normalization & split folder breadcrumbs:** Automatically strips `base/background/` or `background/` prefixes, and splits pathing into **Series / Parent Folder** (with quick dropdown picking from existing folders) and **Room / Scene Name**, so repetitive series prefixes (e.g. `Umamusume/School/`) never have to be re-typed.
+    - **Folder inheritance on creation:** Clicking **+ New** automatically creates the new background inside the currently active series folder.
     - **State Variants:** Supports the mandatory `default` state plus custom states (`crowded`, `festive`, `rainy`, etc.) with tab-based editing and state deletion.
     - **Courtroom & Camera Positions:** Toggleable position mode supporting standard court camera angles (`Normal`, `Witness`, `Prosecution`, `Defense`, `Judge`, `Juror`) or custom position tags.
     - **Asset Slots:** Dedicated drag-and-drop slots for Background Image (`★ background`), Foreground Overlay filter/desk (`foreground`), and Ambience Audio (`ambience`, relative to `base/sounds/ambient/`).
