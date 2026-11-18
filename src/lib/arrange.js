@@ -20,7 +20,6 @@ export function autoArrange(P, opts = {}) {
   groups.forEach((g) => {
     groupStartPos.set(g.id, { x: g.x, y: g.y, w: g.w || 340, h: g.h || 220 });
     const mems = areas.filter((a) => {
-      if (a.id === hub.id) return false;
       const cx = a.x + NODE_W / 2;
       const cy = a.y + NODE_H / 2;
       return cx >= g.x && cx <= g.x + g.w && cy >= g.y && cy <= g.y + g.h;
@@ -31,7 +30,8 @@ export function autoArrange(P, opts = {}) {
     mems.forEach((a) => groupedAreaIds.add(a.id));
   });
 
-  const X0 = 40 + COL + Math.round(70 * spacing);
+  const hubInGroup = groupedAreaIds.has(hub.id);
+  const X0 = hubInGroup ? 60 : 40 + COL + Math.round(70 * spacing);
   const MAXW = 2000;
   const TOP = 48;
   let cx = X0;
@@ -234,10 +234,12 @@ export function autoArrange(P, opts = {}) {
     shelfH = Math.max(shelfH, specials.length ? Math.ceil(specials.length / 8) * ROW + 130 : 0);
   }
 
-  // 4. Position Hub on the left
-  hub.x = 40;
-  const totalContentBottom = cy + shelfH;
-  hub.y = totalContentBottom > TOP + ROW
-    ? Math.round(TOP + (totalContentBottom - TOP - ROW) / 2)
-    : TOP;
+  // 4. Position Hub on the left ONLY if it is not inside any group
+  if (!hubInGroup) {
+    hub.x = 40;
+    const totalContentBottom = cy + shelfH;
+    hub.y = totalContentBottom > TOP + ROW
+      ? Math.round(TOP + (totalContentBottom - TOP - ROW) / 2)
+      : TOP;
+  }
 }

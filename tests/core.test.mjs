@@ -317,6 +317,8 @@ const groupProj = {
     { id: 'g2', name: 'Group B', x: 700, y: 100, w: 400, h: 300 },
   ],
 };
+// Place Hub outside groups
+groupProj.areas[0].x = 40; groupProj.areas[0].y = 40;
 // Place A1, A2, A3 inside g1
 groupProj.areas[1].x = 250; groupProj.areas[1].y = 150;
 groupProj.areas[2].x = 350; groupProj.areas[2].y = 150;
@@ -336,6 +338,19 @@ const memsB = M.groupMembers(groupProj, groupProj.groups[1]).map((a) => a.area);
 eq(memsB, ['B1', 'B2'], 'autoArrange keeps all Group B members inside Group B');
 
 ok(!M.groupOfArea(groupProj, groupProj.areas[6]), 'Solo area is not inside any group');
+
+/* ---- auto-arrange includes Hub when Hub is inside a group ---- */
+const hubGroupProj = {
+  areas: ['Hub', 'Lobby 1', 'Lobby 2'].map(M.blankArea),
+  groups: [{ id: 'ghub', name: 'Spawn Hub', x: 200, y: 100, w: 400, h: 300 }],
+};
+hubGroupProj.areas[0].x = 250; hubGroupProj.areas[0].y = 150;
+hubGroupProj.areas[1].x = 350; hubGroupProj.areas[1].y = 150;
+hubGroupProj.areas[2].x = 450; hubGroupProj.areas[2].y = 150;
+
+M.autoArrange(hubGroupProj);
+const memsHub = M.groupMembers(hubGroupProj, hubGroupProj.groups[0]).map((a) => a.area);
+eq(memsHub, ['Hub', 'Lobby 1', 'Lobby 2'], 'autoArrange includes Hub when Hub is inside a group');
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
