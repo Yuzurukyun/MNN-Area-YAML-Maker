@@ -280,5 +280,34 @@ fitCamera();
 ok(lastCmd && lastCmd.type === 'fit' && typeof lastCmd.ts === 'number', 'fitCamera dispatches fit command with timestamp');
 unsub();
 
+/* ---- group zone range detection ---- */
+function computeZoneRange(indices) {
+  if (!indices.length) return { hasAreas: false, isRange: false, val1: '', val2: '' };
+  const sorted = [...indices].sort((a, b) => a - b);
+  const min = sorted[0];
+  const max = sorted[sorted.length - 1];
+  const isRange = sorted.length === (max - min + 1) && sorted.every((val, i) => val === min + i);
+  return {
+    hasAreas: true,
+    isRange,
+    val1: isRange ? `${min}, ${max}` : sorted.join(', '),
+    val2: isRange ? `/zone ${min}, ${max}` : `/zone ${sorted.join(', ')}`,
+  };
+}
+
+const rangeTest1 = computeZoneRange([4, 5, 6, 7, 8, 9, 10, 11, 12]);
+ok(rangeTest1.isRange, 'consecutive indices are recognized as range');
+eq(rangeTest1.val1, '4, 12', 'range val1 is "4, 12"');
+eq(rangeTest1.val2, '/zone 4, 12', 'range val2 is "/zone 4, 12"');
+
+const rangeTest2 = computeZoneRange([3, 6, 12, 13, 14, 15]);
+ok(!rangeTest2.isRange, 'non-consecutive indices are recognized as non-range');
+eq(rangeTest2.val1, '3, 6, 12, 13, 14, 15', 'non-range val1 lists all IDs');
+eq(rangeTest2.val2, '/zone 3, 6, 12, 13, 14, 15', 'non-range val2 formats /zone with all IDs');
+
+const rangeTest3 = computeZoneRange([7]);
+ok(rangeTest3.isRange, 'single area is a range');
+eq(rangeTest3.val1, '7, 7', 'single area produces min, max');
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

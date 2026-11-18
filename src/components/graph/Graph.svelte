@@ -766,8 +766,9 @@
     e.preventDefault();
     e.stopPropagation();
     const p = toWrap(e);
-    const maxX = wrapEl ? Math.max(10, wrapEl.clientWidth - 205) : p.x;
-    const maxY = wrapEl ? Math.max(10, wrapEl.clientHeight - items.length * 32 - 20) : p.y;
+    const estH = items.reduce((acc, it) => acc + (it.type === 'zone' ? 150 : it.type === 'swatches' ? 56 : 32), 30);
+    const maxX = wrapEl ? Math.max(10, wrapEl.clientWidth - 270) : p.x;
+    const maxY = wrapEl ? Math.max(10, wrapEl.clientHeight - estH) : p.y;
     menu = { x: clamp(p.x, 8, maxX), y: clamp(p.y, 8, maxY), items };
   }
 
@@ -816,7 +817,47 @@
   }
 
   function onGroupMenu(e, g) {
+    const members = M.groupMembers(P, g);
+    const indices = members
+      .map((a) => P.areas.indexOf(a))
+      .filter((idx) => idx >= 0)
+      .sort((a, b) => a - b);
+
+    const hasAreas = indices.length > 0;
+    let isRange = false;
+    let val1 = '';
+    let val2 = '';
+
+    if (hasAreas) {
+      const min = indices[0];
+      const max = indices[indices.length - 1];
+      isRange = indices.length === (max - min + 1) && indices.every((val, i) => val === min + i);
+
+      if (isRange) {
+        val1 = `${min}, ${max}`;
+        val2 = `/zone ${min}, ${max}`;
+      } else {
+        val1 = indices.join(', ');
+        val2 = `/zone ${indices.join(', ')}`;
+        notify(
+          `Area IDs in "${g.name}" are not consecutive (${indices.join(', ')}). Run "Sort IDs" in the toolbar to turn them into a clean range.`,
+          'warn',
+          6000
+        );
+      }
+    }
+
     openMenu(e, [
+      {
+        type: 'zone',
+        group: g,
+        hasAreas,
+        isRange,
+        count: indices.length,
+        val1,
+        val2,
+        onSortIds: () => (sortConfirmOpen = true),
+      },
       {
         type: 'swatches',
         label: 'Group colour',

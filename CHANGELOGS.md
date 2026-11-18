@@ -163,8 +163,13 @@
     - Renamed section to **Node Image** and removed descriptive text.
     - Container now fills the section width with downscaled natural aspect-ratio image display.
 
-### Board Groups Colouring & High Visibility
+### Board Groups Colouring, Visibility & /zone Range Commands
 
+- **Group `/zone` range command copy blocks (`ContextMenu.svelte`, `Graph.svelte`):**
+    - Right-clicking any spatial group now inspects its member area indices and provides two instant copy-paste code blocks:
+        1. Just the range: `<lowest>, <highest>` (e.g. `4, 12`).
+        2. The full command: `/zone <lowest>, <highest>` (e.g. `/zone 4, 12`).
+    - **Consecutive detection & warning:** If group members do not form a consecutive range (e.g. `3, 6, 12, 13, 14, 15`), a warning notification and banner alert users to run **Sort IDs**, while still providing the scattered values and `/zone` command to copy anyway, alongside an instant `⚡ Auto-sort IDs into range…` action button.
 - **Significantly increased group visibility (`base.css`, `GroupLayer.svelte`):**
     - Boosted dark theme group fill from invisible 1.5% to 5% with distinct `#525263` stroke; boosted light theme group fill to 18% with `#64748b` stroke.
 - **Group custom colours (`GroupLayer.svelte`, `ContextMenu.svelte`, `Graph.svelte`):**
