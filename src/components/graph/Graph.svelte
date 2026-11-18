@@ -31,6 +31,9 @@
   import ContextMenu from './ContextMenu.svelte';
   import RenameOverlay from './RenameOverlay.svelte';
   import NodeHoverCard from './NodeHoverCard.svelte';
+  import Minimap from './Minimap.svelte';
+  import RouteBar from './RouteBar.svelte';
+  import AuditModal from '../modals/AuditModal.svelte';
   import ConfirmModal from '../modals/ConfirmModal.svelte';
 
   const COLOR_PALETTE = [
@@ -49,9 +52,29 @@
   const NH = M.NODE_H;
 
   let sortConfirmOpen = false;
+  let auditModalOpen = false;
+  let routeActive = false;
+  let routeFromId = null;
+  let routeToId = null;
+  let activeRoutePath = [];
+
+  $: activeRouteEdgeSet = (() => {
+    if (!routeActive || !activeRoutePath || activeRoutePath.length < 2) return null;
+    const s = new Set();
+    for (let i = 0; i < activeRoutePath.length - 1; i++) {
+      const u = activeRoutePath[i];
+      const v = activeRoutePath[i + 1];
+      s.add(u + '->' + v);
+      s.add(v + '->' + u);
+    }
+    return s;
+  })();
 
   let svgElRef;
   let wrapEl;
+  $: wrapBounds = wrapEl
+    ? { w: wrapEl.clientWidth || 800, h: wrapEl.clientHeight || 600 }
+    : { w: 800, h: 600 };
   let view = { x: 30, y: 20, k: 1 };
   let drag = null;
   let tempTo = null;
@@ -173,8 +196,13 @@
       spaceHeld = true;
     } else if (e.key === 'Escape') {
       if (menu) { menu = null; return; }
+      if (routeActive) { routeActive = false; activeRoutePath = []; return; }
       if ($state.selectedEdge) { update((s) => (s.selectedEdge = null), { skipHistory: true }); return; }
       if ($state.focusViewIds) update((s) => exitFocusView(s), { skipHistory: true });
+    } else if (e.key.toLowerCase() === 'm' && !e.ctrlKey && !e.metaKey && !e.altKey && !editing) {
+      e.preventDefault();
+      updateSettings((s) => (s.showMinimap = !s.showMinimap));
+      notify($settings.showMinimap ? 'Minimap radar enabled.' : 'Minimap radar hidden.', 'info');
     } else if (e.key.toLowerCase() === 'f' && !e.ctrlKey && !e.metaKey && !e.altKey) {
       fitView();
     } else if (e.key.toLowerCase() === 'c' && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -337,6 +365,20 @@
       return;
     }
     centerOnNode($state.selectedId, true);
+  }
+
+  function panToWorld(worldX, worldY, instant = false) {
+    if (!wrapEl) return;
+    const vw = wrapEl.clientWidth || 800;
+    const vh = wrapEl.clientHeight || 600;
+    const targetX = vw / 2 - worldX * view.k;
+    const targetY = vh / 2 - worldY * view.k;
+    if (instant) {
+      cancelCameraAnim();
+      view = { ...view, x: targetX, y: targetY };
+    } else {
+      animateViewTo(targetX, targetY, view.k, 260);
+    }
   }
 
   function fitView(smooth = true) {
@@ -802,6 +844,22 @@
         },
       },
       { label: 'Center camera here (C)', run: () => centerOnNode(a.id, true) },
+      {
+        label: 'Find route from here…',
+        run: () => {
+          routeFromId = a.id;
+          routeActive = true;
+          notify(`Route Finder: start set to "${a.area}".`, 'info');
+        },
+      },
+      {
+        label: 'Find route to here…',
+        run: () => {
+          routeToId = a.id;
+          routeActive = true;
+          notify(`Route Finder: destination set to "${a.area}".`, 'info');
+        },
+      },
       { label: 'Attach node image…', run: () => pickNodeImage(a) },
       ...(a.image ? [{ label: 'Remove node image', run: () => update((s) => { const x = s.project.areas.find(ar => ar.id === a.id); if (x) x.image = ''; notify('Removed node image.', 'info'); }) }] : []),
       { label: 'Rename', run: () => startRename('area', a) },
@@ -872,6 +930,30 @@
         },
       },
       { label: 'Rename group', run: () => startRename('group', g) },
+      ...(hasAreas
+        ? [
+            {
+              label: `Select all areas in zone (${indices.length})`,
+              run: () => {
+                selection.set(new Set(members.map((m) => m.id)));
+                selected.set(members[0].id);
+                notify(`Selected ${indices.length} areas in "${g.name}".`, 'ok');
+              },
+            },
+            {
+              label: `Copy Zone YAML (${indices.length} areas)`,
+              run: async () => {
+                const zoneYaml = M.exportYaml({ areas: members, groups: [] });
+                const ok = await copyText(zoneYaml);
+                if (ok) {
+                  notify(`Copied YAML snippet for "${g.name}" (${indices.length} areas).`, 'ok');
+                } else {
+                  notify('Failed to copy to clipboard.', 'error');
+                }
+              },
+            },
+          ]
+        : []),
       { label: 'Delete group', danger: true, run: () => deleteGroup(g.id) },
     ]);
   }
@@ -1230,11 +1312,28 @@
   onDeleteLayout={deleteLayout}
   onSortByGroup={() => (sortConfirmOpen = true)}
   onArrange={arrange}
+  {routeActive}
+  onToggleRoute={() => {
+    routeActive = !routeActive;
+    if (!routeActive) activeRoutePath = [];
+  }}
+  onOpenAudit={() => (auditModalOpen = true)}
 />
 
 <svelte:window on:keydown={onWinKey} on:keyup={onWinKeyUp} on:pointerdown={onWinDown} />
 
 <div id="graphWrap" class:pan-mode={panTool || spaceHeld} style={gridStyle} bind:this={wrapEl}>
+  {#if routeActive}
+    <RouteBar
+      project={P}
+      bind:fromId={routeFromId}
+      bind:toId={routeToId}
+      on:routeChange={(e) => { activeRoutePath = e.detail.path || []; }}
+      on:close={() => { routeActive = false; activeRoutePath = []; }}
+      onStepClick={(id) => centerOnNode(id, true)}
+    />
+  {/if}
+
   {#if inFocus}
     <button class="focus-exit" on:click={() => update((s) => exitFocusView(s), { skipHistory: true })}>
       ✕ Show everything (Esc)
@@ -1263,11 +1362,15 @@
       <marker id="arrowAmber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
         <path d="M0,0 L10,5 L0,10 z" fill="var(--edge-oneway-in)"></path>
       </marker>
+      <marker id="arrowRoute" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="#10b981"></path>
+      </marker>
     </defs>
 
     <g transform="translate({view.x},{view.y}) scale({view.k})">
       <GroupLayer
         groups={P.groups}
+        areas={P.areas}
         {onGroupDown}
         {onGroupMenu}
         onGroupDblClick={(e, g) => { e.stopPropagation(); startRename('group', g); }}
@@ -1287,6 +1390,8 @@
         {tempTo}
         {band}
         onPickEdge={pickEdge}
+        edgeStyle={$settings.edgeStyle || 'curved'}
+        routeEdgeSet={activeRouteEdgeSet}
       />
       <NodeLayer
         {P}
@@ -1345,6 +1450,14 @@
     />
   {/if}
 
+  <Minimap
+    areas={P.areas}
+    groups={P.groups}
+    {view}
+    bounds={wrapBounds}
+    onPanTo={panToWorld}
+  />
+
   <GraphHud
     zoom={view.k}
     onZoomIn={() => zoomBy(1.18)}
@@ -1371,6 +1484,17 @@
         sortByGroup();
       }}
       onCancel={() => (sortConfirmOpen = false)}
+    />
+  {/if}
+
+  {#if auditModalOpen}
+    <AuditModal
+      project={P}
+      on:close={() => (auditModalOpen = false)}
+      onFocusArea={(id) => {
+        update((s) => selectOnly(s, id), { skipHistory: true });
+        centerOnNode(id, true);
+      }}
     />
   {/if}
 </div>

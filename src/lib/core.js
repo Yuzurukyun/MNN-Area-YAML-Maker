@@ -17,3 +17,4 @@ export * from './model.js';
 export * from './links.js';
 export * from './yaml.js';
 export * from './arrange.js';
+export * from './pathAudit.js';

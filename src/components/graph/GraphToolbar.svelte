@@ -22,6 +22,9 @@
   export let onDeleteLayout;
   export let onSortByGroup;
   export let onArrange;
+  export let routeActive = false;
+  export let onToggleRoute = () => {};
+  export let onOpenAudit = () => {};
 
   let layoutMenu = false;
   let layoutName = '';
@@ -174,12 +177,32 @@
       </div>
     {/if}
   </span>
+
+  <span class="toolbar-sep">|</span>
+
+  <button
+    class="mini-btn {routeActive ? 'primary' : ''}"
+    title="Trace shortest walkable route between areas (or right-click an area)"
+    on:click={onToggleRoute}
+  >🧭 Route</button>
+
+  <button
+    class="mini-btn"
+    title="Audit map network for isolated island rooms, dead ends, and one-way traps"
+    on:click={onOpenAudit}
+  >🔍 Audit</button>
 </div>
 
 <style>
   .arrange-wrap {
     display: inline-flex;
     align-items: center;
+  }
+  .toolbar-sep {
+    color: var(--line2);
+    user-select: none;
+    font-size: 11px;
+    margin: 0 2px;
   }
   .arrange-btn {
     border-top-right-radius: 0 !important;

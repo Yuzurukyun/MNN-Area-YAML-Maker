@@ -149,20 +149,92 @@
         </div>
       </div>
 
-      <!-- Live preview of line thickness and glow -->
+      <!-- 4. Connection Line Style -->
+      <div class="setting-item">
+        <div class="setting-header">
+          <span class="setting-title">Connection line style</span>
+          <span class="setting-val">
+            {$settings.edgeStyle || 'curved'}
+            {#if ($settings.edgeStyle || 'curved') === 'curved'}<span class="default-tag">Default</span>{/if}
+          </span>
+        </div>
+        <div class="hint">Visual geometry of connection paths between nodes.</div>
+        <div class="style-btn-group">
+          <button
+            class="style-choice-btn {($settings.edgeStyle || 'curved') === 'curved' ? 'active' : ''}"
+            on:click={() => updateSettings((s) => (s.edgeStyle = 'curved'))}
+          >
+            <span class="choice-icon">∿</span>
+            <b>Curved</b>
+            <span class="choice-sub">Smooth Bezier</span>
+          </button>
+          <button
+            class="style-choice-btn {($settings.edgeStyle || 'curved') === 'orthogonal' ? 'active' : ''}"
+            on:click={() => updateSettings((s) => (s.edgeStyle = 'orthogonal'))}
+          >
+            <span class="choice-icon">⌐</span>
+            <b>Orthogonal</b>
+            <span class="choice-sub">90° Circuit / Blueprint</span>
+          </button>
+          <button
+            class="style-choice-btn {($settings.edgeStyle || 'curved') === 'straight' ? 'active' : ''}"
+            on:click={() => updateSettings((s) => (s.edgeStyle = 'straight'))}
+          >
+            <span class="choice-icon">╱</span>
+            <b>Straight</b>
+            <span class="choice-sub">Direct Line</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 5. Minimap / Radar HUD Toggle -->
+      <div class="setting-item">
+        <div class="setting-header">
+          <span class="setting-title">Minimap Radar HUD</span>
+          <span class="setting-val">
+            {$settings.showMinimap ? 'Enabled' : 'Hidden'}
+            {#if $settings.showMinimap}<span class="default-tag">Default</span>{/if}
+          </span>
+        </div>
+        <div class="hint">Birds-eye interactive radar in the bottom-right corner showing full network layout and camera viewport.</div>
+        <label class="setting-check-row" style="margin-top:6px;display:flex;align-items:center;gap:10px;cursor:pointer">
+          <input
+            type="checkbox"
+            checked={$settings.showMinimap}
+            on:change={(e) => updateSettings((s) => (s.showMinimap = e.target.checked))}
+          />
+          <span style="font-size:12px;color:var(--text-strong)">Show Minimap radar HUD on canvas (Toggle with <b>M</b> key)</span>
+        </label>
+      </div>
+
+      <!-- Live preview of line thickness, glow, and style -->
       <div class="preview-box">
         <div class="hint" style="margin-bottom:6px">Line appearance live preview:</div>
         <svg width="100%" height="46" style="display:block">
-          <!-- Background preview line -->
-          <line
-            x1="20"
-            y1="23"
-            x2="90%"
-            y2="23"
-            stroke="var(--edge-oneway)"
-            stroke-width="{$settings.edgeThickness * 1.2}px"
-            style="filter: drop-shadow(0 0 {$settings.edgeGlow}px var(--edge-oneway))"
-          />
+          {#if ($settings.edgeStyle || 'curved') === 'straight'}
+            <line
+              x1="20" y1="23" x2="90%" y2="23"
+              stroke="var(--edge-oneway)"
+              stroke-width="{$settings.edgeThickness * 1.2}px"
+              style="filter: drop-shadow(0 0 {$settings.edgeGlow}px var(--edge-oneway))"
+            />
+          {:else if ($settings.edgeStyle || 'curved') === 'orthogonal'}
+            <path
+              d="M 20 33 L 45% 33 L 45% 13 L 90% 13"
+              fill="none"
+              stroke="var(--edge-oneway)"
+              stroke-width="{$settings.edgeThickness * 1.2}px"
+              style="filter: drop-shadow(0 0 {$settings.edgeGlow}px var(--edge-oneway))"
+            />
+          {:else}
+            <path
+              d="M 20 33 C 45% 33, 55% 13, 90% 13"
+              fill="none"
+              stroke="var(--edge-oneway)"
+              stroke-width="{$settings.edgeThickness * 1.2}px"
+              style="filter: drop-shadow(0 0 {$settings.edgeGlow}px var(--edge-oneway))"
+            />
+          {/if}
         </svg>
       </div>
     </div>
@@ -254,5 +326,52 @@
     border: 1px solid var(--line);
     border-radius: var(--radius);
     padding: 8px 12px;
+  }
+
+  .style-btn-group {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .style-choice-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 6px;
+    background: var(--panel2);
+    border: 1.5px solid var(--line);
+    border-radius: var(--radius);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: center;
+  }
+
+  .style-choice-btn:hover {
+    border-color: var(--accent);
+    background: var(--hover);
+  }
+
+  .style-choice-btn.active {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 15%, var(--panel2));
+    color: var(--accent);
+    box-shadow: 0 0 10px -2px var(--accent-glow);
+  }
+
+  .choice-icon {
+    font-size: 16px;
+    font-weight: 900;
+    line-height: 1;
+    color: var(--accent);
+  }
+
+  .choice-sub {
+    font-size: 9.5px;
+    color: var(--dim);
+    margin-top: 1px;
   }
 </style>

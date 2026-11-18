@@ -42,6 +42,47 @@ export function edgeMidpoint(A, B) {
   return { x: (x1 + x2) / 2, y: (y1 + y2) / 2 };
 }
 
+/**
+ * Computes an SVG path `d` attribute based on the chosen line style:
+ * - 'curved': Smooth cubic bezier curve
+ * - 'orthogonal': Stepped 90° blueprint/circuit lines
+ * - 'straight': Direct linear connection
+ */
+export function edgePath(pts, style = 'curved') {
+  const { x1, y1, x2, y2 } = pts;
+  if (style === 'straight') {
+    return `M ${x1} ${y1} L ${x2} ${y2}`;
+  }
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+
+  if (style === 'orthogonal') {
+    if (Math.abs(dx) < 2 || Math.abs(dy) < 2) {
+      return `M ${x1} ${y1} L ${x2} ${y2}`;
+    }
+    if (Math.abs(dx) >= Math.abs(dy) * 0.8) {
+      const midX = x1 + dx / 2;
+      return `M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}`;
+    } else {
+      const midY = y1 + dy / 2;
+      return `M ${x1} ${y1} L ${x1} ${midY} L ${x2} ${midY} L ${x2} ${y2}`;
+    }
+  }
+
+  // Default: 'curved'
+  const dist = Math.hypot(dx, dy);
+  const curvature = Math.min(Math.max(dist * 0.35, 24), 160);
+  if (Math.abs(dx) >= Math.abs(dy) * 0.7) {
+    const cx1 = x1 + (dx >= 0 ? curvature : -curvature);
+    const cx2 = x2 - (dx >= 0 ? curvature : -curvature);
+    return `M ${x1} ${y1} C ${cx1} ${y1}, ${cx2} ${y2}, ${x2} ${y2}`;
+  } else {
+    const cy1 = y1 + (dy >= 0 ? curvature : -curvature);
+    const cy2 = y2 - (dy >= 0 ? curvature : -curvature);
+    return `M ${x1} ${y1} C ${x1} ${cy1}, ${x2} ${cy2}, ${x2} ${y2}`;
+  }
+}
+
 export function pairCardPos(byId, pair, view, bounds) {
   const A = byId(pair.x);
   const B = byId(pair.y);

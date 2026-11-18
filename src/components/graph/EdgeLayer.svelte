@@ -1,5 +1,5 @@
 <script>
-  import { centreOf, edgeEndpoints } from '../../lib/graphGeom.js';
+  import { centreOf, edgeEndpoints, edgePath } from '../../lib/graphGeom.js';
 
   export let pairs;
   export let byId;
@@ -14,6 +14,8 @@
   export let tempTo;
   export let band;
   export let onPickEdge;
+  export let edgeStyle = 'curved';
+  export let routeEdgeSet = null;
 </script>
 
 <g>
@@ -42,20 +44,22 @@
         {@const fromNode = flip ? B : A}
         {@const toNode = flip ? A : B}
         {@const pts = edgeEndpoints(fromNode, toNode)}
+        {@const d = edgePath(pts, edgeStyle)}
+        {@const isRoute = routeEdgeSet && (routeEdgeSet.has(fromNode.id + '->' + toNode.id) || routeEdgeSet.has(toNode.id + '->' + fromNode.id))}
 
         {#if !p.derived}
           <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-          <line
+          <path
             class="edge-hit"
-            x1={pts.x1} y1={pts.y1} x2={pts.x2} y2={pts.y2}
+            {d}
             on:pointerdown={(e) => onPickEdge(e, p)}
           />
         {/if}
-        <line
-          class="edge {p.ghost ? 'ghost' : isSel ? 'sel' : ''} {p.derived ? 'derived' : ''} {p.allOnly ? 'all-mesh' : ''} {oneway ? (selIn ? 'oneway-in' : 'oneway') : ''}"
-          x1={pts.x1} y1={pts.y1} x2={pts.x2} y2={pts.y2}
-          opacity={dim ? 0.07 : p.ghost ? 0.5 : p.derived ? 0.42 : 1}
-          marker-end={oneway ? `url(#${p.derived ? 'arrow' : isSel ? 'arrowSel' : selIn ? 'arrowAmber' : 'arrowRed'})` : undefined}
+        <path
+          class="edge {p.ghost ? 'ghost' : isSel ? 'sel' : ''} {p.derived ? 'derived' : ''} {p.allOnly ? 'all-mesh' : ''} {oneway ? (selIn ? 'oneway-in' : 'oneway') : ''} {isRoute ? 'route-active' : ''}"
+          {d}
+          opacity={isRoute ? 1 : dim ? 0.07 : p.ghost ? 0.5 : p.derived ? 0.42 : 1}
+          marker-end={oneway ? `url(#${isRoute ? 'arrowRoute' : p.derived ? 'arrow' : isSel ? 'arrowSel' : selIn ? 'arrowAmber' : 'arrowRed'})` : undefined}
         />
       {/if}
     {/if}

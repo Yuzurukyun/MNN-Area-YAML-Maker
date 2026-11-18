@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import * as M from '../src/lib/core.js';
 import { edgeEndpoints } from '../src/lib/graphGeom.js';
 import { cameraCommand, centerCameraOn, resetCamera, fitCamera } from '../src/lib/state.js';
+import { findShortestPath, auditMap } from '../src/lib/pathAudit.js';
 
 let pass = 0;
 let fail = 0;
@@ -382,6 +383,36 @@ groupsOnlyProj.areas[3].x = 888; groupsOnlyProj.areas[3].y = 777; // loose area
 M.autoArrange(groupsOnlyProj, { arrangeGroupsOnly: true });
 eq(groupsOnlyProj.areas[3].x, 888, 'arrangeGroupsOnly: true leaves ungrouped X untouched');
 eq(groupsOnlyProj.areas[3].y, 777, 'arrangeGroupsOnly: true leaves ungrouped Y untouched');
+
+/* ---- pathfinding (BFS) & map audit ---- */
+const auditProj = {
+  areas: ['Hub', 'Hallway', 'Courtyard', 'Dungeon', 'Island', 'DeadEnd'].map(M.blankArea),
+  groups: [],
+};
+// Hub (0) -> Hallway (1) <-> Courtyard (2) -> Dungeon (3)
+// Dungeon (3) has no way back to Hub (one-way trap to DeadEnd)
+// Dungeon (3) -> DeadEnd (5)
+// DeadEnd (5) has 0 exits (dead end)
+// Island (4) has no connections (island)
+auditProj.areas[0].links.reachable = { mode: 'list', targets: [auditProj.areas[1].id] };
+auditProj.areas[1].links.reachable = { mode: 'list', targets: [auditProj.areas[0].id, auditProj.areas[2].id] };
+auditProj.areas[2].links.reachable = { mode: 'list', targets: [auditProj.areas[1].id, auditProj.areas[3].id] };
+auditProj.areas[3].links.reachable = { mode: 'list', targets: [auditProj.areas[5].id] };
+auditProj.areas[4].links.reachable = { mode: 'list', targets: [] };
+auditProj.areas[5].links.reachable = { mode: 'list', targets: [] };
+
+const path1 = findShortestPath(auditProj, auditProj.areas[0].id, auditProj.areas[3].id);
+ok(path1.found, 'findShortestPath finds route to dungeon');
+eq(path1.stepCount, 3, 'route has 3 steps (Hub -> Hallway -> Courtyard -> Dungeon)');
+eq(path1.path, [auditProj.areas[0].id, auditProj.areas[1].id, auditProj.areas[2].id, auditProj.areas[3].id], 'exact step sequence matches');
+
+const pathBlocked = findShortestPath(auditProj, auditProj.areas[0].id, auditProj.areas[4].id);
+ok(!pathBlocked.found, 'findShortestPath reports not found for isolated island');
+
+const audit = auditMap(auditProj);
+eq(audit.islands.map((a) => a.area), ['Island'], 'audit identifies isolated island');
+eq(audit.deadEnds.map((a) => a.area), ['Island', 'DeadEnd'], 'audit identifies dead ends (0 exits)');
+eq(audit.oneWayTraps.map((a) => a.area), ['Dungeon', 'DeadEnd'], 'audit identifies one-way traps (cannot return to Hub)');
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
