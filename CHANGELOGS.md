@@ -213,7 +213,55 @@
     - Connection line thickness slider (`1.0px` to `6.0px`).
     - Connection line neon glow slider (`0px` to `14px`).
 
+## v2.1.0-dev — Minimap Radar, Smart Route Finder, Network Audit, Line Styles & Group Zone Actions
+
+### Minimap / Radar HUD
+
+- **Interactive miniature radar (`src/components/graph/Minimap.svelte`, `Graph.svelte`, `src/lib/state.js`):**
+    - Added a floating birds-eye radar in the bottom-left corner with real-time camera viewport box.
+    - Click or drag anywhere on the radar to smoothly glide the main camera to that region of the network.
+    - Added a collapsible chevron toggle and keyboard shortcut `M` (`toggleMinimap`).
+    - Added a toggle in the Settings Cog modal to enable or disable the minimap by default (`showMinimap`).
+
+### Smart Route Finder
+
+- **Turn-by-turn shortest path navigation (`src/lib/pathAudit.js`, `src/components/graph/RouteBar.svelte`, `Graph.svelte`, `EdgeLayer.svelte`, `src/styles/graph.css`):**
+    - Added a floating tactical Route Finder bar toggled via the toolbar **🧭 Route** button or canvas right-click context menu (**Find route from here** / **Find route to here**).
+    - Uses Dijkstra's algorithm to compute the shortest walkable path between any two rooms based on physical `reachable_areas` corridors.
+    - **Strict physical exit resolution:** Strictly excludes global `<ALL>` reachability shortcuts (`mode === 'list'` required for walkable transit).
+    - **RP privacy & lobby protection:** Prevents private rooms/dorms (`private_area: true`) and OOC lobbies (`lobby_area: true`) from being used as intermediate pass-through thoroughfares (they can only serve as starting points or final destinations).
+    - **Turn-by-turn cards:** Displays step numbers, source/target `#ID` badges, role badges (`Hub`, `Private`, `Lobby`), and direction arrows.
+    - **Visual route highlighting:** Active route connections illuminate on the map with a pulsating neon emerald glow (`.edge.route-active`).
+    - Added **⌖ Frame route** to smoothly zoom and frame the active route, and **📋 Copy route** for clipboard sharing.
+
+### Map Network Audit
+
+- **Comprehensive map health auditor (`src/lib/pathAudit.js`, `src/components/modals/AuditModal.svelte`, `Graph.svelte`, `GraphToolbar.svelte`):**
+    - Added a one-click network audit tool opened via the **🔍 Audit** button in the canvas toolbar.
+    - Automatically checks the graph and flags:
+        - **Unreachable Islands:** Non-hub rooms with zero incoming list connections from the rest of the world.
+        - **Dead Ends:** Rooms with zero outgoing list connections.
+        - **One-Way Traps:** Rooms that can be entered via list connections but have no exit leading back into the network.
+    - Provides instant **⌖ View** buttons beside each flagged room to smoothly center the camera on it for inspection.
+
+### Connection Line Styles in Settings
+
+- **Configurable edge paths (`src/components/modals/SettingsModal.svelte`, `src/lib/graphGeom.js`, `src/components/graph/EdgeLayer.svelte`, `src/lib/state.js`, `src/styles/graph.css`):**
+    - Added a **Line Style** selector to the Settings Cog with 3 styles:
+        - **Curved (Smooth cubic Bézier):** Flowing organic connection paths.
+        - **Orthogonal (90° Circuit / Manhattanesque):** Crisp architectural right-angle wiring.
+        - **Straight (Direct):** Classic direct edge lines.
+    - Added an interactive live SVG preview showing the chosen line style directly inside the settings modal.
+    - Enforced `fill="none"` and `fill: none !important;` on all SVG `<path>` elements, preventing dark/black polygon fills.
+
+### Group Zone Statistics & Bulk Actions
+
+- **Zone area counts & bulk tools (`src/components/graph/GroupLayer.svelte`, `src/components/graph/Graph.svelte`):**
+    - Spatial group tabs now display dynamic member count badges (e.g. `[Zone · 8 areas]`).
+    - Added **Select all areas in zone** to the group context menu, allowing one-click multi-selection of all member cards for bulk repositioning, inspector review, or deletion.
+    - Added **Copy Zone YAML** to the group context menu to copy only the member areas of that spatial zone formatted as valid YAML.
+
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **93 passed, 0 failed**.
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **104 passed, 0 failed**.
 - `npm run build:both`: rebuilt `export/yuzu_area_maker.html`, `export/yuzu_area_maker_nomusic.html`, and `docs/index.html`.

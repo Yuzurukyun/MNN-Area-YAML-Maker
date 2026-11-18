@@ -25,6 +25,7 @@ This editor lets you build and maintain a TsuMNN `areas.yaml` visually without f
 | Connect two areas | Drag from a node's **right-edge port** or **Shift+drag** between nodes |
 | Edit link direction | Click any connection line to open its **Direction Card** |
 | Pan map | **Middle-mouse drag**, **Space + drag**, or toggle **✋ Pan** |
+| Toggle minimap radar | **M** (or click chevron on bottom-left radar) |
 | Reset camera & zoom | **Home** or **0** (or toolbar **⟲ Reset**) |
 | Center on selected area | **C** (or toolbar **⌖ Center**) |
 | Jump & center on area | **Double-click** area row in left list |
@@ -47,9 +48,13 @@ Each area has three link types, switched cleanly via the tabs above the map:
 
 ## Map Tools, Groups & Layouts
 
+- **Minimap Radar:** Collapsible birds-eye radar in the bottom-left corner with real-time camera viewport box. Click or drag to jump camera across large maps. Press **M** to toggle.
+- **Smart Route Finder (🧭 Route):** Finds the shortest walkable path between any two areas, displays turn-by-turn steps, highlights corridors with emerald neon on the map, and respects RP privacy rules (private rooms and lobbies cannot be used as public transit shortcuts).
+- **Network Audit (🔍 Audit):** Scans your area network for unreachable islands, dead ends, and one-way traps, with instant **⌖ View** buttons to inspect them.
+- **Connection Line Styles:** Switch between Curved (smooth Bézier), Orthogonal (90° circuit), and Straight lines in the **⚙ Settings** cog.
 - **Focus / Isolate:** **Focus** dims unrelated nodes around your selection. **Isolate** hides everything except your selected area and its direct neighbours (`Esc` exits).
 - **Hide hub / Hide `<ALL>`:** Temporarily declutter the board without changing any data.
-- **Groups:** Right-click the canvas → **Add group here**. Areas whose centers sit inside a group rectangle move with it. **Sort IDs** reorders your area list so members of each group hold consecutive IDs (useful for `/zone_area`).
+- **Groups:** Right-click the canvas → **Add group here**. Areas whose centers sit inside a group rectangle move with it. Right-click a group to **Select all areas in zone**, **Copy Zone YAML**, or change its color. **Sort IDs** reorders your area list so members of each group hold consecutive IDs (useful for `/zone_area`).
 - **Layouts ▾:** Save snapshots of node positions, groups, and corkboard images so you can experiment safely.
 - **Auto-arrange:** Deterministically arranges the Hub on the left, connected clusters in radial islands, and standalone areas underneath, then fits the view.
 
