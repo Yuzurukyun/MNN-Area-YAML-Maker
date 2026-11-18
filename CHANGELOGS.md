@@ -49,11 +49,6 @@
 - **Toast notifications (`src/components/ToastHost.svelte`):** Added non-blocking status toasts for clipboard copies, imports/merges, layouts, and warnings.
 - **Sidebar improvements (`src/components/panels/AreaList.svelte`, `src/components/panels/Inspector.svelte`):** Added `↑` / `↓` reorder buttons, `#ID` matching in area search, live typing updates in Inspector inputs, and Escape/scrim dismissal across all modals.
 
-### Verification
-
-- Expanded [tests/core.test.mjs](tests/core.test.mjs) to **53 passing checks** covering YAML quoting/lists/block scalars, `syncUid`, empty-list round trips, `exportWarnings`, `edgeEndpoints` clipping, and link resolution.
-- Rebuilt single-file bundles via `npm run build:both` (`export/yuzu_area_maker.html` and `export/yuzu_area_maker_nomusic.html`).
-
 ## v2.0.1 — PyYAML Multi-line List Fix, Bidirectional Hub Arrows & Full-Height Resizer
 
 ### Bug Fixes
@@ -68,11 +63,6 @@
     - Reset `pickerFor` and `query` when switching selected areas, and shallow-cloned `s.project` in `update()` so Svelte always propagates nested link edits reliably.
 - **Full-height right sidebar resize handle (`src/styles/panels.css`):**
     - Moved `overflow-y: auto` from `#right` onto the inner `#inspector` flex child so `#resizeRight` stays anchored across the full height of the sidebar regardless of scroll position.
-
-### Verification
-
-- Expanded [tests/core.test.mjs](tests/core.test.mjs) to **58 passed, 0 failed** (covering wrapped unquoted `reachable_areas`, `\xHH` / line-joining, mid-word apostrophes in list items, and `...` quoting) and verified cleanly against `wsl_ch3.yaml` (47 areas), `BREATHLESS.yaml` (27 areas), and `HHDI.yaml` (10 areas) with 0 errors and 0 warnings.
-- Rebuilt single-file bundles via `npm run build:both` (`export/yuzu_area_maker.html` and `export/yuzu_area_maker_nomusic.html`).
 
 ## v2.0.2 — ULTRAKILL-Terminal UI Polish, New Templates, Focus Dimming & Tooltips
 
@@ -96,11 +86,6 @@
 - **Stricter default/empty omission (`src/lib/yaml.js`):**
     - Non-mandatory empty or default values (`default_description`, empty `scream_range` lists, empty `restricted_chars`, `afk_delay: 0`, `afk_sendto: 0`, default booleans/extra keys) are omitted on YAML export so the server uses its own defaults cleanly.
 
-### Verification
-
-- Expanded [tests/core.test.mjs](tests/core.test.mjs) to **63 passed, 0 failed**.
-- Rebuilt single-file bundles via `npm run build:both` (`export/yuzu_area_maker.html` and `export/yuzu_area_maker_nomusic.html`).
-
 ## v2.0.3 — Full ULTRAKILL-Terminal & Warm Paper UI Polish
 
 ### Visual & Design System Overhaul
@@ -121,11 +106,6 @@
 - **Example Project selector (`src/components/Header.svelte`, `src/assets/wsl_ch3.yaml`):**
     - Expanded **New ▾ → Example project** into a two-option picker: **WSL Chapter 3 (47 areas)** (`wsl_ch3.yaml`, bundled inline) and **Classic sample (8 areas)**.
 
-### Verification
-
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **66 passed, 0 failed**.
-- `npm run build:both`: rebuilt `export/yuzu_area_maker.html` and `export/yuzu_area_maker_nomusic.html`.
-
 ## v2.0.4 — Header Branding, Area Counter Hierarchy & Extended Graph QoLs
 
 ### UI Polish & Extended Graph QoLs
@@ -145,11 +125,6 @@
     - Bound to shortcut `C`.
     - **Double-clicking** any area in the left sidebar `AreaList` smoothly flies the camera to that node on the map.
     - Added **Center on selected (C)** and **Reset view (Home / 0)** to the canvas context menu, and **Center camera here** to node right-click menus.
-
-### Verification
-
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **69 passed, 0 failed** (including camera command bus tests).
-- `npm run build:both`: rebuilt `export/yuzu_area_maker.html`, `export/yuzu_area_maker_nomusic.html`, and `docs/index.html`.
 
 ## v2.0.5 — Light Terminal Theme, Custom Node & Group Colors, Full Map Screenshots, Hover Summaries & Multi-Reordering
 
