@@ -208,6 +208,7 @@
         <div class="drop-menu">
           <button title="Preview, validate, copy, or download areas.yaml" on:click={() => { exportMenu = false; yamlOpen = true; }}>YAML — the finished areas.yaml…</button>
           <button title="Download full project backup including positions and templates" on:click={exportJson}>JSON — save project backup</button>
+          <button title="Export high-resolution PNG image of the visible network map" on:click={() => { exportMenu = false; window.dispatchEvent(new CustomEvent('export-graph-screenshot')); }}>Map image — high-res PNG visual…</button>
           <div class="drop-hint">JSON is your project save file (positions, groups, templates). YAML is the finished server config.</div>
         </div>
       {/if}
@@ -218,11 +219,11 @@
   </div>
   <div class="sp"></div>
   <div class="grp">
-    <label class="theme-picker" title="Switch interface colour theme (Dark Terminal or Warm Light)">
+    <label class="theme-picker" title="Switch interface colour theme (Dark Terminal or Light Terminal)">
       <span>Theme</span>
       <select value={$theme} title="Select colour theme" on:change={(e) => setTheme(e.target.value)}>
         <option value="dark">Dark Terminal</option>
-        <option value="light">Light (Slate)</option>
+        <option value="light">Light Terminal</option>
       </select>
     </label>
     <button on:click={() => (testOpen = true)} title="Walk through the live map like a player to verify exits">▶ Test mode</button>

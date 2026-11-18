@@ -15,6 +15,7 @@
   export let onTogglePanTool;
   export let onResetCamera = () => {};
   export let onCenterSelected = () => {};
+  export let onExportScreenshot = () => {};
   export let onToggleFocus;
   export let onSaveLayout;
   export let onApplyLayout;
@@ -24,16 +25,6 @@
 
   let layoutMenu = false;
   let layoutName = '';
-  let armSort = false;
-
-  function sortClick() {
-    if (!armSort) {
-      armSort = true;
-      return;
-    }
-    armSort = false;
-    onSortByGroup();
-  }
 
   function saveClick() {
     const name = layoutName;
@@ -89,6 +80,9 @@
   <button class="mini-btn" title="Center camera on selected area without changing zoom (C)" on:click={onCenterSelected}>
     ⌖ Center
   </button>
+  <button class="mini-btn" title="Export high-resolution screenshot of the visible map (PNG)" on:click={onExportScreenshot}>
+    📷 Snapshot
+  </button>
 
   <span class="drop-wrap">
     <button class="mini-btn" title="Save or restore named board layouts (node positions, groups, and images)" on:pointerdown|stopPropagation on:click|stopPropagation={() => (layoutMenu = !layoutMenu)}>Layouts ▾</button>
@@ -113,9 +107,9 @@
 
   <button
     class="mini-btn"
-    on:click={sortClick}
+    on:click={onSortByGroup}
     title="Reorder area IDs so group members hold consecutive IDs (useful for /zone_area)"
-  >{armSort ? 'Confirm sort IDs?' : 'Sort IDs'}</button>
+  >Sort IDs</button>
   <button class="mini-btn" title="Automatically arrange areas into clusters and fit the view" on:click={onArrange}>Auto-arrange</button>
 </div>
 

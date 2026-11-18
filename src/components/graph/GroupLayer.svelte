@@ -13,9 +13,32 @@
       on:contextmenu={(e) => onGroupMenu(e, g)}
       on:dblclick={(e) => onGroupDblClick(e, g)}
     >
-      <rect class="group-body" x={g.x} y={g.y} width={g.w} height={g.h} rx="6" />
-      <rect class="group-tab" x={g.x} y={g.y} width={Math.max(96, g.name.length * 7.5 + 22)} height="24" rx="5" />
-      <text class="group-name" x={g.x + 11} y={g.y + 16}>{g.name}</text>
+      <rect
+        class="group-body"
+        class:custom-color={!!g.color}
+        x={g.x}
+        y={g.y}
+        width={g.w}
+        height={g.h}
+        rx="6"
+        style={g.color ? `fill:color-mix(in srgb, ${g.color} 14%, var(--group-fill)); stroke:color-mix(in srgb, ${g.color} 80%, var(--group-stroke)); stroke-width:2px;` : ''}
+      />
+      <rect
+        class="group-tab"
+        class:custom-color={!!g.color}
+        x={g.x}
+        y={g.y}
+        width={Math.max(96, g.name.length * 7.5 + 22)}
+        height="24"
+        rx="5"
+        style={g.color ? `fill:color-mix(in srgb, ${g.color} 24%, var(--panel2)); stroke:color-mix(in srgb, ${g.color} 80%, var(--group-stroke)); stroke-width:1.5px;` : ''}
+      />
+      <text
+        class="group-name"
+        x={g.x + 11}
+        y={g.y + 16}
+        style={g.color ? `fill:color-mix(in srgb, ${g.color} 85%, var(--text-strong)); font-weight:700;` : ''}
+      >{g.name}</text>
     </g>
     <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
     <rect
@@ -31,14 +54,14 @@
   .group-body {
     fill: var(--group-fill);
     stroke: var(--group-stroke);
-    stroke-width: 1.4;
-    stroke-dasharray: 7 5;
+    stroke-width: 1.8;
+    stroke-dasharray: 8 5;
     cursor: grab;
   }
   .group-tab {
     fill: var(--panel2);
     stroke: var(--group-stroke);
-    stroke-width: 1.2;
+    stroke-width: 1.4;
   }
   .group-name {
     font-size: 12px;

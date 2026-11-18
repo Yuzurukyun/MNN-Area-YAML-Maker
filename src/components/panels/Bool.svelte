@@ -21,6 +21,6 @@
 
 <label class="tgl {changed ? '' : 'at-default'}" data-group={grp} title={full}>
   <input type="checkbox" checked={area[fkey]} on:change={toggle} />
-  <span class="gsym {grp}" title={M.GROUP_LABEL[grp]}>{M.GROUP_SYM[grp]}</span>
+  <span class="gsym {grp}" title={M.GROUP_LABEL[grp]}></span>
   <span class="fn"><b class:changed>{keyName}</b><span class="bdesc">{M.capFirst(apt)}</span></span>
 </label>

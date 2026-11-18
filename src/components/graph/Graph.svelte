@@ -1,7 +1,7 @@
 <script>
   // Connection map coordinator: camera (pan/zoom/fit/recenter), pointer gestures,
   // right-click menus, inline rename, saved layouts, and corkboard images.
-  import { onDestroy } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import {
     state,
     update,
@@ -31,9 +31,24 @@
   import ContextMenu from './ContextMenu.svelte';
   import RenameOverlay from './RenameOverlay.svelte';
   import NodeHoverCard from './NodeHoverCard.svelte';
+  import ConfirmModal from '../modals/ConfirmModal.svelte';
+
+  const COLOR_PALETTE = [
+    ['#ef4444', 'Red'],
+    ['#f97316', 'Orange'],
+    ['#f59e0b', 'Amber'],
+    ['#10b981', 'Green'],
+    ['#06b6d4', 'Teal'],
+    ['#3b82f6', 'Blue'],
+    ['#8b5cf6', 'Purple'],
+    ['#ec4899', 'Pink'],
+    ['#64748b', 'Slate'],
+  ];
 
   const NW = M.NODE_W;
   const NH = M.NODE_H;
+
+  let sortConfirmOpen = false;
 
   let svgElRef;
   let wrapEl;
@@ -270,7 +285,7 @@
     const cx = wrapEl.clientWidth / 2;
     const cy = wrapEl.clientHeight / 2;
     const before = { x: (cx - view.x) / view.k, y: (cy - view.y) / view.k };
-    const k = clamp(view.k * factor, 0.25, 2.5);
+    const k = clamp(view.k * factor, 0.08, 4.0);
     animateViewTo(cx - before.x * k, cy - before.y * k, k, 180);
   }
 
@@ -336,7 +351,7 @@
     const bh = Math.max(100, maxY - minY);
     const vw = wrapEl.clientWidth;
     const vh = wrapEl.clientHeight;
-    const k = clamp(Math.min(vw / bw, vh / bh), 0.25, 1.5);
+    const k = clamp(Math.min(vw / bw, vh / bh), 0.08, 2.0);
     const targetX = (vw - bw * k) / 2 - minX * k;
     const targetY = (vh - bh * k) / 2 - minY * k;
     if (smooth) {
@@ -357,6 +372,157 @@
     } else if ($cameraCommand.type === 'fit') {
       fitView(true);
     }
+  }
+
+  onMount(() => {
+    window.addEventListener('export-graph-screenshot', exportMapVisual);
+    return () => {
+      window.removeEventListener('export-graph-screenshot', exportMapVisual);
+    };
+  });
+
+  function exportMapVisual() {
+    if (!svgElRef || !P.areas.length) {
+      notify('No map content to export.', 'info');
+      return;
+    }
+
+    const visibleAreas = P.areas.filter((a) => !hiddenIds.has(a.id) && (!inFocus || focusIds.has(a.id)));
+    if (!visibleAreas.length) {
+      notify('No visible areas to capture.', 'info');
+      return;
+    }
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    visibleAreas.forEach((a) => {
+      minX = Math.min(minX, a.x);
+      minY = Math.min(minY, a.y);
+      maxX = Math.max(maxX, a.x + NW);
+      maxY = Math.max(maxY, a.y + NH);
+    });
+
+    (P.groups || []).forEach((g) => {
+      const hasMember = visibleAreas.some((a) => a.x >= g.x && a.x <= g.x + g.w && a.y >= g.y && a.y <= g.y + g.h);
+      if (hasMember) {
+        minX = Math.min(minX, g.x);
+        minY = Math.min(minY, g.y);
+        maxX = Math.max(maxX, g.x + g.w);
+        maxY = Math.max(maxY, g.y + g.h);
+      }
+    });
+
+    (P.images || []).forEach((im) => {
+      minX = Math.min(minX, im.x);
+      minY = Math.min(minY, im.y);
+      maxX = Math.max(maxX, im.x + im.w);
+      maxY = Math.max(maxY, im.y + im.h);
+    });
+
+    const pad = 64;
+    const cropX = Math.round(minX - pad);
+    const cropY = Math.round(minY - pad);
+    const cropW = Math.max(300, Math.round(maxX - minX + pad * 2));
+    const cropH = Math.max(200, Math.round(maxY - minY + pad * 2));
+
+    const clone = svgElRef.cloneNode(true);
+    clone.setAttribute('width', cropW);
+    clone.setAttribute('height', cropH);
+    clone.setAttribute('viewBox', `0 0 ${cropW} ${cropH}`);
+
+    const worldGroup = clone.querySelector('g[transform]');
+    if (worldGroup) {
+      worldGroup.setAttribute('transform', `translate(${-cropX}, ${-cropY})`);
+    }
+
+    clone.querySelectorAll('.node-port, .band-select, .temp-edge, .group-resize, .img-hdl, .title-hitbox').forEach((el) => el.remove());
+
+    const compRoot = window.getComputedStyle(document.documentElement);
+    const compBody = window.getComputedStyle(document.body);
+    const themeBg = compBody.backgroundColor || compRoot.getPropertyValue('--bg').trim() || '#0d0d12';
+
+    const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    bgRect.setAttribute('width', '100%');
+    bgRect.setAttribute('height', '100%');
+    bgRect.setAttribute('fill', themeBg);
+    clone.insertBefore(bgRect, clone.firstChild);
+
+    let cssText = '';
+    for (const sheet of document.styleSheets) {
+      try {
+        for (const rule of sheet.cssRules) {
+          cssText += rule.cssText + '\n';
+        }
+      } catch (_) {}
+    }
+
+    const varList = [
+      '--bg', '--panel', '--panel2', '--node-bg', '--node-border', '--text',
+      '--text-strong', '--dim', '--line', '--line2', '--accent', '--accent2',
+      '--edge-both', '--edge-oneway', '--edge-oneway-in', '--edge-sel',
+      '--group-fill', '--group-stroke', '--font-mono', '--radius', '--danger', '--ok'
+    ];
+    let resolvedVars = ':root, svg {\n';
+    varList.forEach((v) => {
+      const val = compRoot.getPropertyValue(v).trim();
+      if (val) resolvedVars += `  ${v}: ${val};\n`;
+    });
+    resolvedVars += '}\n';
+
+    const styleEl = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+    styleEl.textContent = resolvedVars + '\n' + cssText;
+    clone.insertBefore(styleEl, clone.firstChild);
+
+    const svgStr = new XMLSerializer().serializeToString(clone);
+    const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+    const blobUrl = URL.createObjectURL(svgBlob);
+
+    const fallbackDownloadSvg = () => {
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = 'MNN-Area-Map.svg';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
+      notify('Exported map visual to MNN-Area-Map.svg', 'ok');
+    };
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const scale = 2;
+        const canvas = document.createElement('canvas');
+        canvas.width = cropW * scale;
+        canvas.height = cropH * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(scale, scale);
+        ctx.drawImage(img, 0, 0);
+        URL.revokeObjectURL(blobUrl);
+
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const pngUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = pngUrl;
+            a.download = 'MNN-Area-Map.png';
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(pngUrl), 1500);
+            notify(`Exported map screenshot (${cropW}×${cropH} px) to MNN-Area-Map.png`, 'ok');
+          } else {
+            fallbackDownloadSvg();
+          }
+        }, 'image/png');
+      } catch (_) {
+        fallbackDownloadSvg();
+      }
+    };
+    img.onerror = () => {
+      fallbackDownloadSvg();
+    };
+    img.src = blobUrl;
   }
 
   /* ================= shared area actions ================= */
@@ -592,7 +758,7 @@
 
   // Spacious, dim world-locked dot grid: scales with zoom (64px at 100%,
   // larger when zoomed in, smaller when zoomed out) and moves with pan.
-  $: dotStep = 64 * view.k;
+  $: dotStep = Math.max(16, 64 * view.k);
   $: gridStyle = `background-size:${dotStep.toFixed(2)}px ${dotStep.toFixed(2)}px;background-position:${view.x.toFixed(2)}px ${view.y.toFixed(2)}px;`;
 
   /* ================= right-click menus ================= */
@@ -621,10 +787,22 @@
   function onNodeMenu(e, a) {
     update((s) => selectOnly(s, a.id), { skipHistory: true });
     openMenu(e, [
+      {
+        type: 'swatches',
+        label: 'Node colour',
+        current: a.color || '',
+        colors: COLOR_PALETTE,
+        onSelect: (c) => {
+          update((s) => {
+            const x = s.project.areas.find((ar) => ar.id === a.id);
+            if (x) x.color = c;
+          });
+          notify(c ? 'Changed node colour.' : 'Reset node colour.', 'ok');
+        },
+      },
       { label: 'Center camera here (C)', run: () => centerOnNode(a.id, true) },
-      { label: 'Attach image icon…', run: () => pickNodeImage(a) },
-      ...(a.image ? [{ label: 'Remove image icon', run: () => update((s) => { const x = s.project.areas.find(ar => ar.id === a.id); if (x) x.image = ''; notify('Removed node icon.', 'info'); }) }] : []),
-      ...(a.color ? [{ label: 'Reset node colour', run: () => update((s) => { const x = s.project.areas.find(ar => ar.id === a.id); if (x) x.color = ''; notify('Reset node colour.', 'info'); }) }] : []),
+      { label: 'Attach node image…', run: () => pickNodeImage(a) },
+      ...(a.image ? [{ label: 'Remove node image', run: () => update((s) => { const x = s.project.areas.find(ar => ar.id === a.id); if (x) x.image = ''; notify('Removed node image.', 'info'); }) }] : []),
       { label: 'Rename', run: () => startRename('area', a) },
       { label: 'Duplicate', run: () => duplicateFlow(a.id) },
       { label: 'Isolate neighbourhood', run: () => update((s) => { selectOnly(s, a.id); enterFocusView(s); }, { skipHistory: true }) },
@@ -639,6 +817,19 @@
 
   function onGroupMenu(e, g) {
     openMenu(e, [
+      {
+        type: 'swatches',
+        label: 'Group colour',
+        current: g.color || '',
+        colors: COLOR_PALETTE,
+        onSelect: (c) => {
+          update((s) => {
+            const gr = s.project.groups.find((x) => x.id === g.id);
+            if (gr) gr.color = c;
+          });
+          notify(c ? 'Changed group colour.' : 'Reset group colour.', 'ok');
+        },
+      },
       { label: 'Rename group', run: () => startRename('group', g) },
       { label: 'Delete group', danger: true, run: () => deleteGroup(g.id) },
     ]);
@@ -937,7 +1128,7 @@
     const mx = (e.clientX - r.left) / uiScale.value;
     const my = (e.clientY - r.top) / uiScale.value;
     const before = { x: (mx - view.x) / view.k, y: (my - view.y) / view.k };
-    const k = clamp(view.k * (e.deltaY < 0 ? 1.1 : 0.9), 0.25, 2.5);
+    const k = clamp(view.k * (e.deltaY < 0 ? 1.12 : 1 / 1.12), 0.08, 4.0);
     view = { k, x: mx - before.x * k, y: my - before.y * k };
   }
 
@@ -983,11 +1174,12 @@
   onTogglePanTool={() => (panTool = !panTool)}
   onResetCamera={resetCameraSmooth}
   onCenterSelected={centerOnSelectedSmooth}
+  onExportScreenshot={exportMapVisual}
   onToggleFocus={toggleFocus}
   onSaveLayout={saveLayout}
   onApplyLayout={applyLayout}
   onDeleteLayout={deleteLayout}
-  onSortByGroup={sortByGroup}
+  onSortByGroup={() => (sortConfirmOpen = true)}
   onArrange={arrange}
 />
 
@@ -1062,7 +1254,8 @@
         {onNodeDown}
         {onPortDown}
         {onNodeMenu}
-        onNodeDblClick={(e, a) => { e.stopPropagation(); startRename('area', a); }}
+        onNodeDblClick={(e, a) => { e.stopPropagation(); centerOnNode(a.id, true); }}
+        onTitleDblClick={(e, a) => { e.stopPropagation(); startRename('area', a); }}
         onNodeEnter={handleNodeEnter}
         onNodeLeave={handleNodeLeave}
       />
@@ -1113,6 +1306,24 @@
 
   <input type="file" accept="image/*" hidden bind:this={imageFile} on:change={onImageFile} />
   <input type="file" accept="image/*" hidden bind:this={nodeImageFile} on:change={onNodeImageFile} />
+
+  {#if sortConfirmOpen}
+    <ConfirmModal
+      title="Reorder Area IDs by Groups?"
+      body={`This will reorder the area list in your project so that areas enclosed in each spatial board group are assigned consecutive ID numbers (e.g. #1–#5 for Group 1, #6–#10 for Group 2).
+
+• Area 0 (Hub) remains at ID 0.
+• Areas outside of groups will follow afterwards.
+• Any afk_sendto targets are automatically remapped to their new positions.
+• All connection lines and links are preserved.`}
+      confirmLabel="Reorder Area IDs"
+      onConfirm={() => {
+        sortConfirmOpen = false;
+        sortByGroup();
+      }}
+      onCancel={() => (sortConfirmOpen = false)}
+    />
+  {/if}
 </div>
 
 <style>

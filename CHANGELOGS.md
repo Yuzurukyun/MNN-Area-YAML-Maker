@@ -151,51 +151,76 @@
 - `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **69 passed, 0 failed** (including camera command bus tests).
 - `npm run build:both`: rebuilt `export/yuzu_area_maker.html`, `export/yuzu_area_maker_nomusic.html`, and `docs/index.html`.
 
-## v2.0.5 — Slate Light Theme, Custom Node Colors & Icons, Hover Summaries, Multi-Reordering & Settings Cog
+## v2.0.5 — Light Terminal Theme, Custom Node & Group Colors, Full Map Screenshots, Hover Summaries & Multi-Reordering
 
-### Light Theme Redo (Slate Studio)
+### Theme Naming & Inspector Alignment Fixes
 
-- **Refined, glare-free canvas palette (`src/styles/base.css`):**
-    - Replaced the bright ivory background with a calm, darker slate-grey canvas (`--bg: #d5dbe4`, `--outer-bg: #cbd1da`) that prevents eye fatigue during long mapping sessions while making white node cards pop cleanly.
-    - Upgraded surfaces, hairlines (`#bcc5d2` / `#93a0b2`), and high-legibility ink (`#181c22` / `#080b0f`), with crisp crimson accents (`#ce3421`).
+- **Renamed theme to "Light Terminal" (`Header.svelte`):** Matched terminology with `Dark Terminal`.
+- **Inspector square indicator separation (`Field.svelte`, `Bool.svelte`, `panels.css`):**
+    - Separated the group square indicator from the key label into dedicated flex columns (`.fline { display: flex; align-items: flex-start; gap: 7px; }`), preventing the square from breaking or wrapping awkwardly onto line 2.
+    - Sized square to 12px with 2.5px rounded corners matching the text line height.
+- **Node image preview section (`Inspector.svelte`):**
+    - Renamed section to **Node Image** and removed descriptive text.
+    - Container now fills the section width with downscaled natural aspect-ratio image display.
+
+### Board Groups Colouring & High Visibility
+
+- **Significantly increased group visibility (`base.css`, `GroupLayer.svelte`):**
+    - Boosted dark theme group fill from invisible 1.5% to 5% with distinct `#525263` stroke; boosted light theme group fill to 18% with `#64748b` stroke.
+- **Group custom colours (`GroupLayer.svelte`, `ContextMenu.svelte`, `Graph.svelte`):**
+    - Right-clicking any spatial group now presents an interactive color swatch palette (Red, Orange, Amber, Green, Teal, Blue, Purple, Pink, Slate) plus custom color picker `🎨` and Reset.
+    - Custom colors dynamically tint the group body, tab, and header label, and persist in JSON project exports.
+
+### Extended Zoom Range & Node Double-Click Behaviors
+
+- **Extended zoom in/out boundaries (`Graph.svelte`):**
+    - Zoom bounds widened from `0.25× – 2.5×` to `0.08× – 4.0×` (over 3× farther zoom out for large 47+ area networks, and close-up zoom in for detailed inspection).
+    - Dot grid background step is clamped to prevent excessive dot density on extreme zoom-out.
+- **Dual double-click actions on area nodes (`NodeLayer.svelte`, `Graph.svelte`):**
+    - Double-clicking the top name/title section opens the inline rename overlay.
+    - Double-clicking anywhere else on the node card smooth-centers the camera on that node.
+
+### Full Graph Screenshot / Map Visual Export
+
+- **High-resolution map image snapshot (`Graph.svelte`, `GraphToolbar.svelte`, `Header.svelte`):**
+    - Added one-click **📷 Snapshot** button in the graph toolbar and **Map image — high-res PNG visual…** in the `Export ▾` dropdown.
+    - Computes bounding box of all visible nodes, lines, groups, and images (excluding hidden or non-focused nodes), embeds active theme styles and background, and exports a high-definition 2× PNG image (`MNN-Area-Map.png`) with clean fallback to SVG.
+
+### Area List Dropdown Sizing & Sort IDs Confirmation Modal
+
+- **Compact index dropdown width (`panels.css`):**
+    - Constrained `.idx-select` to 34–50px so it fits 3 digits (`#47`, `#999`) without expanding across the row, keeping area names prominent.
+- **Sort IDs confirmation modal (`Graph.svelte`, `GraphToolbar.svelte`):**
+    - Replaced the armed-button toggle with a full confirmation modal explaining that group members will be assigned consecutive ID numbers, `afk_sendto` links will be safely remapped, Hub remains at ID 0, and allowing cancellation.
 
 ### Custom Node Colors & Image Icons
 
-- **Persistent custom node colours (`src/lib/model.js`, `NodeLayer.svelte`, `Inspector.svelte`):**
-    - Added free-form node colouring via quick preset swatches (Red, Orange, Amber, Green, Teal, Blue, Purple, Pink, Slate) and a custom color picker in the Inspector header and node context menu.
-    - Custom colors tint the node accent bar, border, selection glow, and card fill using `color-mix`, persisting seamlessly across theme changes without reverting.
+- **Persistent custom node colours (`src/lib/model.js`, `NodeLayer.svelte`, `Inspector.svelte`, `ContextMenu.svelte`):**
+    - Added free-form node colouring via quick preset swatches in both the Inspector and right-click context menu.
+    - Custom colors persist seamlessly across themes.
 - **Node 1:1 image icons with automatic cropping (`src/lib/model.js`, `NodeLayer.svelte`, `Inspector.svelte`):**
-    - Areas can now have an image icon attached via file upload in the Inspector or node context menu.
-    - Displayed as a crisp 1:1 square icon on the node using SVG `<clipPath>` and `preserveAspectRatio="xMidYMid slice"`, with automatic text offset.
+    - Areas can have an image icon attached via file upload, cropped 1:1 on the node card.
 
 ### Node Hover Summary Popup
 
 - **Interactive area summary card (`src/components/graph/NodeHoverCard.svelte`, `Graph.svelte`):**
-    - Hovering any node on the canvas reveals a glassmorphic summary card displaying the full area name, #ID badge, fixed-size image preview, background/TOD count, link summaries (Reachable, Visible, Scream), active flags (Lobby, Private, Indoors, Weather, AFK), and description snippet.
-    - Position is viewport-clamped so cards stay fully visible without obscuring canvas interactions.
+    - Hovering any node on the canvas reveals a glassmorphic summary card displaying the full area name, #ID badge, fixed-size image preview, background/TOD count, link summaries, active flags, and description snippet.
 
 ### Area List Multi-Selection & Quick Index Reordering
 
 - **Multi-select reordering (`src/lib/model.js`, `AreaList.svelte`):**
-    - Added `Ctrl+click` / `Cmd+click` toggle and `Shift+click` range selection to select multiple areas at once in the left sidebar.
-    - Clicking `↑` / `↓` or dragging moves all selected areas together while preserving relative ordering and remapping `afk_sendto` links.
+    - `Ctrl+click` / `Cmd+click` and `Shift+click` to select multiple areas at once; `↑` / `↓` moves all selected areas together.
 - **Interactive index position dropdown (`AreaList.svelte`):**
-    - Each movable area's index badge (`#1` to `#N-1`) is now an interactive dropdown allowing instant jump-reordering to any destination position in the project.
+    - Jump-reorder any area to another index position.
 
 ### Settings Cog & Canvas Customization
 
 - **Settings modal (`src/components/modals/SettingsModal.svelte`, `Header.svelte`, `src/lib/state.js`, `src/styles/graph.css`):**
-    - Added a `⚙ Settings` button in the header with persistent options in `localStorage`:
-        a) **Auto-arrange node separation:** adjustable slider from `0.5×` to `2.5×` (default `1.0×`).
-        b) **Connection line thickness:** adjustable slider from `1.0px` to `6.0px` (default `1.6px`).
-        c) **Connection line glow:** adjustable neon halo slider from `0px` (off) to `14px`, complete with live SVG preview.
-
-### Inspector Importance Squares
-
-- **Clearer, font-height group squares (`src/styles/panels.css`):**
-    - Replaced the tiny 9px symbol with a solid geometric square matching the 11px font x-height (`width: 11px; height: 11px; border-radius: 2px`) in vibrant emerald (`common`), amber (`uncommon`), and slate (`rarely`).
+    - Auto-arrange node separation slider (`0.5×` to `2.5×`).
+    - Connection line thickness slider (`1.0px` to `6.0px`).
+    - Connection line neon glow slider (`0px` to `14px`).
 
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **73 passed, 0 failed** (including multi-area reordering and afk remapping).
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **73 passed, 0 failed**.
 - `npm run build:both`: rebuilt `export/yuzu_area_maker.html`, `export/yuzu_area_maker_nomusic.html`, and `docs/index.html`.

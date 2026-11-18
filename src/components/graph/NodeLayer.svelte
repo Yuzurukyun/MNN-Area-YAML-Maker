@@ -20,6 +20,7 @@
   export let onPortDown;
   export let onNodeMenu;
   export let onNodeDblClick;
+  export let onTitleDblClick = () => {};
   export let onNodeEnter = () => {};
   export let onNodeLeave = () => {};
 </script>
@@ -93,7 +94,26 @@
             />
             <rect x="9" y="9" width="46" height="46" rx="4" fill="none" stroke="var(--line2)" stroke-width="1" />
           {/if}
-          <text class="title" x={xOff} y="21" font-size="13" font-weight="650">{titleText(a, idx, hasImg)}</text>
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <rect
+            class="title-hitbox"
+            x="0"
+            y="0"
+            width={NW}
+            height="27"
+            rx="5"
+            fill="transparent"
+            style="cursor:pointer"
+            on:dblclick|stopPropagation={(e) => onTitleDblClick(e, a)}
+          />
+          <text
+            class="title"
+            x={xOff}
+            y="21"
+            font-size="13"
+            font-weight="650"
+            on:dblclick|stopPropagation={(e) => onTitleDblClick(e, a)}
+          >{titleText(a, idx, hasImg)}</text>
           <text x={xOff} y="39" font-size="10.5" class="sub">{bgText(a, hasImg)}</text>
           {#if tags}
             <text x={xOff} y="57" font-size="9.5" font-weight="600" class="tags">{tags}</text>

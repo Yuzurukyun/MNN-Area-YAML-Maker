@@ -221,24 +221,21 @@
       </div>
 
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:9px">
-        <span class="hint" title="1:1 image icon displayed directly on the area node">Node Icon</span>
+        <span class="hint" title="Image displayed on the area node and hover preview">Node Image</span>
         {#if a.image}
           <div style="display:flex;gap:4px">
-            <button class="mini-btn" title="Replace area icon" on:click={() => iconInput.click()}>Replace</button>
-            <button class="mini-btn" title="Remove area icon" on:click={() => withArea((s, ar) => (ar.image = ''))}>✕</button>
+            <button class="mini-btn" title="Replace area image" on:click={() => iconInput.click()}>Replace</button>
+            <button class="mini-btn" title="Remove area image" on:click={() => withArea((s, ar) => (ar.image = ''))}>✕</button>
           </div>
         {/if}
       </div>
       {#if a.image}
-        <div class="icon-preview-row" style="display:flex;gap:8px;align-items:center;margin-top:6px">
-          <div style="width:44px;height:44px;border-radius:4px;overflow:hidden;border:1px solid var(--line2);background:var(--input-bg);flex:none">
-            <img src={a.image} alt="Icon preview" style="width:100%;height:100%;object-fit:cover;display:block" />
-          </div>
-          <span class="hint" style="font-size:10.5px">1:1 square icon shown on node card & hover summary</span>
+        <div class="node-image-preview" style="margin-top:6px;border-radius:5px;overflow:hidden;border:1px solid var(--line2);background:var(--input-bg);display:flex;align-items:center;justify-content:center;max-height:180px">
+          <img src={a.image} alt="Node preview" style="max-width:100%;max-height:180px;width:auto;height:auto;object-fit:contain;display:block" />
         </div>
       {:else}
         <div style="margin-top:5px">
-          <button class="mini-btn" style="width:100%;padding:4px" on:click={() => iconInput.click()}>＋ Attach Icon / Image</button>
+          <button class="mini-btn" style="width:100%;padding:4px" on:click={() => iconInput.click()}>＋ Attach Node Image</button>
         </div>
       {/if}
       <input type="file" accept="image/*" hidden bind:this={iconInput} on:change={onIconUpload} />

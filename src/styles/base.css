@@ -53,8 +53,8 @@
   --edge-sel: #ff6a52;
   --tag-bg: #121217;
   --tag-text: #f2dcd6;
-  --group-fill: rgba(255, 255, 255, 0.015);
-  --group-stroke: #3d3d48;
+  --group-fill: rgba(255, 255, 255, 0.05);
+  --group-stroke: #525263;
   --img-frame: rgba(235, 231, 223, 0.28);
 
   /* Elevation */
@@ -111,8 +111,8 @@
   --edge-sel: #ce3421;
   --tag-bg: #ffffff;
   --tag-text: #181c22;
-  --group-fill: rgba(100, 116, 139, 0.08);
-  --group-stroke: #8d9ba8;
+  --group-fill: rgba(148, 163, 184, 0.18);
+  --group-stroke: #64748b;
   --img-frame: rgba(30, 41, 59, 0.4);
 
   --scrim: rgba(15, 23, 42, 0.48);
