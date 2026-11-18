@@ -352,5 +352,36 @@ M.autoArrange(hubGroupProj);
 const memsHub = M.groupMembers(hubGroupProj, hubGroupProj.groups[0]).map((a) => a.area);
 eq(memsHub, ['Hub', 'Lobby 1', 'Lobby 2'], 'autoArrange includes Hub when Hub is inside a group');
 
+/* ---- sortInsideGroup: false preserves relative node offsets and group shape ---- */
+const shapeProj = {
+  areas: ['Hub', 'C1', 'C2'].map(M.blankArea),
+  groups: [{ id: 'gc', name: 'Custom L-Shape', x: 500, y: 300, w: 550, h: 420 }],
+};
+shapeProj.areas[0].x = 40; shapeProj.areas[0].y = 40;
+shapeProj.areas[1].x = 540; shapeProj.areas[1].y = 350; // offset (40, 50)
+shapeProj.areas[2].x = 720; shapeProj.areas[2].y = 480; // offset (220, 180)
+
+M.autoArrange(shapeProj, { sortInsideGroup: false });
+const gCustom = shapeProj.groups[0];
+eq(gCustom.w, 550, 'sortInsideGroup: false preserves custom group width');
+eq(gCustom.h, 420, 'sortInsideGroup: false preserves custom group height');
+eq(shapeProj.areas[1].x - gCustom.x, 40, 'preserves exact relative offset X for node 1');
+eq(shapeProj.areas[1].y - gCustom.y, 50, 'preserves exact relative offset Y for node 1');
+eq(shapeProj.areas[2].x - gCustom.x, 220, 'preserves exact relative offset X for node 2');
+eq(shapeProj.areas[2].y - gCustom.y, 180, 'preserves exact relative offset Y for node 2');
+
+/* ---- arrangeGroupsOnly: true leaves ungrouped areas untouched ---- */
+const groupsOnlyProj = {
+  areas: ['Hub', 'G1', 'G2', 'Ungrouped'].map(M.blankArea),
+  groups: [{ id: 'gonly', name: 'Only Group', x: 400, y: 300, w: 400, h: 300 }],
+};
+groupsOnlyProj.areas[1].x = 440; groupsOnlyProj.areas[1].y = 350;
+groupsOnlyProj.areas[2].x = 540; groupsOnlyProj.areas[2].y = 350;
+groupsOnlyProj.areas[3].x = 888; groupsOnlyProj.areas[3].y = 777; // loose area
+
+M.autoArrange(groupsOnlyProj, { arrangeGroupsOnly: true });
+eq(groupsOnlyProj.areas[3].x, 888, 'arrangeGroupsOnly: true leaves ungrouped X untouched');
+eq(groupsOnlyProj.areas[3].y, 777, 'arrangeGroupsOnly: true leaves ungrouped Y untouched');
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

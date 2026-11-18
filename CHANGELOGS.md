@@ -163,11 +163,14 @@
     - Renamed section to **Node Image** and removed descriptive text.
     - Container now fills the section width with downscaled natural aspect-ratio image display.
 
-### Board Groups Colouring, Visibility & /zone Range Commands
+### Board Groups Colouring, Visibility, Auto-arrange Options & /zone Range Commands
 
-- **Group-preserving Auto-Arrange (`src/lib/arrange.js`):**
-    - Fixed an issue where running Auto-arrange ignored board groups, causing member nodes to fly to default cluster coordinates and leave their group empty behind.
-    - Auto-arrange now treats spatial groups as first-class containers: member areas are neatly arranged in sequential index order inside their respective group box, each group boundary automatically resizes and frames around them with comfortable padding and tab clearance, and groups are arranged in clean shelves across the canvas without collisions.
+- **Auto-arrange Custom Group Shape Preservation (`src/lib/arrange.js`, `GraphToolbar.svelte`, `SettingsModal.svelte`, `state.js`):**
+    - **"Sort inside group" toggle (`sortInsideGroup`, default `false`):** When turned off (default), auto-arrange preserves the custom internal spatial shape, dimensions, and relative offsets of member nodes inside groups—translating the entire group container as a cohesive unit into clean shelf positions without disturbing manual layout. When turned on, member nodes are re-gridded sequentially inside the group container.
+    - **"Fit view after arrange" toggle (`arrangeFitView`, default `true`):** Controls whether camera auto-zooms and centers smoothly after arranging.
+    - **"Arrange groups only" toggle (`arrangeGroupsOnly`, default `false`):** Only repositions spatial group containers, leaving all loose / ungrouped areas untouched.
+    - **Toolbar split-button & Settings modal (`GraphToolbar.svelte`, `SettingsModal.svelte`):** Added an interactive `[Auto-arrange] [▾]` split button directly on the canvas toolbar with quick toggle checkboxes and live hints, mirrored inside the Settings Cog modal.
+    - **Hub node preservation:** Grouped nodes (including the Hub if inside a group) maintain group membership and relative position; ungrouped Hub cleanly anchors to canvas margin.
 - **Group `/zone` range command copy blocks (`ContextMenu.svelte`, `Graph.svelte`):**
     - Right-clicking any spatial group now inspects its member area indices and provides two instant copy-paste code blocks:
         1. Just the range: `<lowest>, <highest>` (e.g. `4, 12`).
@@ -230,5 +233,5 @@
 
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **73 passed, 0 failed**.
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **93 passed, 0 failed**.
 - `npm run build:both`: rebuilt `export/yuzu_area_maker.html`, `export/yuzu_area_maker_nomusic.html`, and `docs/index.html`.

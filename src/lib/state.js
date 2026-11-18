@@ -85,9 +85,12 @@ export function setTheme(mode) {
 /* ================= editor & canvas settings ================= */
 const SETTINGS_KEY = 'areamaker-settings';
 export const DEFAULT_SETTINGS = {
-  arrangeSeparation: 1.0, // multiplier, default 1.0
-  edgeThickness: 1.6,     // px, default 1.6
-  edgeGlow: 0,            // px, default 0
+  arrangeSeparation: 1.0,  // multiplier, default 1.0
+  edgeThickness: 1.6,      // px, default 1.6
+  edgeGlow: 0,             // px, default 0
+  sortInsideGroup: false,  // bool, default false (preserves custom internal group layout & shape)
+  arrangeFitView: true,    // bool, default true (auto-fits camera after arrange)
+  arrangeGroupsOnly: false,// bool, default false (only move groups, leaving loose areas untouched)
 };
 
 function loadSettings() {

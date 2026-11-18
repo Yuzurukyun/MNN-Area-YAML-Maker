@@ -58,6 +58,45 @@
           />
           <span class="range-bound">2.5× Spacious</span>
         </div>
+
+        <div style="display:flex;flex-direction:column;gap:7px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line2)">
+          <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+            <input
+              type="checkbox"
+              style="margin-top:2px;cursor:pointer"
+              checked={$settings.sortInsideGroup}
+              on:change={(e) => updateSettings((s) => (s.sortInsideGroup = e.target.checked))}
+            />
+            <div>
+              <b style="font-size:12px;color:var(--text-strong)">Sort inside group</b>
+              <div class="hint" style="margin-top:1px">Re-aligns member nodes into a compact grid. When unchecked (default), preserves your custom internal group layout and shape.</div>
+            </div>
+          </label>
+          <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+            <input
+              type="checkbox"
+              style="margin-top:2px;cursor:pointer"
+              checked={$settings.arrangeFitView}
+              on:change={(e) => updateSettings((s) => (s.arrangeFitView = e.target.checked))}
+            />
+            <div>
+              <b style="font-size:12px;color:var(--text-strong)">Fit view after arrange</b>
+              <div class="hint" style="margin-top:1px">Automatically zoom and center the camera on the content after arranging.</div>
+            </div>
+          </label>
+          <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+            <input
+              type="checkbox"
+              style="margin-top:2px;cursor:pointer"
+              checked={$settings.arrangeGroupsOnly}
+              on:change={(e) => updateSettings((s) => (s.arrangeGroupsOnly = e.target.checked))}
+            />
+            <div>
+              <b style="font-size:12px;color:var(--text-strong)">Arrange groups only</b>
+              <div class="hint" style="margin-top:1px">Only repositions group containers, leaving ungrouped areas where they currently sit.</div>
+            </div>
+          </label>
+        </div>
       </div>
 
       <!-- 2. Connection Line Thickness -->

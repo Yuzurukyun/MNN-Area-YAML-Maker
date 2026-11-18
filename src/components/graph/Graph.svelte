@@ -1184,8 +1184,16 @@
   }
 
   function arrange() {
-    update((s) => M.autoArrange(s.project, { spacing: $settings.arrangeSeparation }));
-    fitView();
+    update((s) =>
+      M.autoArrange(s.project, {
+        spacing: $settings.arrangeSeparation,
+        sortInsideGroup: $settings.sortInsideGroup,
+        arrangeGroupsOnly: $settings.arrangeGroupsOnly,
+      })
+    );
+    if ($settings.arrangeFitView) {
+      fitView();
+    }
   }
 
   function setTab(t) {

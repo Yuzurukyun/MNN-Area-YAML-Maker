@@ -1,5 +1,5 @@
 <script>
-  import { state, update } from '../../lib/state.js';
+  import { state, update, settings, updateSettings } from '../../lib/state.js';
 
   export let lt;
   export let hideHub;
@@ -25,6 +25,7 @@
 
   let layoutMenu = false;
   let layoutName = '';
+  let arrangeMenuOpen = false;
 
   function saveClick() {
     const name = layoutName;
@@ -33,7 +34,7 @@
   }
 </script>
 
-<svelte:window on:pointerdown={() => (layoutMenu = false)} />
+<svelte:window on:pointerdown={() => { layoutMenu = false; arrangeMenuOpen = false; }} />
 
 <div id="graphBar">
   <div class="tab-group" title="Choose which link type to display and edit on the map">
@@ -110,10 +111,148 @@
     on:click={onSortByGroup}
     title="Reorder area IDs so group members hold consecutive IDs (useful for /zone_area)"
   >Sort IDs</button>
-  <button class="mini-btn" title="Automatically arrange areas into clusters and fit the view" on:click={onArrange}>Auto-arrange</button>
+
+  <span class="drop-wrap arrange-wrap">
+    <button
+      class="mini-btn arrange-btn"
+      title="Automatically arrange areas and groups (click ▾ for options)"
+      on:click={onArrange}
+    >Auto-arrange</button>
+    <button
+      class="mini-btn arrange-caret {$settings.sortInsideGroup || $settings.arrangeGroupsOnly ? 'active-opt' : ''}"
+      title="Auto-arrange options (group sorting, camera fit)"
+      on:pointerdown|stopPropagation
+      on:click|stopPropagation={() => (arrangeMenuOpen = !arrangeMenuOpen)}
+    >▾</button>
+
+    {#if arrangeMenuOpen}
+      <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+      <div class="drop-menu arrange-menu" on:pointerdown|stopPropagation on:click|stopPropagation>
+        <div class="arrange-menu-title">Auto-arrange Options</div>
+
+        <label class="arrange-check-row" title="Sort nodes inside groups into a grid. Off preserves custom internal layout & shape.">
+          <input
+            type="checkbox"
+            checked={$settings.sortInsideGroup}
+            on:change={(e) => updateSettings((s) => (s.sortInsideGroup = e.target.checked))}
+          />
+          <div class="check-text">
+            <b>Sort inside group</b>
+            <span class="check-desc">{$settings.sortInsideGroup ? 'Grids nodes inside group' : 'Preserves custom internal shape'}</span>
+          </div>
+        </label>
+
+        <label class="arrange-check-row" title="Automatically zoom and center the camera after arranging">
+          <input
+            type="checkbox"
+            checked={$settings.arrangeFitView}
+            on:change={(e) => updateSettings((s) => (s.arrangeFitView = e.target.checked))}
+          />
+          <div class="check-text">
+            <b>Fit view after arrange</b>
+            <span class="check-desc">Smooth camera zoom to fit content</span>
+          </div>
+        </label>
+
+        <label class="arrange-check-row" title="Only reposition group containers, leaving loose areas untouched">
+          <input
+            type="checkbox"
+            checked={$settings.arrangeGroupsOnly}
+            on:change={(e) => updateSettings((s) => (s.arrangeGroupsOnly = e.target.checked))}
+          />
+          <div class="check-text">
+            <b>Arrange groups only</b>
+            <span class="check-desc">Leaves ungrouped areas untouched</span>
+          </div>
+        </label>
+
+        <div class="arrange-menu-action">
+          <button class="primary mini-btn" style="width:100%" on:click={() => { arrangeMenuOpen = false; onArrange(); }}>
+            Run Auto-arrange
+          </button>
+        </div>
+      </div>
+    {/if}
+  </span>
 </div>
 
 <style>
+  .arrange-wrap {
+    display: inline-flex;
+    align-items: center;
+  }
+  .arrange-btn {
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    border-right: none !important;
+  }
+  .arrange-caret {
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    padding: 0 6px !important;
+    font-size: 10px !important;
+  }
+  .arrange-caret.active-opt {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--sel);
+    font-weight: 700;
+  }
+  .arrange-menu {
+    right: 0;
+    left: auto;
+    width: 270px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .arrange-menu-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--dim);
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 4px;
+    margin-bottom: 2px;
+  }
+  .arrange-check-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: var(--radius);
+    transition: background 0.1s ease;
+  }
+  .arrange-check-row:hover {
+    background: var(--hover);
+  }
+  .arrange-check-row input {
+    margin-top: 2px;
+    flex: none;
+    cursor: pointer;
+  }
+  .arrange-check-row .check-text {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    line-height: 1.25;
+  }
+  .arrange-check-row b {
+    font-size: 11.5px;
+    color: var(--text-strong);
+  }
+  .arrange-check-row .check-desc {
+    font-size: 10px;
+    color: var(--dim);
+  }
+  .arrange-menu-action {
+    border-top: 1px solid var(--line);
+    padding-top: 6px;
+    margin-top: 2px;
+  }
   .sep {
     width: 1px;
     height: 18px;
