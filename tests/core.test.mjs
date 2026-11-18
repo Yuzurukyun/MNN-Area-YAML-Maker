@@ -258,6 +258,17 @@ eq(wslReport.errors, [], 'bundled wsl_ch3.yaml parses with no errors');
 eq(wslReport.warnings, [], 'bundled wsl_ch3.yaml parses with no warnings');
 eq(wslReport.areas.length, 47, 'bundled wsl_ch3.yaml has 47 areas');
 
+/* ---- reorderAreas and moveAreasDelta multi-select reordering ---- */
+const multiProj = { areas: ['Hub', 'A', 'B', 'C', 'D', 'E'].map(M.blankArea) };
+multiProj.areas[5].afk_sendto = 2; // E -> B
+M.moveAreasDelta(multiProj, [2, 3], -1); // B and C move up by 1
+eq(multiProj.areas.map((a) => a.area), ['Hub', 'B', 'C', 'A', 'D', 'E'], 'moveAreasDelta moves multiple items up');
+eq(multiProj.areas[5].afk_sendto, 1, 'afk_sendto remapped when target moves');
+M.moveAreasDelta(multiProj, [1, 2], 1); // B and C move back down by 1
+eq(multiProj.areas.map((a) => a.area), ['Hub', 'A', 'B', 'C', 'D', 'E'], 'moveAreasDelta moves multiple items down');
+M.reorderAreas(multiProj, [1, 4], 2); // move A (1) and D (4) to start at index 2
+eq(multiProj.areas.map((a) => a.area), ['Hub', 'B', 'A', 'D', 'C', 'E'], 'reorderAreas moves multiple items to explicit target index');
+
 /* ---- camera commands ---- */
 let lastCmd = null;
 const unsub = cameraCommand.subscribe((v) => (lastCmd = v));

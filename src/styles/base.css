@@ -66,57 +66,57 @@
   --font-mono: "JetBrains Mono", "Cascadia Code", "Cascadia Mono", "SF Mono", ui-monospace, Consolas, "Liberation Mono", monospace;
 }
 
-/* Warm Paper — low-glare ivory surfaces, espresso ink, terracotta accent */
+/* Slate Studio light — darker/greyer canvas with no glare, crisp charcoal ink, crimson accent */
 :root[data-theme="light"] {
   color-scheme: light;
 
-  --outer-bg: #e6e1d6;
-  --bg: #f1ede4;
-  --panel: #f8f5ee;
-  --panel2: #fffdf8;
-  --hover: #f0ebe1;
+  --outer-bg: #cbd1da;
+  --bg: #d5dbe4;
+  --panel: #e6ebf2;
+  --panel2: #f3f6fa;
+  --hover: #d2d9e3;
   --input-bg: #ffffff;
 
-  --line: #e0d9cc;
-  --line2: #c4baa8;
+  --line: #bcc5d2;
+  --line2: #93a0b2;
 
-  --text: #2a2622;
-  --ink: #2a2622;
-  --text-strong: #14110e;
-  --dim: #6e665b;
-  --muted: #6e665b;
-  --faint: #a39a8c;
+  --text: #181c22;
+  --ink: #181c22;
+  --text-strong: #080b0f;
+  --dim: #4e5868;
+  --muted: #4e5868;
+  --faint: #6e798a;
 
-  --accent: #c4432b;
-  --accent2: #9e321e;
-  --accent-solid: #c4432b;
-  --accent-solid-hover: #a93720;
-  --sel: #f7e6e0;
-  --glow: rgba(196, 67, 43, 0.16);
-  --ring: rgba(196, 67, 43, 0.38);
+  --accent: #ce3421;
+  --accent2: #ab2211;
+  --accent-solid: #ce3421;
+  --accent-solid-hover: #b52614;
+  --sel: #fae4e1;
+  --glow: rgba(206, 52, 33, 0.22);
+  --ring: rgba(206, 52, 33, 0.45);
 
-  --warn: #a8690c;
-  --danger: #c4352a;
-  --ok: #2f7d47;
+  --warn: #b45309;
+  --danger: #dc2626;
+  --ok: #15803d;
 
-  --grid-dot: #d9d1c3;
-  --vignette: rgba(120, 100, 70, 0.1);
-  --node-bg: #fffdf8;
-  --node-stroke: #cdc3b2;
-  --node-shadow: rgba(80, 62, 38, 0.12);
-  --node-multi: #c86d5b;
-  --edge-both: #8a8275;
-  --edge-oneway: #c4352a;
-  --edge-oneway-in: #b8740f;
-  --edge-sel: #c4432b;
-  --tag-bg: #fffdf8;
-  --tag-text: #3a2c27;
-  --group-fill: rgba(120, 105, 80, 0.05);
-  --group-stroke: #b5ab99;
-  --img-frame: rgba(60, 52, 42, 0.3);
+  --grid-dot: #b3bcc9;
+  --vignette: rgba(15, 23, 42, 0.14);
+  --node-bg: #ffffff;
+  --node-stroke: #b0bac7;
+  --node-shadow: rgba(15, 23, 42, 0.12);
+  --node-multi: #d97706;
+  --edge-both: #64748b;
+  --edge-oneway: #dc2626;
+  --edge-oneway-in: #d97706;
+  --edge-sel: #ce3421;
+  --tag-bg: #ffffff;
+  --tag-text: #181c22;
+  --group-fill: rgba(100, 116, 139, 0.08);
+  --group-stroke: #8d9ba8;
+  --img-frame: rgba(30, 41, 59, 0.4);
 
-  --scrim: rgba(40, 34, 26, 0.38);
-  --shadow: rgba(60, 48, 30, 0.14);
+  --scrim: rgba(15, 23, 42, 0.48);
+  --shadow: rgba(15, 23, 42, 0.18);
 }
 
 /* ---------- Reset & document ---------- */

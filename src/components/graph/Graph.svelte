@@ -15,6 +15,7 @@
     commitTransaction,
     notify,
     cameraCommand,
+    settings,
   } from '../../lib/state.js';
   import * as M from '../../lib/core.js';
   import { clamp } from '../../lib/util.js';
@@ -29,6 +30,7 @@
   import ImageLayer from './ImageLayer.svelte';
   import ContextMenu from './ContextMenu.svelte';
   import RenameOverlay from './RenameOverlay.svelte';
+  import NodeHoverCard from './NodeHoverCard.svelte';
 
   const NW = M.NODE_W;
   const NH = M.NODE_H;
@@ -50,6 +52,11 @@
   let editing = null;
   let imageFile;
   let imageAt = null;
+  let nodeImageFile;
+  let nodeImageTarget = null;
+  let hoveredArea = null;
+  let hoverPos = { left: 0, top: 0 };
+  let hoverTimer = null;
 
   $: P = $state.project;
   $: lt = $state.activeLink;
@@ -445,6 +452,73 @@
     });
   }
 
+  function pickNodeImage(a) {
+    nodeImageTarget = a.id;
+    if (nodeImageFile) nodeImageFile.click();
+  }
+
+  function onNodeImageFile(e) {
+    const f = e.target.files[0];
+    e.target.value = '';
+    if (!f || !nodeImageTarget) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 512;
+        let w = img.naturalWidth;
+        let h = img.naturalHeight;
+        if (w > max || h > max) {
+          if (w > h) { h = Math.round((h * max) / w); w = max; }
+          else { w = Math.round((w * max) / h); h = max; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL(f.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.88);
+        update((s) => {
+          const target = s.project.areas.find((x) => x.id === nodeImageTarget);
+          if (target) target.image = dataUrl;
+        });
+        notify('Attached node icon.', 'ok');
+        nodeImageTarget = null;
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(f);
+  }
+
+  function handleNodeEnter(e, a) {
+    if (drag || menu) return;
+    clearTimeout(hoverTimer);
+    hoverTimer = setTimeout(() => {
+      if (drag || menu || !wrapEl) return;
+      const nx = a.x * view.k + view.x;
+      const ny = a.y * view.k + view.y;
+      const nw = NW * view.k;
+      const vw = wrapEl.clientWidth;
+      const vh = wrapEl.clientHeight;
+      const cardW = 265;
+      let left = nx + nw + 12;
+      if (left + cardW > vw) {
+        left = nx - cardW - 12;
+      }
+      if (left < 10) {
+        left = Math.max(10, Math.min(vw - cardW - 10, nx));
+      }
+      let top = Math.max(10, Math.min(vh - 290, ny));
+      hoverPos = { left: Math.round(left), top: Math.round(top) };
+      hoveredArea = a;
+    }, 150);
+  }
+
+  function handleNodeLeave(e, a) {
+    clearTimeout(hoverTimer);
+    hoveredArea = null;
+  }
+
   function saveLayout(name) {
     const finalName = M.strip(name) || 'Layout ' + (P.layouts.length + 1);
     update((s) => {
@@ -547,7 +621,10 @@
   function onNodeMenu(e, a) {
     update((s) => selectOnly(s, a.id), { skipHistory: true });
     openMenu(e, [
-      { label: 'Center camera here', run: () => centerOnNode(a.id, true) },
+      { label: 'Center camera here (C)', run: () => centerOnNode(a.id, true) },
+      { label: 'Attach image icon…', run: () => pickNodeImage(a) },
+      ...(a.image ? [{ label: 'Remove image icon', run: () => update((s) => { const x = s.project.areas.find(ar => ar.id === a.id); if (x) x.image = ''; notify('Removed node icon.', 'info'); }) }] : []),
+      ...(a.color ? [{ label: 'Reset node colour', run: () => update((s) => { const x = s.project.areas.find(ar => ar.id === a.id); if (x) x.color = ''; notify('Reset node colour.', 'info'); }) }] : []),
       { label: 'Rename', run: () => startRename('area', a) },
       { label: 'Duplicate', run: () => duplicateFlow(a.id) },
       { label: 'Isolate neighbourhood', run: () => update((s) => { selectOnly(s, a.id); enterFocusView(s); }, { skipHistory: true }) },
@@ -875,7 +952,7 @@
   }
 
   function arrange() {
-    update((s) => M.autoArrange(s.project));
+    update((s) => M.autoArrange(s.project, { spacing: $settings.arrangeSeparation }));
     fitView();
   }
 
@@ -986,6 +1063,8 @@
         {onPortDown}
         {onNodeMenu}
         onNodeDblClick={(e, a) => { e.stopPropagation(); startRename('area', a); }}
+        onNodeEnter={handleNodeEnter}
+        onNodeLeave={handleNodeLeave}
       />
       <TagLayer pairs={displayPairs} {byId} selectedId={$state.selectedId} {showAllMesh} {inFocus} />
     </g>
@@ -999,6 +1078,15 @@
       pos={popPos}
       onToggle={toggleSide}
       onClose={() => update((s) => (s.selectedEdge = null), { skipHistory: true })}
+    />
+  {/if}
+
+  {#if hoveredArea && !drag && !menu}
+    <NodeHoverCard
+      area={hoveredArea}
+      idx={P.areas.indexOf(hoveredArea)}
+      pos={hoverPos}
+      {dups}
     />
   {/if}
 
@@ -1024,6 +1112,7 @@
   />
 
   <input type="file" accept="image/*" hidden bind:this={imageFile} on:change={onImageFile} />
+  <input type="file" accept="image/*" hidden bind:this={nodeImageFile} on:change={onNodeImageFile} />
 </div>
 
 <style>

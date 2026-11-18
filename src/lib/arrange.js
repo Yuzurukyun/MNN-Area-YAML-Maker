@@ -2,13 +2,14 @@
 
 import { NODE_W, NODE_H } from './fields.js';
 
-export function autoArrange(P) {
+export function autoArrange(P, opts = {}) {
   const areas = P.areas;
   const n = areas.length;
   if (!n) return;
   const hub = areas[0];
-  const COL = NODE_W + 96;
-  const ROW = NODE_H + 76;
+  const spacing = typeof opts === 'number' ? opts : opts.spacing != null ? opts.spacing : 1.0;
+  const COL = NODE_W + Math.round(96 * spacing);
+  const ROW = NODE_H + Math.round(76 * spacing);
 
   const adj = new Map(areas.map((a) => [a.id, new Set()]));
   areas.forEach((a) => {
@@ -90,7 +91,7 @@ export function autoArrange(P) {
     while (idx < order.length) {
       const cap = 6 * ring;
       const inRing = order.slice(idx, idx + cap);
-      const R = Math.max(305 * ring, Math.ceil((inRing.length * (NODE_W + 104)) / (2 * Math.PI)));
+      const R = Math.max(Math.round(305 * ring * spacing), Math.ceil((inRing.length * (NODE_W + Math.round(104 * spacing))) / (2 * Math.PI)));
       const rx = Math.round(R * 1.16);
       const ry = Math.round(R * 0.92);
       maxRx = Math.max(maxRx, rx);
@@ -106,12 +107,12 @@ export function autoArrange(P) {
     }
     return {
       pos,
-      halfW: maxRx + NODE_W / 2 + 64,
-      halfH: maxRy + NODE_H / 2 + 56,
+      halfW: maxRx + NODE_W / 2 + Math.round(64 * spacing),
+      halfH: maxRy + NODE_H / 2 + Math.round(56 * spacing),
     };
   };
 
-  const X0 = 40 + COL + 70;
+  const X0 = 40 + COL + Math.round(70 * spacing);
   const MAXW = 1900;
   const TOP = 48;
   let cx = X0;

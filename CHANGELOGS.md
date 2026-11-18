@@ -150,3 +150,52 @@
 
 - `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **69 passed, 0 failed** (including camera command bus tests).
 - `npm run build:both`: rebuilt `export/yuzu_area_maker.html`, `export/yuzu_area_maker_nomusic.html`, and `docs/index.html`.
+
+## v2.0.5 — Slate Light Theme, Custom Node Colors & Icons, Hover Summaries, Multi-Reordering & Settings Cog
+
+### Light Theme Redo (Slate Studio)
+
+- **Refined, glare-free canvas palette (`src/styles/base.css`):**
+    - Replaced the bright ivory background with a calm, darker slate-grey canvas (`--bg: #d5dbe4`, `--outer-bg: #cbd1da`) that prevents eye fatigue during long mapping sessions while making white node cards pop cleanly.
+    - Upgraded surfaces, hairlines (`#bcc5d2` / `#93a0b2`), and high-legibility ink (`#181c22` / `#080b0f`), with crisp crimson accents (`#ce3421`).
+
+### Custom Node Colors & Image Icons
+
+- **Persistent custom node colours (`src/lib/model.js`, `NodeLayer.svelte`, `Inspector.svelte`):**
+    - Added free-form node colouring via quick preset swatches (Red, Orange, Amber, Green, Teal, Blue, Purple, Pink, Slate) and a custom color picker in the Inspector header and node context menu.
+    - Custom colors tint the node accent bar, border, selection glow, and card fill using `color-mix`, persisting seamlessly across theme changes without reverting.
+- **Node 1:1 image icons with automatic cropping (`src/lib/model.js`, `NodeLayer.svelte`, `Inspector.svelte`):**
+    - Areas can now have an image icon attached via file upload in the Inspector or node context menu.
+    - Displayed as a crisp 1:1 square icon on the node using SVG `<clipPath>` and `preserveAspectRatio="xMidYMid slice"`, with automatic text offset.
+
+### Node Hover Summary Popup
+
+- **Interactive area summary card (`src/components/graph/NodeHoverCard.svelte`, `Graph.svelte`):**
+    - Hovering any node on the canvas reveals a glassmorphic summary card displaying the full area name, #ID badge, fixed-size image preview, background/TOD count, link summaries (Reachable, Visible, Scream), active flags (Lobby, Private, Indoors, Weather, AFK), and description snippet.
+    - Position is viewport-clamped so cards stay fully visible without obscuring canvas interactions.
+
+### Area List Multi-Selection & Quick Index Reordering
+
+- **Multi-select reordering (`src/lib/model.js`, `AreaList.svelte`):**
+    - Added `Ctrl+click` / `Cmd+click` toggle and `Shift+click` range selection to select multiple areas at once in the left sidebar.
+    - Clicking `↑` / `↓` or dragging moves all selected areas together while preserving relative ordering and remapping `afk_sendto` links.
+- **Interactive index position dropdown (`AreaList.svelte`):**
+    - Each movable area's index badge (`#1` to `#N-1`) is now an interactive dropdown allowing instant jump-reordering to any destination position in the project.
+
+### Settings Cog & Canvas Customization
+
+- **Settings modal (`src/components/modals/SettingsModal.svelte`, `Header.svelte`, `src/lib/state.js`, `src/styles/graph.css`):**
+    - Added a `⚙ Settings` button in the header with persistent options in `localStorage`:
+        a) **Auto-arrange node separation:** adjustable slider from `0.5×` to `2.5×` (default `1.0×`).
+        b) **Connection line thickness:** adjustable slider from `1.0px` to `6.0px` (default `1.6px`).
+        c) **Connection line glow:** adjustable neon halo slider from `0px` (off) to `14px`, complete with live SVG preview.
+
+### Inspector Importance Squares
+
+- **Clearer, font-height group squares (`src/styles/panels.css`):**
+    - Replaced the tiny 9px symbol with a solid geometric square matching the 11px font x-height (`width: 11px; height: 11px; border-radius: 2px`) in vibrant emerald (`common`), amber (`uncommon`), and slate (`rarely`).
+
+### Verification
+
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **73 passed, 0 failed** (including multi-area reordering and afk remapping).
+- `npm run build:both`: rebuilt `export/yuzu_area_maker.html`, `export/yuzu_area_maker_nomusic.html`, and `docs/index.html`.

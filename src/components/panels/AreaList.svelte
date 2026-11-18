@@ -43,22 +43,63 @@
     centerCameraOn(a.id);
   }
 
-  function pick(a) {
+  let lastPickedIdx = null;
+
+  function pick(e, a, i) {
     if (suppressClick) {
       suppressClick = false;
       return;
     }
     update((s) => {
-      selectOnly(s, a.id);
+      s.selectedEdge = null;
+      if (e.shiftKey && lastPickedIdx !== null) {
+        const start = Math.min(lastPickedIdx, i);
+        const end = Math.max(lastPickedIdx, i);
+        for (let idx = start; idx <= end; idx++) {
+          if (P.areas[idx]) s.selectedIds.add(P.areas[idx].id);
+        }
+        s.selectedId = a.id;
+      } else if (e.ctrlKey || e.metaKey) {
+        if (s.selectedIds.has(a.id) && s.selectedIds.size > 1) {
+          s.selectedIds.delete(a.id);
+          s.selectedId = [...s.selectedIds][0];
+        } else {
+          s.selectedIds.add(a.id);
+          s.selectedId = a.id;
+        }
+      } else {
+        selectOnly(s, a.id);
+      }
       refocusView(s);
     });
+    lastPickedIdx = i;
   }
 
-  function moveArea(e, i, delta) {
+  function moveArea(e, a, i, delta) {
     e.stopPropagation();
-    const target = i + delta;
-    if (target < 1 || target >= P.areas.length) return;
-    update((s) => M.reorderArea(s.project, i, target));
+    if ($state.selectedIds.has(a.id) && $state.selectedIds.size > 1) {
+      const selIndices = P.areas
+        .map((x, idx) => ($state.selectedIds.has(x.id) ? idx : -1))
+        .filter((idx) => idx > 0);
+      update((s) => M.moveAreasDelta(s.project, selIndices, delta));
+    } else {
+      const target = i + delta;
+      if (target < 1 || target >= P.areas.length) return;
+      update((s) => M.reorderArea(s.project, i, target));
+    }
+  }
+
+  function onIndexSelect(e, a, i) {
+    const target = parseInt(e.target.value, 10);
+    if (!target || target === i || target < 1 || target >= P.areas.length) return;
+    if ($state.selectedIds.has(a.id) && $state.selectedIds.size > 1) {
+      const selIndices = P.areas
+        .map((x, idx) => ($state.selectedIds.has(x.id) ? idx : -1))
+        .filter((idx) => idx > 0);
+      update((s) => M.reorderAreas(s.project, selIndices, target));
+    } else {
+      update((s) => M.reorderArea(s.project, i, target));
+    }
   }
 
   function del(e, a) {
@@ -74,8 +115,8 @@
     });
   }
 
-  function startReorder(e, i, el) {
-    if (!(e.ctrlKey || e.metaKey) || e.target.closest('button')) return;
+  function startReorder(e, i, a, el) {
+    if (!(e.ctrlKey || e.metaKey) || e.target.closest('button') || e.target.closest('select')) return;
     e.preventDefault();
     const startY = e.clientY;
     const stepH = el.offsetHeight + 3;
@@ -95,7 +136,16 @@
       el.classList.remove('reordering');
       el.style.transform = '';
       suppressClick = moved;
-      if (moved && curIdx !== i) update((s) => M.reorderArea(s.project, i, curIdx));
+      if (moved && curIdx !== i) {
+        if ($state.selectedIds.has(a.id) && $state.selectedIds.size > 1) {
+          const selIndices = P.areas
+            .map((x, idx) => ($state.selectedIds.has(x.id) ? idx : -1))
+            .filter((idx) => idx > 0);
+          update((s) => M.reorderAreas(s.project, selIndices, curIdx));
+        } else {
+          update((s) => M.reorderArea(s.project, i, curIdx));
+        }
+      }
     };
     window.addEventListener('pointermove', mv);
     window.addEventListener('pointerup', up);
@@ -183,20 +233,36 @@
   {#each rows as { a, i } (a.id)}
     <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
     <div
-      class="area-item {a.id === $state.selectedId ? 'sel' : ''} {dups.has(M.strip(a.area)) ? 'dup' : ''}"
+      class="area-item {a.id === $state.selectedId ? 'sel' : ''} {$state.selectedIds.has(a.id) && a.id !== $state.selectedId ? 'multi-sel' : ''} {dups.has(M.strip(a.area)) ? 'dup' : ''}"
       title={itemTitle(a, i)}
-      on:click={() => pick(a)}
+      on:click={(e) => pick(e, a, i)}
       on:dblclick={() => dblClickArea(a)}
-      on:pointerdown={(e) => i > 0 && startReorder(e, i, e.currentTarget)}
+      on:pointerdown={(e) => i > 0 && startReorder(e, i, a, e.currentTarget)}
     >
       <div class="li-row">
-        <span class="idx">{i}</span>
+        {#if i === 0}
+          <span class="idx" title="Hub area (always Area 0)">0</span>
+        {:else}
+          <select
+            class="idx-select"
+            title="Press to jump #{i} to another index position"
+            value={i}
+            on:pointerdown|stopPropagation
+            on:click|stopPropagation
+            on:change={(e) => onIndexSelect(e, a, i)}
+          >
+            {#each Array(P.areas.length - 1) as _, optIdx}
+              {@const pos = optIdx + 1}
+              <option value={pos}>#{pos}</option>
+            {/each}
+          </select>
+        {/if}
         <span class="nm">{a.area || 'Unnamed'}</span>
         {#if i > 0}
           <span class="row-actions">
             {#if !q}
-              <button class="mv" title="Move up" disabled={i <= 1} on:click={(e) => moveArea(e, i, -1)}>↑</button>
-              <button class="mv" title="Move down" disabled={i >= P.areas.length - 1} on:click={(e) => moveArea(e, i, 1)}>↓</button>
+              <button class="mv" title="Move up (moves all selected areas together)" disabled={i <= 1} on:click={(e) => moveArea(e, a, i, -1)}>↑</button>
+              <button class="mv" title="Move down (moves all selected areas together)" disabled={i >= P.areas.length - 1} on:click={(e) => moveArea(e, a, i, 1)}>↓</button>
             {/if}
             <button class="del" title="Delete this area" on:click={(e) => del(e, a)}>✕</button>
           </span>

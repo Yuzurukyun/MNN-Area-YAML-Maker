@@ -23,6 +23,8 @@ export function blankArea(name) {
       scream: { mode: 'reachable', targets: [] },
     },
     restricted_chars: [],
+    color: '',
+    image: '',
   };
   BOOL_FIELDS.forEach(([k, , d]) => (a[k] = d));
   a.weather = '';
@@ -302,6 +304,46 @@ export function reorderArea(P, from, to) {
   const [item] = P.areas.splice(from, 1);
   P.areas.splice(to, 0, item);
   remapAfk(P, idsBefore);
+}
+
+export function reorderAreas(P, indices, targetIndex) {
+  const valid = [...new Set(indices)].filter((i) => i > 0 && i < P.areas.length).sort((a, b) => a - b);
+  if (!valid.length) return;
+  const target = Math.max(1, Math.min(P.areas.length - 1, targetIndex));
+  const idsBefore = P.areas.map((x) => x.id);
+  const selected = valid.map((i) => P.areas[i]);
+  const selSet = new Set(selected.map((a) => a.id));
+  const rest = P.areas.filter((a) => !selSet.has(a.id));
+  rest.splice(target, 0, ...selected);
+  P.areas = rest;
+  remapAfk(P, idsBefore);
+}
+
+export function moveAreasDelta(P, indices, delta) {
+  if (!delta) return;
+  const valid = [...new Set(indices)].filter((i) => i > 0 && i < P.areas.length).sort((a, b) => a - b);
+  if (!valid.length) return;
+  if (delta < 0) {
+    if (valid[0] <= 1) return;
+    const idsBefore = P.areas.map((x) => x.id);
+    for (let i = 0; i < valid.length; i++) {
+      const idx = valid[i];
+      const [item] = P.areas.splice(idx, 1);
+      P.areas.splice(idx - 1, 0, item);
+      valid[i] = idx - 1;
+    }
+    remapAfk(P, idsBefore);
+  } else {
+    if (valid[valid.length - 1] >= P.areas.length - 1) return;
+    const idsBefore = P.areas.map((x) => x.id);
+    for (let i = valid.length - 1; i >= 0; i--) {
+      const idx = valid[i];
+      const [item] = P.areas.splice(idx, 1);
+      P.areas.splice(idx + 1, 0, item);
+      valid[i] = idx + 1;
+    }
+    remapAfk(P, idsBefore);
+  }
 }
 
 export function deleteArea(P, id) {

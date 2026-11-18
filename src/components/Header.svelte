@@ -8,11 +8,13 @@
   import HelpModal from './modals/HelpModal.svelte';
   import TemplatesModal from './modals/TemplatesModal.svelte';
   import TestMode from './modals/TestMode.svelte';
+  import SettingsModal from './modals/SettingsModal.svelte';
 
   let yamlOpen = false;
   let tplOpen = false;
   let helpOpen = false;
   let testOpen = false;
+  let settingsOpen = false;
   let newMenu = false;
   let exampleMenu = false;
   let importMenu = false;
@@ -220,11 +222,12 @@
       <span>Theme</span>
       <select value={$theme} title="Select colour theme" on:change={(e) => setTheme(e.target.value)}>
         <option value="dark">Dark Terminal</option>
-        <option value="light">Warm Light</option>
+        <option value="light">Light (Slate)</option>
       </select>
     </label>
     <button on:click={() => (testOpen = true)} title="Walk through the live map like a player to verify exits">▶ Test mode</button>
     <button on:click={() => (tplOpen = true)} title="Manage reusable field/permission templates">Templates</button>
+    <button on:click={() => (settingsOpen = true)} title="Adjust auto-arrange spacing, line thickness & glow">⚙ Settings</button>
     <MusicPlayer />
     <button on:click={() => (helpOpen = true)} title="Open the full usage guide and shortcut reference">? Help</button>
   </div>
@@ -238,6 +241,10 @@
 
 {#if testOpen}
   <TestMode {P} onClose={() => (testOpen = false)} />
+{/if}
+
+{#if settingsOpen}
+  <SettingsModal on:close={() => (settingsOpen = false)} />
 {/if}
 
 {#if pending}

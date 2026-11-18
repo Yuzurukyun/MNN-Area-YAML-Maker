@@ -130,6 +130,34 @@
       s.selectedEdge = null;
     });
   }
+  let iconInput;
+  function onIconUpload(e) {
+    const f = e.target.files[0];
+    e.target.value = '';
+    if (!f || !a) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 512;
+        let w = img.naturalWidth;
+        let h = img.naturalHeight;
+        if (w > max || h > max) {
+          if (w > h) { h = Math.round((h * max) / w); w = max; }
+          else { w = Math.round((w * max) / h); h = max; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL(f.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.88);
+        withArea((s, ar) => (ar.image = dataUrl));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(f);
+  }
 </script>
 
 {#if a}
@@ -150,10 +178,70 @@
         on:change={(e) => update((s) => (s.fieldFilter = e.target.value), { skipHistory: true })}
       >
         <option value="all">All fields</option>
-        <option value="uncommon">Common + Uncommon</option>
-        <option value="common">Common only</option>
-        <option value="rarely">Rarely only</option>
+        <option value="common">■ Common only</option>
+        <option value="uncommon">■ Common + Uncommon</option>
+        <option value="rarely">■ Rarely only</option>
       </select>
+    </div>
+
+    <div class="node-style-row" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--line)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span class="hint" title="Custom color for this area node on the map">Node Colour</span>
+        {#if a.color}
+          <button class="mini-btn" title="Reset to current theme default" on:click={() => withArea((s, ar) => (ar.color = ''))}>Reset</button>
+        {/if}
+      </div>
+      <div class="swatch-bar">
+        {#each [
+          ['#ef4444', 'Red'],
+          ['#f97316', 'Orange'],
+          ['#f59e0b', 'Amber'],
+          ['#10b981', 'Green'],
+          ['#06b6d4', 'Teal'],
+          ['#3b82f6', 'Blue'],
+          ['#8b5cf6', 'Purple'],
+          ['#ec4899', 'Pink'],
+          ['#64748b', 'Slate'],
+        ] as [c, cname]}
+          <button
+            class="c-swatch {a.color === c ? 'active' : ''}"
+            style="background:{c}"
+            title={cname}
+            on:click={() => withArea((s, ar) => (ar.color = c))}
+          ></button>
+        {/each}
+        <label class="c-swatch-custom" title="Custom color picker">
+          <input
+            type="color"
+            value={a.color || '#3b82f6'}
+            on:input={(e) => withArea((s, ar) => (ar.color = e.target.value))}
+          />
+          <span>🎨</span>
+        </label>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:9px">
+        <span class="hint" title="1:1 image icon displayed directly on the area node">Node Icon</span>
+        {#if a.image}
+          <div style="display:flex;gap:4px">
+            <button class="mini-btn" title="Replace area icon" on:click={() => iconInput.click()}>Replace</button>
+            <button class="mini-btn" title="Remove area icon" on:click={() => withArea((s, ar) => (ar.image = ''))}>✕</button>
+          </div>
+        {/if}
+      </div>
+      {#if a.image}
+        <div class="icon-preview-row" style="display:flex;gap:8px;align-items:center;margin-top:6px">
+          <div style="width:44px;height:44px;border-radius:4px;overflow:hidden;border:1px solid var(--line2);background:var(--input-bg);flex:none">
+            <img src={a.image} alt="Icon preview" style="width:100%;height:100%;object-fit:cover;display:block" />
+          </div>
+          <span class="hint" style="font-size:10.5px">1:1 square icon shown on node card & hover summary</span>
+        </div>
+      {:else}
+        <div style="margin-top:5px">
+          <button class="mini-btn" style="width:100%;padding:4px" on:click={() => iconInput.click()}>＋ Attach Icon / Image</button>
+        </div>
+      {/if}
+      <input type="file" accept="image/*" hidden bind:this={iconInput} on:change={onIconUpload} />
     </div>
   </div>
 

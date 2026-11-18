@@ -82,6 +82,54 @@ export function setTheme(mode) {
   theme.set(next);
 }
 
+/* ================= editor & canvas settings ================= */
+const SETTINGS_KEY = 'areamaker-settings';
+export const DEFAULT_SETTINGS = {
+  arrangeSeparation: 1.0, // multiplier, default 1.0
+  edgeThickness: 1.6,     // px, default 1.6
+  edgeGlow: 0,            // px, default 0
+};
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return { ...DEFAULT_SETTINGS, ...parsed };
+    }
+  } catch {
+    /* fallback to default */
+  }
+  return { ...DEFAULT_SETTINGS };
+}
+
+export function applySettingsToDom(cfg) {
+  if (typeof document !== 'undefined') {
+    const root = document.documentElement;
+    root.style.setProperty('--edge-thickness', (cfg.edgeThickness || 1.6) + 'px');
+    root.style.setProperty('--edge-glow', (cfg.edgeGlow || 0) + 'px');
+  }
+}
+
+const initialSettings = loadSettings();
+applySettingsToDom(initialSettings);
+
+export const settings = writable(initialSettings);
+
+export function updateSettings(fn) {
+  settings.update((curr) => {
+    const next = { ...curr };
+    fn(next);
+    applySettingsToDom(next);
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+    return next;
+  });
+}
+
 /* ================= toast notifications ================= */
 export const toasts = writable([]);
 let toastId = 1;
