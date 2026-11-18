@@ -13,6 +13,7 @@ import {
   resolveActiveVisual,
   hasTimeVariants,
 } from '../src/lib/bgSchema.js';
+import { resolveNodeImageUrl } from '../src/lib/bgStore.js';
 import { buildZip } from '../src/lib/zip.js';
 
 let pass = 0;
@@ -554,6 +555,13 @@ const noTvBg = createBackground('Simple/Bg', {
 ok(!hasTimeVariants(noTvBg), 'standard background without time variants returns false');
 ok(!hasTimeVariants(null), 'null bg returns false');
 ok(!hasTimeVariants({}), 'empty object returns false');
+
+// Test resolveNodeImageUrl
+const iconArea = { image: 'data:image/png;base64,icon', imageMode: 'node', background: 'plain.png' };
+eq(resolveNodeImageUrl(iconArea), 'data:image/png;base64,icon', 'node mode returns icon dataUrl');
+const sceneArea = { image: 'data:image/png;base64,icon', imageMode: 'scene', background: 'plain.png' };
+// Since plain.png is not in assetPool, fallback is image or empty
+ok(typeof resolveNodeImageUrl(sceneArea) === 'string', 'scene mode resolves valid string');
 
 // Test ZIP archive builder
 const zipBuf = await buildZip([

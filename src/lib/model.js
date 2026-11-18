@@ -25,6 +25,7 @@ export function blankArea(name) {
     restricted_chars: [],
     color: '',
     image: '',
+    imageMode: 'node',
   };
   BOOL_FIELDS.forEach(([k, , d]) => (a[k] = d));
   a.weather = '';

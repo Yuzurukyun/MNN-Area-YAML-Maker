@@ -5,7 +5,7 @@
   import Bool from './Bool.svelte';
   import LinkEditor from './LinkEditor.svelte';
   import { onMount } from 'svelte';
-  import { bgStore } from '../../lib/bgStore.js';
+  import { bgStore, getAreaBgUrl } from '../../lib/bgStore.js';
   import { resolveActiveVisual, normalizeBgPath, hasTimeVariants } from '../../lib/bgSchema.js';
 
   let open = { basics: true, links: true, access: false, behaviour: false, perms: false };
@@ -13,7 +13,13 @@
   let todPresetName = '';
   let armDelete = false;
   let armFor = null;
-  let imageDisplayMode = 'node'; // 'node' | 'scene'
+  $: imageDisplayMode = a?.imageMode || (a?.image ? 'node' : (currentBgUrl ? 'scene' : 'node'));
+
+  function setImageMode(mode) {
+    withArea((s, ar) => {
+      ar.imageMode = mode;
+    });
+  }
 
   let bgStoreState = bgStore.get();
   onMount(() => {
@@ -57,13 +63,7 @@
     (b) => b.folder.toLowerCase() === normalizeBgPath(a?.background).toLowerCase()
   );
 
-  $: currentBgVisual = currentBgDef
-    ? resolveActiveVisual(currentBgDef, { state: 'default', tod: 'day' })
-    : null;
-
-  $: currentBgUrl = currentBgVisual
-    ? bgStore.getAssetUrl(currentBgVisual.background, 'image')
-    : (a?.background ? bgStore.getAssetUrl(a.background.split('/').pop(), 'image') : '');
+  $: currentBgUrl = getAreaBgUrl(a?.background, bgStoreState);
 
   $: hasInternalTod = Boolean(
     currentBgDef && hasTimeVariants(currentBgDef)
@@ -196,7 +196,10 @@
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, w, h);
         const dataUrl = canvas.toDataURL(f.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.88);
-        withArea((s, ar) => (ar.image = dataUrl));
+        withArea((s, ar) => {
+          ar.image = dataUrl;
+          ar.imageMode = 'node';
+        });
       };
       img.src = reader.result;
     };
@@ -270,18 +273,18 @@
           {#if a.image && currentBgUrl}
             <button
               class="mini-btn {imageDisplayMode === 'node' ? 'active-filter' : ''}"
-              title="Show custom cropped node icon"
-              on:click={() => (imageDisplayMode = 'node')}
+              title="Show custom cropped node icon on canvas and inspector"
+              on:click={() => setImageMode('node')}
             >Icon</button>
             <button
               class="mini-btn {imageDisplayMode === 'scene' ? 'active-filter' : ''}"
-              title="Show full background scene"
-              on:click={() => (imageDisplayMode = 'scene')}
+              title="Show background scene on canvas and inspector"
+              on:click={() => setImageMode('scene')}
             >Scene</button>
           {/if}
           {#if a.image}
             <button class="mini-btn" title="Replace area icon" on:click={() => iconInput.click()}>Replace</button>
-            <button class="mini-btn" title="Remove area icon" on:click={() => withArea((s, ar) => (ar.image = ''))}>✕</button>
+            <button class="mini-btn" title="Remove area icon" on:click={() => withArea((s, ar) => { ar.image = ''; ar.imageMode = 'scene'; })}>✕</button>
           {/if}
         </div>
       </div>

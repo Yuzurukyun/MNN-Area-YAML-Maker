@@ -1,6 +1,8 @@
 <script>
   import * as M from '../../lib/core.js';
   import { titleText, bgText, tagText } from '../../lib/nodeLabels.js';
+  import { onMount } from 'svelte';
+  import { bgStore, resolveNodeImageUrl } from '../../lib/bgStore.js';
 
   const NW = M.NODE_W;
   const NH = M.NODE_H;
@@ -23,12 +25,20 @@
   export let onTitleDblClick = () => {};
   export let onNodeEnter = () => {};
   export let onNodeLeave = () => {};
+
+  let bgStoreState = bgStore.get();
+  onMount(() => {
+    return bgStore.subscribe((s) => {
+      bgStoreState = s;
+    });
+  });
 </script>
 
 <g>
   <defs>
     {#each P.areas as a (a.id)}
-      {#if a.image}
+      {@const nodeImg = resolveNodeImageUrl(a, bgStoreState)}
+      {#if nodeImg}
         <clipPath id="clip-{a.id}">
           <rect x="9" y="9" width="46" height="46" rx="4" />
         </clipPath>
@@ -45,7 +55,8 @@
   {/if}
 
   {#each P.areas as a, idx (a.id)}
-    {@const hasImg = !!a.image}
+    {@const nodeImg = resolveNodeImageUrl(a, bgStoreState)}
+    {@const hasImg = Boolean(nodeImg)}
     {@const tags = tagText(P, a, idx, dups, lt, hasImg)}
     {@const isSel = a.id === selectedId}
     {@const isMulti = selectedIds.has(a.id) && !isSel}
@@ -84,7 +95,7 @@
           />
           {#if hasImg}
             <image
-              href={a.image}
+              href={nodeImg}
               x="9"
               y="9"
               width="46"

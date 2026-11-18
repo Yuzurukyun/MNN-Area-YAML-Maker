@@ -45,13 +45,17 @@
   class="node-hover-card"
   style="left: {pos.left}px; top: {pos.top}px; {area.color ? `--card-accent: ${area.color}; border-left: 3px solid ${area.color};` : ''}"
 >
-  {#if area.image}
+  {#if area.imageMode === 'scene' && bgUrl}
+    <div class="card-img-wrap" style="aspect-ratio: 16/9; height: auto; max-height: 120px;">
+      <img src={bgUrl} alt={area.background} style="width: 100%; height: 100%; object-fit: contain; background: #000;" />
+    </div>
+  {:else if area.image}
     <div class="card-img-wrap">
       <img src={area.image} alt={area.area} />
     </div>
   {:else if bgUrl}
     <div class="card-img-wrap" style="aspect-ratio: 16/9; height: auto; max-height: 120px;">
-      <img src={bgUrl} alt={area.background} style="width: 100%; height: 100%; object-fit: cover;" />
+      <img src={bgUrl} alt={area.background} style="width: 100%; height: 100%; object-fit: contain; background: #000;" />
     </div>
   {/if}
 

@@ -323,15 +323,15 @@
 
 ### Inspector & Node Hover Integration
 
-- **Inspector background tools (`src/components/panels/Inspector.svelte`):**
+- **Inspector background tools (`src/components/panels/Inspector.svelte`, `src/components/graph/NodeLayer.svelte`, `src/lib/bgStore.js`):**
     - Added a library picker dropdown under `background:` to quickly assign any defined background to an area.
     - Added a direct **🖼 Maker…** button to open the editor pre-focused on that area's background.
-    - Added **Node Icon** vs **Background Scene** preview toggle, allowing inspection of either the cropped 1:1 node avatar or the full background visual asset.
+    - **Synchronized Node Avatar & Visual Preview Toggle:** Toggling **Icon** vs **Scene** under `Visual Preview` in the Inspector now updates the area node card's avatar on the map canvas in real time. Choosing **Scene** displays the resolved background scene visual asset directly on the node card, while choosing **Icon** displays the custom uploaded icon.
     - Strict `background_tod` detection (`hasTimeVariants`): Displays the green badge (`✓ Handled by <folder>/background.json — separate bg_tod is optional`) ONLY when `background.json` specifically defines non-empty `time_variants` (in states or positions); otherwise completely ignored and hidden.
 - **Node hover summaries (`src/components/graph/NodeHoverCard.svelte`):**
-    - Displays background scene asset previews when hovering nodes on the canvas that don't have custom node icons.
+    - Displays background scene asset previews when hovering nodes on the canvas that don't have custom node icons, and respects `imageMode: 'scene'`.
 
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **143 passed, 0 failed**.
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **145 passed, 0 failed**.
 - `npm run build:both`: rebuilt `export/yuzu_area_maker.html`, `export/yuzu_area_maker_nomusic.html`, and `docs/index.html`.

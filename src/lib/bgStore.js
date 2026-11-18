@@ -9,6 +9,7 @@ import {
   normalizeBgPath,
   normalizeAmbiencePath,
   hasTimeVariants,
+  resolveActiveVisual,
 } from './bgSchema.js';
 import { buildZip, downloadZipBlob } from './zip.js';
 
@@ -268,6 +269,9 @@ export const bgStore = {
   // Helper to find preview URL for an asset filename
   getAssetUrl(nameOrPath, type = 'image') {
     if (!nameOrPath) return '';
+    if (nameOrPath.startsWith('data:') || nameOrPath.startsWith('blob:') || nameOrPath.startsWith('http://') || nameOrPath.startsWith('https://')) {
+      return nameOrPath;
+    }
     const match = assetPool.find((a) => {
       if (type && a.type !== type) return false;
       return a.name === nameOrPath || a.relPath === nameOrPath || a.fullRelPath === nameOrPath;
@@ -275,3 +279,44 @@ export const bgStore = {
     return match ? match.url : '';
   },
 };
+
+/**
+ * Resolves the background scene image preview URL for a given background folder name.
+ */
+export function getAreaBgUrl(bgFolder, customStoreState) {
+  if (!bgFolder || typeof bgFolder !== 'string') return '';
+  if (bgFolder.startsWith('data:') || bgFolder.startsWith('blob:') || bgFolder.startsWith('http://') || bgFolder.startsWith('https://')) {
+    return bgFolder;
+  }
+  const currentStore = customStoreState || getStoreState();
+  const norm = normalizeBgPath(bgFolder).toLowerCase();
+  const matched = (currentStore.backgrounds || []).find(
+    (b) => b.folder.toLowerCase() === norm
+  );
+  if (matched) {
+    const visual = resolveActiveVisual(matched, { state: 'default', tod: 'day' });
+    if (visual && visual.background) {
+      const url = bgStore.getAssetUrl(visual.background, 'image');
+      if (url) return url;
+    }
+  }
+  // Fallback: match by last segment filename in asset pool
+  const last = bgFolder.split('/').pop();
+  return bgStore.getAssetUrl(last, 'image');
+}
+
+/**
+ * Resolves the visual image URL to display on the node card on the graph canvas.
+ * If area.imageMode === 'scene', returns the resolved background scene URL if available.
+ * Otherwise returns the custom node avatar (area.image).
+ */
+export function resolveNodeImageUrl(area, customStoreState) {
+  if (!area) return '';
+  const mode = area.imageMode || (area.image ? 'node' : '');
+  if (mode === 'scene') {
+    const sceneUrl = getAreaBgUrl(area.background, customStoreState);
+    if (sceneUrl) return sceneUrl;
+    return area.image || '';
+  }
+  return area.image || '';
+}
