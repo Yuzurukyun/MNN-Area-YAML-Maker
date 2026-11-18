@@ -11,6 +11,7 @@ import {
   serializeBackgroundJson,
   parseBackgroundJson,
   resolveActiveVisual,
+  hasTimeVariants,
 } from '../src/lib/bgSchema.js';
 import { buildZip } from '../src/lib/zip.js';
 
@@ -540,6 +541,19 @@ eq(roundTripCafe.default.time_variants.evening.background, 'evening.webp', 'roun
 ok(serializedCafe.includes('    "background"'), 'indent 4 produces 4 spaces indent');
 const tabJson = serializeBackgroundJson(parsedCafe, '\t');
 ok(tabJson.includes('\t"background"'), 'indent tab produces tab indent');
+
+// Test hasTimeVariants
+ok(hasTimeVariants(parsedCafe), 'parsedCafe has time variants');
+ok(hasTimeVariants(parsedComplex), 'parsedComplex has time variants in positions');
+const noTvBg = createBackground('Simple/Bg', {
+  states: {
+    default: { background: 'plain.png' },
+    crowded: { background: 'crowded.png' },
+  },
+});
+ok(!hasTimeVariants(noTvBg), 'standard background without time variants returns false');
+ok(!hasTimeVariants(null), 'null bg returns false');
+ok(!hasTimeVariants({}), 'empty object returns false');
 
 // Test ZIP archive builder
 const zipBuf = await buildZip([

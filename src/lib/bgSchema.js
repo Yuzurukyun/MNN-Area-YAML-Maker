@@ -293,3 +293,46 @@ export function resolveActiveVisual(bg, { state = 'default', position = 'Normal'
     ambience: tv?.ambience || st.ambience || '',
   };
 }
+
+/**
+ * Checks whether a background definition specifically defines any non-empty time_variants.
+ * Returns true only if actual time_variants with content exist in states or positions.
+ */
+export function hasTimeVariants(bg) {
+  if (!bg || !bg.states || typeof bg.states !== 'object') return false;
+  for (const st of Object.values(bg.states)) {
+    if (!st || typeof st !== 'object') continue;
+    if (st.time_variants && typeof st.time_variants === 'object') {
+      const keys = Object.keys(st.time_variants);
+      if (keys.length > 0) {
+        const hasContent = Object.values(st.time_variants).some(
+          (v) => v && typeof v === 'object' && Boolean(
+            (v.background && String(v.background).trim()) ||
+            (v.foreground && String(v.foreground).trim()) ||
+            (v.ambience && String(v.ambience).trim())
+          )
+        );
+        if (hasContent) return true;
+      }
+    }
+    if (st.positions && typeof st.positions === 'object') {
+      for (const pos of Object.values(st.positions)) {
+        if (!pos || typeof pos !== 'object') continue;
+        if (pos.time_variants && typeof pos.time_variants === 'object') {
+          const keys = Object.keys(pos.time_variants);
+          if (keys.length > 0) {
+            const hasContent = Object.values(pos.time_variants).some(
+              (v) => v && typeof v === 'object' && Boolean(
+                (v.background && String(v.background).trim()) ||
+                (v.foreground && String(v.foreground).trim()) ||
+                (v.ambience && String(v.ambience).trim())
+              )
+            );
+            if (hasContent) return true;
+          }
+        }
+      }
+    }
+  }
+  return false;
+}

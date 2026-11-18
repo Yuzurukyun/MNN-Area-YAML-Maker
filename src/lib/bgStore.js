@@ -8,6 +8,7 @@ import {
   parseBackgroundJson,
   normalizeBgPath,
   normalizeAmbiencePath,
+  hasTimeVariants,
 } from './bgSchema.js';
 import { buildZip, downloadZipBlob } from './zip.js';
 
@@ -26,18 +27,12 @@ let backgrounds = [
     states: {
       default: {
         background: 'default.webp',
-        time_variants: {
-          evening: { background: 'evening.webp' },
-        },
       },
       crowded: {
         background: 'crowded.webp',
       },
       festive: {
         background: 'festive.webp',
-        time_variants: {
-          evening: { background: 'festive_evening.webp' },
-        },
       },
     },
   }),

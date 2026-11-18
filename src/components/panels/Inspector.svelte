@@ -6,7 +6,7 @@
   import LinkEditor from './LinkEditor.svelte';
   import { onMount } from 'svelte';
   import { bgStore } from '../../lib/bgStore.js';
-  import { resolveActiveVisual, normalizeBgPath } from '../../lib/bgSchema.js';
+  import { resolveActiveVisual, normalizeBgPath, hasTimeVariants } from '../../lib/bgSchema.js';
 
   let open = { basics: true, links: true, access: false, behaviour: false, perms: false };
   let todPresetIdx = 0;
@@ -66,10 +66,7 @@
     : (a?.background ? bgStore.getAssetUrl(a.background.split('/').pop(), 'image') : '');
 
   $: hasInternalTod = Boolean(
-    currentBgDef && (
-      (currentBgDef.states?.default?.time_variants && Object.keys(currentBgDef.states.default.time_variants).length > 0) ||
-      (currentBgDef.states?.default?.positions && Object.values(currentBgDef.states.default.positions).some(p => p.time_variants && Object.keys(p.time_variants).length > 0))
-    )
+    currentBgDef && hasTimeVariants(currentBgDef)
   );
 
   const grpOf = (k) => M.FIELD_GROUP[k] || 'common';
