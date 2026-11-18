@@ -62,3 +62,12 @@ Each area has three link types, switched cleanly via the tabs above the map:
 
 - **▶ Test mode:** Walk through your areas like a player using live reachable exits, search exits by name or ID, and verify there are no unintended dead ends.
 - **Export YAML:** Blocks export if required fields or duplicate names exist, and shows non-blocking **warnings** if any area has 0 exits, cannot be reached from the Hub, or has an out-of-range `afk_sendto`.
+
+## Background.json Maker & Visual Asset Gallery
+
+- **🖼 Backgrounds (Header & Inspector):** Visual maker for TsuMNN/MNN `background.json` files and folder packages.
+- **State Variants & Positions:** Build states (`default`, `crowded`, `festive`) and courtroom/camera positions (`Normal`, `Witness`, `Prosecution`, `Defense`, `Judge`, `Juror`).
+- **Time Variants:** Configure `day`, `evening`, `night` variations with background images, foreground overlays, and ambience audio.
+- **Asset Pool Dock:** Drag-and-drop folders or batches of images (`.webp`, `.png`, `.jpg`) and audio (`.opus`, `.mp3`) into the pool to build backgrounds without re-uploading.
+- **Live Stage Monitor:** Preview blended background and foreground overlays, test times of day, and listen to ambience audio loops in real time.
+- **📦 Export Folder ZIP:** Exports a ready-to-use package containing `base/background/<folder>/background.json`, all images, and `base/sounds/ambient/` audio files.

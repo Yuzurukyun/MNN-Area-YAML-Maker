@@ -261,7 +261,53 @@
     - Added **Select all areas in zone** to the group context menu, allowing one-click multi-selection of all member cards for bulk repositioning, inspector review, or deletion.
     - Added **Copy Zone YAML** to the group context menu to copy only the member areas of that spatial zone formatted as valid YAML.
 
+## v2.1.0-dev — Visual Background.json Maker, Multi-Asset Pool, Stage Monitor & Folder Zip Export
+
+### Visual Background.json Maker
+
+- **Dedicated visual builder (`src/components/modals/BackgroundMakerModal.svelte`, `src/lib/bgSchema.js`, `src/lib/bgStore.js`):**
+    - Added a dedicated 3-column workspace accessible via the header **🖼 Backgrounds** button, the **Export ▾** menu, or directly from the Inspector beside the `background` input field.
+    - **Relative path normalization:** Automatically strips `base/background/` or `background/` prefixes so folders cleanly map to MNN conventions (e.g. `Umamusume/Cafeteria`).
+    - **State Variants:** Supports the mandatory `default` state plus custom states (`crowded`, `festive`, `rainy`, etc.) with tab-based editing and state deletion.
+    - **Courtroom & Camera Positions:** Toggleable position mode supporting standard court camera angles (`Normal`, `Witness`, `Prosecution`, `Defense`, `Judge`, `Juror`) or custom position tags.
+    - **Asset Slots:** Dedicated drag-and-drop slots for Background Image (`★ background`), Foreground Overlay filter/desk (`foreground`), and Ambience Audio (`ambience`, relative to `base/sounds/ambient/`).
+    - **Time of Day Variants (`time_variants`):** Visual rows for `day`, `evening`, `night`, and custom times of day with individual background, foreground, and ambience slots.
+    - **Dual view:** Instant toggling between the **Visual Builder** and **Live background.json** formatted code inspector.
+    - **One-click area assignment:** **✓ Apply to Area #ID** sets the edited background folder directly onto the currently selected area.
+
+### Interactive Live Stage Monitor
+
+- **Real-time visual composite preview (`BackgroundMakerModal.svelte`):**
+    - Live canvas displaying composite layer blending (Background image + layered Foreground filter/desk overlay).
+    - Interactive testing controls: Switch between time-of-day variants (`☀ Day`, `🌆 Evening`, `🌙 Night`), positions, and states to preview visual changes live.
+    - Built-in ambience audio player with Play/Pause button and loop playback for dropped sound files.
+
+### In-Memory Asset Repository Pool & Multi-Upload
+
+- **Drag-and-drop asset dock (`src/lib/bgStore.js`, `BackgroundMakerModal.svelte`):**
+    - Allows dropping entire folders (via `webkitdirectory`) or multiple files (`.webp`, `.png`, `.jpg`, `.opus`, `.mp3`) at once to populate an in-memory asset library without repetitive upload cycles.
+    - Filter assets by `All`, `Images`, and `Audio` with live search.
+    - Drag any thumbnail from the pool directly onto any background, foreground, or ambience slot in the builder.
+    - 100% privacy-safe: all files are handled in-memory via ObjectURLs with zero OS absolute paths (`C:\...`) persisted or leaked.
+
+### Zero-Dependency ZIP Package Exporter
+
+- **Standard client-side ZIP builder (`src/lib/zip.js`):**
+    - Built a pure vanilla JavaScript ZIP archive generator supporting UTF-8 filenames, CRC-32 checksums, and standard uncompressed STORE packaging.
+    - **📦 Export Folder ZIP:** Exports a ready-to-use MNN server package containing `base/background/<folder>/background.json`, all referenced images, and `base/sounds/ambient/<soundPath>` audio files.
+    - **💾 Download JSON / 📋 Copy JSON:** Fast clipboard copy or `.json` file download.
+
+### Inspector & Node Hover Integration
+
+- **Inspector background tools (`src/components/panels/Inspector.svelte`):**
+    - Added a library picker dropdown under `background:` to quickly assign any defined background to an area.
+    - Added a direct **🖼 Maker…** button to open the editor pre-focused on that area's background.
+    - Added **Node Icon** vs **Background Scene** preview toggle, allowing inspection of either the cropped 1:1 node avatar or the full background visual asset.
+    - Automatic `background_tod` detection: Displays a green badge (`✓ Handled by background.json`) when an area's background already defines internal time variants.
+- **Node hover summaries (`src/components/graph/NodeHoverCard.svelte`):**
+    - Displays background scene asset previews when hovering nodes on the canvas that don't have custom node icons.
+
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **104 passed, 0 failed**.
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **128 passed, 0 failed**.
 - `npm run build:both`: rebuilt `export/yuzu_area_maker.html`, `export/yuzu_area_maker_nomusic.html`, and `docs/index.html`.

@@ -4,12 +4,23 @@
   import Field from './Field.svelte';
   import Bool from './Bool.svelte';
   import LinkEditor from './LinkEditor.svelte';
+  import { onMount } from 'svelte';
+  import { bgStore } from '../../lib/bgStore.js';
+  import { resolveActiveVisual, normalizeBgPath } from '../../lib/bgSchema.js';
 
   let open = { basics: true, links: true, access: false, behaviour: false, perms: false };
   let todPresetIdx = 0;
   let todPresetName = '';
   let armDelete = false;
   let armFor = null;
+  let imageDisplayMode = 'node'; // 'node' | 'scene'
+
+  let bgStoreState = bgStore.get();
+  onMount(() => {
+    return bgStore.subscribe((s) => {
+      bgStoreState = s;
+    });
+  });
   $: if (armFor !== $state.selectedId) {
     armFor = $state.selectedId;
     armDelete = false;
@@ -24,6 +35,25 @@
   $: isDup = a ? M.dupNames(P).has(M.strip(a.area)) : false;
   $: allPresets = M.BUILTIN_TOD_PRESETS.concat(P.todPresets || []);
   $: filter = $state.fieldFilter;
+
+  $: currentBgDef = bgStoreState.backgrounds.find(
+    (b) => b.folder.toLowerCase() === normalizeBgPath(a?.background).toLowerCase()
+  );
+
+  $: currentBgVisual = currentBgDef
+    ? resolveActiveVisual(currentBgDef, { state: 'default', tod: 'day' })
+    : null;
+
+  $: currentBgUrl = currentBgVisual
+    ? bgStore.getAssetUrl(currentBgVisual.background, 'image')
+    : (a?.background ? bgStore.getAssetUrl(a.background.split('/').pop(), 'image') : '');
+
+  $: hasInternalTod = Boolean(
+    currentBgDef && (
+      (currentBgDef.states?.default?.time_variants && Object.keys(currentBgDef.states.default.time_variants).length > 0) ||
+      (currentBgDef.states?.default?.positions && Object.values(currentBgDef.states.default.positions).some(p => p.time_variants && Object.keys(p.time_variants).length > 0))
+    )
+  );
 
   const grpOf = (k) => M.FIELD_GROUP[k] || 'common';
   const showG = (g) =>
@@ -221,21 +251,44 @@
       </div>
 
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:9px">
-        <span class="hint" title="Image displayed on the area node and hover preview">Node Image</span>
-        {#if a.image}
-          <div style="display:flex;gap:4px">
-            <button class="mini-btn" title="Replace area image" on:click={() => iconInput.click()}>Replace</button>
-            <button class="mini-btn" title="Remove area image" on:click={() => withArea((s, ar) => (ar.image = ''))}>✕</button>
-          </div>
-        {/if}
+        <span class="hint" title="Visual asset preview for this area">Visual Preview</span>
+        <div style="display:flex;gap:4px">
+          {#if a.image && currentBgUrl}
+            <button
+              class="mini-btn {imageDisplayMode === 'node' ? 'active-filter' : ''}"
+              title="Show custom cropped node icon"
+              on:click={() => (imageDisplayMode = 'node')}
+            >Icon</button>
+            <button
+              class="mini-btn {imageDisplayMode === 'scene' ? 'active-filter' : ''}"
+              title="Show full background scene"
+              on:click={() => (imageDisplayMode = 'scene')}
+            >Scene</button>
+          {/if}
+          {#if a.image}
+            <button class="mini-btn" title="Replace area icon" on:click={() => iconInput.click()}>Replace</button>
+            <button class="mini-btn" title="Remove area icon" on:click={() => withArea((s, ar) => (ar.image = ''))}>✕</button>
+          {/if}
+        </div>
       </div>
-      {#if a.image}
+
+      {#if (imageDisplayMode === 'node' && a.image) || (!currentBgUrl && a.image)}
         <div class="node-image-preview" style="margin-top:6px;border-radius:5px;overflow:hidden;border:1px solid var(--line2);background:var(--input-bg);display:flex;align-items:center;justify-content:center;max-height:180px">
           <img src={a.image} alt="Node preview" style="max-width:100%;max-height:180px;width:auto;height:auto;object-fit:contain;display:block" />
         </div>
+      {:else if currentBgUrl}
+        <div class="node-image-preview" style="margin-top:6px;border-radius:5px;overflow:hidden;border:1px solid var(--line2);background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;max-height:180px;position:relative">
+          <img src={currentBgUrl} alt="Background scene" style="max-width:100%;max-height:180px;width:100%;height:auto;object-fit:cover;display:block" />
+          <div style="position:absolute;bottom:4px;right:6px;background:rgba(0,0,0,0.7);padding:1px 6px;border-radius:3px;font-size:9.5px;color:#fff">
+            Background: {a.background}
+          </div>
+        </div>
       {:else}
-        <div style="margin-top:5px">
-          <button class="mini-btn" style="width:100%;padding:4px" on:click={() => iconInput.click()}>＋ Attach Node Image</button>
+        <div style="margin-top:5px;display:flex;gap:4px">
+          <button class="mini-btn" style="flex:1;padding:4px" on:click={() => iconInput.click()}>＋ Attach Node Icon</button>
+          {#if a.background}
+            <button class="mini-btn" style="padding:4px 8px" title="Configure in Background Maker" on:click={() => bgStore.openMaker(a.background)}>🖼 Open BG</button>
+          {/if}
         </div>
       {/if}
       <input type="file" accept="image/*" hidden bind:this={iconInput} on:change={onIconUpload} />
@@ -267,12 +320,39 @@
         {/if}
         {#if showK('background')}
           <Field fkey="background" mandatory={true}>
-            <input type="text" title="Background path relative to your server's backgrounds folder" placeholder="e.g. DR/Hallway" value={a.background} on:input={inputStr('background')} on:change={trimStr('background')} />
-            <div class="hint" style="margin-top:4px">Path from your backgrounds folder, e.g. <code>DR/Hallway</code>.</div>
+            <div style="display:flex;gap:4px">
+              <input type="text" style="flex:1" title="Background path relative to your server's backgrounds folder" placeholder="e.g. DR/Hallway" value={a.background} on:input={inputStr('background')} on:change={trimStr('background')} />
+              <button class="mini-btn" title="Open in Background.json Maker" on:click={() => bgStore.openMaker(a.background)}>🖼 Maker…</button>
+            </div>
+            {#if bgStoreState.backgrounds.length > 0}
+              <div style="display:flex;align-items:center;gap:4px;margin-top:4px">
+                <span class="hint">Library:</span>
+                <select
+                  style="flex:1;font-size:11px;padding:2px 4px;background:var(--input-bg);border:1px solid var(--line);border-radius:var(--radius);color:var(--text)"
+                  value={normalizeBgPath(a.background)}
+                  on:change={(e) => {
+                    const chosen = e.target.value;
+                    if (chosen) withArea((s, ar) => (ar.background = chosen));
+                  }}
+                >
+                  <option value="">— Pick from Library ({bgStoreState.backgrounds.length}) —</option>
+                  {#each bgStoreState.backgrounds as bgItem}
+                    <option value={bgItem.folder}>{bgItem.folder}</option>
+                  {/each}
+                </select>
+              </div>
+            {/if}
+            <div class="hint" style="margin-top:4px">Path from your backgrounds folder, e.g. <code>DR/Hallway</code> or <code>Umamusume/Cafeteria</code>.</div>
           </Field>
         {/if}
         {#if showK('background_tod')}
           <Field fkey="background_tod">
+            {#if hasInternalTod}
+              <div style="margin-bottom:8px;padding:6px 8px;border-radius:4px;background:color-mix(in srgb, #10b981 12%, transparent);border:1px solid color-mix(in srgb, #10b981 40%, transparent);color:#10b981;font-size:11px;display:flex;align-items:center;gap:6px">
+                <span>✓</span>
+                <span>Handled by <code>{currentBgDef.folder}/background.json</code> — separate <code>bg_tod</code> is optional.</span>
+              </div>
+            {/if}
             {#each a.tod as row, i}
               <div class="tod-row">
                 <input type="text" title="Time-of-day key (e.g. day, evening, night)" placeholder="time of day (e.g. day)" value={row[0]} on:change={(e) => todSet(i, 0, e)} />

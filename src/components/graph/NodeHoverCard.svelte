@@ -1,10 +1,21 @@
 <script>
   import * as M from '../../lib/core.js';
+  import { bgStore } from '../../lib/bgStore.js';
+  import { resolveActiveVisual, normalizeBgPath } from '../../lib/bgSchema.js';
 
   export let area;
   export let idx;
   export let pos = { left: 0, top: 0 };
   export let dups = new Set();
+
+  $: bgState = bgStore.get();
+  $: matchedBg = bgState.backgrounds.find(
+    (b) => b.folder.toLowerCase() === normalizeBgPath(area?.background).toLowerCase()
+  );
+  $: bgVisual = matchedBg ? resolveActiveVisual(matchedBg, { state: 'default', tod: 'day' }) : null;
+  $: bgUrl = bgVisual
+    ? bgStore.getAssetUrl(bgVisual.background, 'image')
+    : (area?.background ? bgStore.getAssetUrl(area.background.split('/').pop(), 'image') : '');
 
   $: reachL = area.links?.reachable;
   $: reachTxt = reachL?.mode === 'all'
@@ -37,6 +48,10 @@
   {#if area.image}
     <div class="card-img-wrap">
       <img src={area.image} alt={area.area} />
+    </div>
+  {:else if bgUrl}
+    <div class="card-img-wrap" style="aspect-ratio: 16/9; height: auto; max-height: 120px;">
+      <img src={bgUrl} alt={area.background} style="width: 100%; height: 100%; object-fit: cover;" />
     </div>
   {/if}
 

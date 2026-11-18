@@ -4,6 +4,15 @@ import * as M from '../src/lib/core.js';
 import { edgeEndpoints } from '../src/lib/graphGeom.js';
 import { cameraCommand, centerCameraOn, resetCamera, fitCamera } from '../src/lib/state.js';
 import { findShortestPath, auditMap } from '../src/lib/pathAudit.js';
+import {
+  normalizeBgPath,
+  normalizeAmbiencePath,
+  createBackground,
+  serializeBackgroundJson,
+  parseBackgroundJson,
+  resolveActiveVisual,
+} from '../src/lib/bgSchema.js';
+import { buildZip } from '../src/lib/zip.js';
 
 let pass = 0;
 let fail = 0;
@@ -441,6 +450,92 @@ eq(pathToPrivate.path, [allProj.areas[1].id, allProj.areas[2].id, allProj.areas[
 // Hub has <ALL>, but Route Finder ignores <ALL> so Hub cannot magical-teleport to Room B
 const pathFromHubAll = findShortestPath(allProj, allProj.areas[0].id, allProj.areas[2].id);
 ok(!pathFromHubAll.found, 'Route Finder strictly ignores <ALL> on Hub or other areas');
+
+/* ---- Background.json Schema, Parsing, Serialization & Zip Builder ---- */
+eq(normalizeBgPath('base/background/Umamusume/Cafeteria/'), 'Umamusume/Cafeteria', 'normalizeBgPath removes base/background/');
+eq(normalizeBgPath('background/wsl/inner_forest'), 'wsl/inner_forest', 'normalizeBgPath removes background/');
+eq(normalizeAmbiencePath('base/sounds/ambient/wsl/forest.opus'), 'wsl/forest.opus', 'normalizeAmbiencePath normalizes sound path');
+
+// Test simple background (Cafeteria style)
+const cafeJson = `{
+  "default": {
+    "background": "default.webp",
+    "time_variants": {
+      "evening": { "background": "evening.webp" }
+    }
+  },
+  "crowded": {
+    "background": "crowded.webp"
+  }
+}`;
+const parsedCafe = parseBackgroundJson(cafeJson, 'Umamusume/Cafeteria');
+eq(parsedCafe.folder, 'Umamusume/Cafeteria', 'parsed folder matches');
+ok(Boolean(parsedCafe.states.default), 'has default state');
+ok(Boolean(parsedCafe.states.crowded), 'has crowded state');
+eq(parsedCafe.states.default.time_variants.evening.background, 'evening.webp', 'evening time variant matches');
+
+const visCafeDay = resolveActiveVisual(parsedCafe, { state: 'default', tod: 'day' });
+eq(visCafeDay.background, 'default.webp', 'day visual resolves to default.webp');
+const visCafeEve = resolveActiveVisual(parsedCafe, { state: 'default', tod: 'evening' });
+eq(visCafeEve.background, 'evening.webp', 'evening visual resolves to evening.webp');
+const visCafeCrowd = resolveActiveVisual(parsedCafe, { state: 'crowded', tod: 'day' });
+eq(visCafeCrowd.background, 'crowded.webp', 'crowded visual resolves to crowded.webp');
+
+// Test complex background with positions & time variants (Inner Forest style)
+const complexJson = `{
+  "default": {
+    "ambience": "wsl/inner_forest_day.opus",
+    "background": "default_day_witnessempty.png",
+    "foreground": "",
+    "positions": {
+      "Normal": {
+        "ambience": "wsl/inner_forest_day.opus",
+        "background": "default_day_witnessempty.png",
+        "foreground": "",
+        "time_variants": {
+          "day": {
+            "background": "default_day_witnessempty.png",
+            "ambience": "wsl/inner_forest_day.opus"
+          },
+          "night": {
+            "background": "default_night_witnessempty.png",
+            "foreground": "default_night_night_filter.png",
+            "ambience": "wsl/inner_forest_night.opus"
+          }
+        }
+      }
+    }
+  }
+}`;
+const parsedComplex = parseBackgroundJson(complexJson, 'wsl/inner_forest');
+ok(parsedComplex.states.default.usePositions, 'positions mode detected');
+ok(Boolean(parsedComplex.states.default.positions.Normal), 'has Normal position');
+
+const visNormDay = resolveActiveVisual(parsedComplex, { state: 'default', position: 'Normal', tod: 'day' });
+eq(visNormDay.background, 'default_day_witnessempty.png', 'normal day background matches');
+const visNormNight = resolveActiveVisual(parsedComplex, { state: 'default', position: 'Normal', tod: 'night' });
+eq(visNormNight.background, 'default_night_witnessempty.png', 'normal night background matches');
+eq(visNormNight.foreground, 'default_night_night_filter.png', 'normal night foreground matches');
+eq(visNormNight.ambience, 'wsl/inner_forest_night.opus', 'normal night ambience matches');
+
+// Test serialization round-trip
+const serializedCafe = serializeBackgroundJson(parsedCafe);
+const roundTripCafe = JSON.parse(serializedCafe);
+eq(roundTripCafe.default.background, 'default.webp', 'round trip preserves default background');
+eq(roundTripCafe.default.time_variants.evening.background, 'evening.webp', 'round trip preserves time variants');
+
+// Test ZIP archive builder
+const zipBuf = await buildZip([
+  { path: 'base/background/Umamusume/Cafeteria/background.json', data: cafeJson },
+  { path: 'base/background/Umamusume/Cafeteria/default.webp', data: 'fake-image-bytes' },
+]);
+ok(zipBuf instanceof Uint8Array, 'buildZip returns Uint8Array');
+ok(zipBuf.length > 100, 'zip has valid length');
+// First 4 bytes must be standard ZIP local header signature 0x04034b50 (PK\x03\x04)
+eq(zipBuf[0], 0x50, 'zip magic byte 0 (P)');
+eq(zipBuf[1], 0x4b, 'zip magic byte 1 (K)');
+eq(zipBuf[2], 0x03, 'zip magic byte 2');
+eq(zipBuf[3], 0x04, 'zip magic byte 3');
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

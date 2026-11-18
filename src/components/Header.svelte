@@ -9,12 +9,16 @@
   import TemplatesModal from './modals/TemplatesModal.svelte';
   import TestMode from './modals/TestMode.svelte';
   import SettingsModal from './modals/SettingsModal.svelte';
+  import BackgroundMakerModal from './modals/BackgroundMakerModal.svelte';
+  import { bgStore } from '../lib/bgStore.js';
 
   let yamlOpen = false;
   let tplOpen = false;
   let helpOpen = false;
   let testOpen = false;
   let settingsOpen = false;
+
+  $: isBgMakerOpen = $bgStore.isMakerOpen;
   let newMenu = false;
   let exampleMenu = false;
   let importMenu = false;
@@ -209,6 +213,7 @@
           <button title="Preview, validate, copy, or download areas.yaml" on:click={() => { exportMenu = false; yamlOpen = true; }}>YAML — the finished areas.yaml…</button>
           <button title="Download full project backup including positions and templates" on:click={exportJson}>JSON — save project backup</button>
           <button title="Export high-resolution PNG image of the visible network map" on:click={() => { exportMenu = false; window.dispatchEvent(new CustomEvent('export-graph-screenshot')); }}>Map image — high-res PNG visual…</button>
+          <button title="Build, manage, and export background.json and asset packages (.zip)" on:click={() => { exportMenu = false; bgStore.openMaker(); }}>Backgrounds — visual package & JSON…</button>
           <div class="drop-hint">JSON is your project save file (positions, groups, templates). YAML is the finished server config.</div>
         </div>
       {/if}
@@ -227,6 +232,7 @@
       </select>
     </label>
     <button on:click={() => (testOpen = true)} title="Walk through the live map like a player to verify exits">▶ Test mode</button>
+    <button on:click={() => bgStore.openMaker()} title="Visual background.json builder & asset pool manager">🖼 Backgrounds</button>
     <button on:click={() => (tplOpen = true)} title="Manage reusable field/permission templates">Templates</button>
     <button on:click={() => (settingsOpen = true)} title="Adjust auto-arrange spacing, line thickness & glow">⚙ Settings</button>
     <MusicPlayer />
@@ -264,4 +270,8 @@
 
 {#if tplOpen}
   <TemplatesModal on:close={() => (tplOpen = false)} />
+{/if}
+
+{#if isBgMakerOpen}
+  <BackgroundMakerModal on:close={() => bgStore.closeMaker()} />
 {/if}
