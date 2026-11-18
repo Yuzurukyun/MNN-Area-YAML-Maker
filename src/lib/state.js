@@ -4,6 +4,7 @@
 
 import { writable } from 'svelte/store';
 import * as M from './core.js';
+import { bgStore } from './bgStore.js';
 
 const LS_KEY = 'areaMakerDemo';
 const THEME_KEY = 'areamaker-theme';
@@ -15,7 +16,9 @@ function loadProject() {
       const p = JSON.parse(raw);
       if (p && Array.isArray(p.areas) && p.areas.length) {
         p.areas.forEach(M.normaliseArea);
-        return M.ensureProject(p);
+        const ensured = M.ensureProject(p);
+        ensured.backgrounds = bgStore.get().backgrounds;
+        return ensured;
       }
     }
   } catch {
@@ -23,11 +26,16 @@ function loadProject() {
   }
   const p = M.sampleProject();
   M.autoArrange(p);
-  return M.ensureProject(p);
+  const ensured = M.ensureProject(p);
+  ensured.backgrounds = bgStore.get().backgrounds;
+  return ensured;
 }
 
 function save(p) {
   try {
+    if (p) {
+      p.backgrounds = bgStore.get().backgrounds;
+    }
     localStorage.setItem(LS_KEY, JSON.stringify(p));
   } catch {
     /* storage full or blocked */

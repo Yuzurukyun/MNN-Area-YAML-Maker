@@ -142,6 +142,99 @@ export async function buildZip(files) {
 }
 
 /**
+ * Parses and extracts files from a standard ZIP archive (ArrayBuffer or Uint8Array).
+ * Supports STORE (uncompressed) and DEFLATE compression using built-in web streams.
+ * @param {ArrayBuffer|Uint8Array} buffer
+ * @returns {Promise<Array<{ path: string, data: Uint8Array }>>}
+ */
+export async function readZip(buffer) {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const decoder = new TextDecoder();
+  const files = [];
+
+  // Find End of Central Directory Record (EOCD) by scanning backwards from end
+  let eocdOffset = -1;
+  const maxSearch = Math.min(bytes.length, 65557); // 22 bytes EOCD + max 65535 comment length
+  for (let i = bytes.length - 22; i >= bytes.length - maxSearch; i--) {
+    if (view.getUint32(i, true) === 0x06054b50) {
+      eocdOffset = i;
+      break;
+    }
+  }
+
+  if (eocdOffset === -1) {
+    throw new Error('Not a valid ZIP archive (EOCD record not found)');
+  }
+
+  const totalEntries = view.getUint16(eocdOffset + 10, true);
+  const cdOffset = view.getUint32(eocdOffset + 16, true);
+
+  let p = cdOffset;
+  for (let i = 0; i < totalEntries; i++) {
+    if (p + 46 > bytes.length || view.getUint32(p, true) !== 0x02014b50) {
+      break; // Reached end or corrupted header
+    }
+
+    const compression = view.getUint16(p + 10, true);
+    const compressedSize = view.getUint32(p + 20, true);
+    const nameLen = view.getUint16(p + 28, true);
+    const extraLen = view.getUint16(p + 30, true);
+    const commentLen = view.getUint16(p + 32, true);
+    const localHeaderOffset = view.getUint32(p + 42, true);
+
+    const nameBytes = bytes.subarray(p + 46, p + 46 + nameLen);
+    const filename = decoder.decode(nameBytes).replace(/\\/g, '/');
+
+    p += 46 + nameLen + extraLen + commentLen;
+
+    // Skip directories
+    if (filename.endsWith('/')) continue;
+
+    // Verify local header signature
+    if (localHeaderOffset + 30 > bytes.length || view.getUint32(localHeaderOffset, true) !== 0x04034b50) {
+      continue;
+    }
+
+    const localNameLen = view.getUint16(localHeaderOffset + 26, true);
+    const localExtraLen = view.getUint16(localHeaderOffset + 28, true);
+    const dataOffset = localHeaderOffset + 30 + localNameLen + localExtraLen;
+
+    if (dataOffset + compressedSize > bytes.length) {
+      continue;
+    }
+
+    const rawData = bytes.subarray(dataOffset, dataOffset + compressedSize);
+    let data;
+
+    if (compression === 0) {
+      // STORE (no compression)
+      data = rawData;
+    } else if (compression === 8) {
+      // DEFLATE compression
+      try {
+        const stream = new Response(rawData).body.pipeThrough(new DecompressionStream('deflate-raw'));
+        const decompressed = await new Response(stream).arrayBuffer();
+        data = new Uint8Array(decompressed);
+      } catch (err) {
+        console.warn(`Failed to decompress ${filename}:`, err);
+        continue;
+      }
+    } else {
+      console.warn(`Unsupported ZIP compression method ${compression} for ${filename}`);
+      continue;
+    }
+
+    files.push({
+      path: filename,
+      data,
+    });
+  }
+
+  return files;
+}
+
+/**
  * Triggers a download of a ZIP blob in browser
  */
 export function downloadZipBlob(zipBytes, filename = 'archive.zip') {

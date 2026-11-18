@@ -324,10 +324,36 @@
   // File upload handlers
   let fileInputGeneral;
   let fileInputFolder;
+  let fileInputLibrary;
+  let libraryMenuOpen = false;
+  let isDraggingOverModal = false;
 
-  function handleFiles(files) {
-    bgStore.registerFiles(files);
-    notify('Loaded files into Asset Pool');
+  async function handleFiles(files) {
+    if (!files || !files.length) return;
+    const countBefore = backgrounds.length;
+    await bgStore.registerFiles(files);
+    const countAfter = backgrounds.length;
+    if (countAfter > countBefore) {
+      notify(`Loaded ${countAfter - countBefore} background(s) & assets into library`, 'ok');
+    } else {
+      notify('Loaded files into Asset Pool & Background Library', 'ok');
+    }
+  }
+
+  function onModalDragOver(e) {
+    e.preventDefault();
+    isDraggingOverModal = true;
+  }
+  function onModalDragLeave(e) {
+    if (e.currentTarget?.contains?.(e.relatedTarget)) return;
+    isDraggingOverModal = false;
+  }
+  function onModalDrop(e) {
+    e.preventDefault();
+    isDraggingOverModal = false;
+    if (e.dataTransfer?.files?.length) {
+      handleFiles(e.dataTransfer.files);
+    }
   }
 
   // Drag over pool
@@ -401,8 +427,19 @@
   });
 </script>
 
+<svelte:window on:click={() => { libraryMenuOpen = false; }} />
+
 <div class="modal-bg" role="presentation" on:click|self={() => dispatch('close')}>
-  <div class="modal bg-maker-modal" role="dialog" aria-modal="true" aria-label="Background.json Maker">
+  <div
+    class="modal bg-maker-modal {isDraggingOverModal ? 'dragover' : ''}"
+    role="dialog"
+    tabindex="-1"
+    aria-modal="true"
+    aria-label="Background.json Maker"
+    on:dragover={onModalDragOver}
+    on:dragleave={onModalDragLeave}
+    on:drop={onModalDrop}
+  >
     <!-- Top Notch & Header -->
     <button class="modal-x" title="Close Background Maker (Esc)" on:click={() => dispatch('close')}>✕</button>
 
@@ -422,6 +459,13 @@
             ✓ Apply to Area #{Math.max(0, $state.project.areas.indexOf(selectedArea))}
           </button>
         {/if}
+        <button
+          class="mini-btn"
+          title="Import background definitions, library backups, or asset ZIPs (.json, .zip)"
+          on:click={() => fileInputLibrary && fileInputLibrary.click()}
+        >
+          📥 Import
+        </button>
         <button
           class="mini-btn"
           title="Copy formatted background.json to clipboard"
@@ -445,12 +489,43 @@
           💾 Download JSON
         </button>
         <button
-          class="mini-btn accent-btn"
+          class="mini-btn"
           title="Export complete package ZIP containing background.json, images and sounds"
           on:click={() => bgStore.exportZip(activeBg.id)}
         >
           📦 Export Folder ZIP
         </button>
+        <span class="drop-wrap">
+          <button
+            class="mini-btn accent-btn"
+            title="Export full background library for sharing with collaborators"
+            on:click|stopPropagation={() => (libraryMenuOpen = !libraryMenuOpen)}
+          >
+            📚 Library ▾
+          </button>
+          {#if libraryMenuOpen}
+            <div class="drop-menu library-drop-menu">
+              <button
+                title="Download backgrounds-library.json backup containing all background definitions"
+                on:click={() => { libraryMenuOpen = false; bgStore.downloadLibraryJson(); }}
+              >
+                💾 Export Library (JSON)
+              </button>
+              <button
+                title="Download comprehensive ZIP package with all background.json files and assets"
+                on:click={() => { libraryMenuOpen = false; bgStore.exportAllZip(); }}
+              >
+                📦 Export All (ZIP)
+              </button>
+              <button
+                title="Import single background.json, backgrounds-library.json, or package ZIP"
+                on:click={() => { libraryMenuOpen = false; fileInputLibrary && fileInputLibrary.click(); }}
+              >
+                📥 Import JSON / ZIP…
+              </button>
+            </div>
+          {/if}
+        </span>
       </div>
     </div>
 
@@ -533,11 +608,18 @@
       <aside class="bg-nav">
         <div class="nav-head">
           <span class="nav-title">BACKGROUNDS ({backgrounds.length})</span>
-          <button
-            class="mini-btn"
-            title="Create a new background in the current folder ({activeSubfolder || 'root'})"
-            on:click={createNewBackgroundInCurrentFolder}
-          >+ New</button>
+          <div class="nav-head-actions">
+            <button
+              class="mini-btn icon-action-btn"
+              title="Import background.json, backgrounds-library.json, or package .zip"
+              on:click={() => fileInputLibrary && fileInputLibrary.click()}
+            >📥 Import</button>
+            <button
+              class="mini-btn"
+              title="Create a new background in the current folder ({activeSubfolder || 'root'})"
+              on:click={createNewBackgroundInCurrentFolder}
+            >+ New</button>
+          </div>
         </div>
 
         <div class="bg-list">
@@ -1056,8 +1138,9 @@
         <div class="dock-actions">
           <button class="mini-btn" on:click={() => fileInputGeneral.click()}>+ Upload Files</button>
           <button class="mini-btn" on:click={() => fileInputFolder.click()}>+ Upload Folder</button>
-          <input type="file" multiple hidden bind:this={fileInputGeneral} on:change={(e) => handleFiles(e.target.files)} />
+          <input type="file" accept="image/*,audio/*,.json,.zip" multiple hidden bind:this={fileInputGeneral} on:change={(e) => handleFiles(e.target.files)} />
           <input type="file" webkitdirectory multiple hidden bind:this={fileInputFolder} on:change={(e) => handleFiles(e.target.files)} />
+          <input type="file" accept=".json,.zip" multiple hidden bind:this={fileInputLibrary} on:change={(e) => handleFiles(e.target.files)} />
         </div>
       </div>
 
@@ -1105,6 +1188,11 @@
     flex-direction: column;
     gap: 12px;
     overflow: hidden;
+    transition: outline 0.15s ease;
+  }
+  .bg-maker-modal.dragover {
+    outline: 2px dashed var(--accent);
+    outline-offset: -4px;
   }
 
   .maker-head {
@@ -1396,6 +1484,21 @@
     justify-content: space-between;
     padding: 8px 10px;
     border-bottom: 1px solid var(--line);
+    gap: 8px;
+  }
+
+  .nav-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .library-drop-menu {
+    right: 0;
+    left: auto;
+    min-width: 210px;
+    z-index: 100;
   }
 
   .nav-title {

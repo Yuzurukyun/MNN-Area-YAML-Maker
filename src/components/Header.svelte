@@ -149,8 +149,17 @@
           body: REPLACE_WARNING,
           confirmLabel: 'Load project',
           apply: () => {
+            if (p.backgrounds && Array.isArray(p.backgrounds) && p.backgrounds.length > 0) {
+              bgStore.loadBackgrounds(p.backgrounds, { replace: true });
+            }
             startProject(p);
-            notify(`Loaded project "${f.name}" (${p.areas.length} areas).`, 'ok');
+            const bgCount = p.backgrounds?.length || 0;
+            notify(
+              bgCount > 0
+                ? `Loaded project "${f.name}" (${p.areas.length} areas, ${bgCount} background${bgCount === 1 ? '' : 's'}).`
+                : `Loaded project "${f.name}" (${p.areas.length} areas).`,
+              'ok',
+            );
           },
         };
       } catch {
@@ -161,8 +170,15 @@
 
   function exportJson() {
     exportMenu = false;
+    P.backgrounds = bgStore.get().backgrounds;
     download('areas-project.json', JSON.stringify(P, null, 2), 'application/json');
-    notify('Saved project backup (areas-project.json).', 'ok');
+    const bgCount = P.backgrounds?.length || 0;
+    notify(
+      bgCount > 0
+        ? `Saved project backup (${P.areas.length} areas, ${bgCount} background${bgCount === 1 ? '' : 's'}).`
+        : 'Saved project backup (areas-project.json).',
+      'ok',
+    );
   }
 </script>
 

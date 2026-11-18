@@ -314,12 +314,29 @@
     - Drag any thumbnail from the pool directly onto any background, foreground, or ambience slot in the builder.
     - 100% privacy-safe: all files are handled in-memory via ObjectURLs with zero OS absolute paths (`C:\...`) persisted or leaked.
 
-### Zero-Dependency ZIP Package Exporter
+### Zero-Dependency ZIP Package Exporter & Reader
 
-- **Standard client-side ZIP builder (`src/lib/zip.js`):**
-    - Built a pure vanilla JavaScript ZIP archive generator supporting UTF-8 filenames, CRC-32 checksums, and standard uncompressed STORE packaging.
+- **Standard client-side ZIP builder & parser (`src/lib/zip.js`):**
+    - Built a pure vanilla JavaScript ZIP archive generator and reader supporting UTF-8 filenames, CRC-32 checksums, standard uncompressed STORE packaging, and DEFLATE decompression via native `DecompressionStream`.
     - **📦 Export Folder ZIP:** Exports a ready-to-use MNN server package containing `base/background/<folder>/background.json`, all referenced images, and `base/sounds/ambient/<soundPath>` audio files.
-    - **💾 Download JSON / 📋 Copy JSON:** Fast clipboard copy or `.json` file download.
+    - **📦 Export All Backgrounds (ZIP):** Comprehensive package bundling the root `backgrounds-library.json`, all background folders with their respective `background.json` files, and referenced artwork/ambience tracks.
+    - **Zero-dependency unzipper (`readZip`):** Directly unpacks `.zip` archives in memory, extracting images, ambience audio, and JSON definitions into the library and asset pool with zero external dependencies.
+    - **💾 Download JSON / 📋 Copy JSON:** Fast clipboard copy or single `.json` file download.
+
+### Background Progress Persistence & Collaborative Sharing
+
+- **Full Project Save / Load Sync (`areas-project.json`, `src/components/Header.svelte`, `src/lib/model.js`):**
+    - `areas-project.json` (via `Export ▾ -> JSON — save project backup`) now bundles all configured `background.json` definitions.
+    - When collaborators import `areas-project.json` (via `Import ▾ -> JSON — a saved project file…`), all backgrounds are automatically restored into `bgStore` with a comprehensive toast notification showing both area and background counts.
+- **Zero-loss `localStorage` Autosave (`src/lib/bgStore.js`, `src/lib/state.js`):**
+    - Background configurations automatically persist in browser `localStorage` under `areaMakerDemo.backgrounds`. Refreshing or reopening the app restores all background definitions seamlessly without data loss.
+- **Dedicated Library Sharing & Import Tools (`BackgroundMakerModal.svelte`, `src/lib/bgStore.js`):**
+    - Added **📚 Library ▾** dropdown in the modal header:
+        - `💾 Export Library (JSON)`: downloads standalone `backgrounds-library.json` containing all background definitions.
+        - `📦 Export All (ZIP)`: downloads full package archive containing all backgrounds and asset files.
+        - `📥 Import JSON / ZIP…`: opens file picker to load single background files, library collections, project files, or zip packages.
+    - Added **📥 Import** button in the Navigator sidebar header next to `+ New`.
+    - **Modal-wide Drag & Drop:** Dropping any `.json` or `.zip` file anywhere onto the Background Maker modal highlights the window and automatically registers assets and loads backgrounds with feedback.
 
 ### Inspector & Node Hover Integration
 
@@ -333,5 +350,10 @@
 
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **145 passed, 0 failed**.
-- `npm run build:both`: rebuilt `export/yuzu_area_maker.html`, `export/yuzu_area_maker_nomusic.html`, and `docs/index.html`.
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **158 passed, 0 failed** (13 new assertions testing `readZip`, `buildZip` roundtrip, `bgStore.loadBackgrounds` replace & merge, `exportLibraryJson`, and project roundtrip with backgrounds).
+- `npm run build:both`: rebuilt `export/yuzu_area_maker.html`, `export/yuzu_area_maker_nomusic.html`, and `docs/index.html` with 0 warnings.
+- Live browser CDP tests verified:
+  - Modal header action bar displays `📥 Import`, `📋 Copy JSON`, `💾 Download JSON`, `📦 Export Folder ZIP`, and `📚 Library ▾`.
+  - Navigator sidebar header displays `📥 Import` and `+ New`.
+  - `📚 Library ▾` menu cleanly renders `💾 Export Library (JSON)`, `📦 Export All (ZIP)`, and `📥 Import JSON / ZIP…`.
+  - Background creation and progress automatically persist in `localStorage` across page reloads.

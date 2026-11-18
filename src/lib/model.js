@@ -135,7 +135,7 @@ export function blankProject() {
   const hub = blankArea('Hub');
   hub.x = 120;
   hub.y = 120;
-  return { areas: [hub], templates: [], todPresets: [], groups: [], layouts: [], images: [] };
+  return { areas: [hub], templates: [], todPresets: [], groups: [], layouts: [], images: [], backgrounds: [] };
 }
 
 export function ensureProject(p) {
@@ -145,6 +145,7 @@ export function ensureProject(p) {
   if (!Array.isArray(p.groups)) p.groups = [];
   if (!Array.isArray(p.layouts)) p.layouts = [];
   if (!Array.isArray(p.images)) p.images = [];
+  if (!Array.isArray(p.backgrounds)) p.backgrounds = [];
   syncUid(p);
   return p;
 }

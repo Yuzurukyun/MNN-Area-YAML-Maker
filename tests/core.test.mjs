@@ -13,8 +13,8 @@ import {
   resolveActiveVisual,
   hasTimeVariants,
 } from '../src/lib/bgSchema.js';
-import { resolveNodeImageUrl } from '../src/lib/bgStore.js';
-import { buildZip } from '../src/lib/zip.js';
+import { resolveNodeImageUrl, bgStore } from '../src/lib/bgStore.js';
+import { buildZip, readZip } from '../src/lib/zip.js';
 
 let pass = 0;
 let fail = 0;
@@ -597,6 +597,72 @@ const tplWithBg = {
 bgPrefixProj.templates = [tplWithBg];
 const newTplArea = M.addArea(bgPrefixProj, { name: 'Classroom', templateId: 'tpl-school' });
 eq(newTplArea.background, 'Umamusume/School/Classroom', 'addArea automatically applies template bg_prefix pattern');
+
+// Test ZIP archive decompression & parsing with readZip
+const unzippedFiles = await readZip(zipBuf);
+eq(unzippedFiles.length, 2, 'readZip extracts expected number of files');
+const unzippedJson = unzippedFiles.find((f) => f.path.endsWith('background.json'));
+ok(unzippedJson, 'readZip extracted background.json');
+const decodedCafe = new TextDecoder().decode(unzippedJson.data);
+eq(decodedCafe, cafeJson, 'extracted background.json content matches original');
+
+// Test bgStore loadBackgrounds (replace mode)
+const sampleBgs = [
+  createBackground('Umamusume/School/Library', {
+    states: {
+      default: { background: 'library_day.png' },
+      quiet: { background: 'library_quiet.png' },
+    },
+  }),
+  createBackground('Umamusume/School/Courtyard', {
+    states: {
+      default: { background: 'courtyard.png' },
+    },
+  }),
+];
+bgStore.loadBackgrounds(sampleBgs, { replace: true });
+eq(bgStore.get().backgrounds.length, 2, 'loadBackgrounds with replace replaces store backgrounds');
+eq(bgStore.get().backgrounds[0].folder, 'Umamusume/School/Library', 'first background folder matches');
+
+// Test bgStore loadBackgrounds (merge mode)
+const updatedLibrary = createBackground('Umamusume/School/Library', {
+  states: {
+    default: { background: 'library_v2.png' },
+  },
+});
+const newDorm = createBackground('Umamusume/Dorm/Room101', {
+  states: {
+    default: { background: 'room101.png' },
+  },
+});
+bgStore.loadBackgrounds([updatedLibrary, newDorm], { replace: false });
+eq(bgStore.get().backgrounds.length, 3, 'loadBackgrounds in merge mode updates existing and appends new');
+const mergedLib = bgStore.get().backgrounds.find((b) => b.folder === 'Umamusume/School/Library');
+eq(mergedLib.states.default.background, 'library_v2.png', 'merge updated existing background state');
+
+// Test bgStore exportLibraryJson round-trip
+const libraryJsonStr = bgStore.exportLibraryJson();
+const parsedLibJson = JSON.parse(libraryJsonStr);
+eq(parsedLibJson.type, 'mnn-backgrounds-library', 'library json has type mnn-backgrounds-library');
+eq(parsedLibJson.backgrounds.length, 3, 'library json contains all backgrounds');
+
+// Test ensureProject initializes backgrounds array
+const projectWithoutBg = { areas: [M.blankArea('Hub')] };
+M.ensureProject(projectWithoutBg);
+ok(Array.isArray(projectWithoutBg.backgrounds), 'ensureProject creates backgrounds array');
+eq(projectWithoutBg.backgrounds.length, 0, 'new project backgrounds is empty array');
+
+// Test project backup sync with backgrounds
+const fullProjectWithBg = {
+  areas: [M.blankArea('Hub')],
+  backgrounds: bgStore.get().backgrounds,
+};
+const serializedProject = JSON.stringify(fullProjectWithBg);
+const reimportedProject = JSON.parse(serializedProject);
+M.ensureProject(reimportedProject);
+eq(reimportedProject.backgrounds.length, 3, 'reimported project preserves backgrounds');
+bgStore.loadBackgrounds(reimportedProject.backgrounds, { replace: true });
+eq(bgStore.get().backgrounds.length, 3, 'reimported backgrounds restore cleanly into bgStore');
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
