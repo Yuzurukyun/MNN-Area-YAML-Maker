@@ -57,8 +57,9 @@
   let audioEl;
   let isPlayingAudio = false;
 
-  // JSON string
-  $: bgJsonString = activeBg ? serializeBackgroundJson(activeBg) : '{}';
+  // JSON string & Indent configuration
+  let jsonIndent = 4;
+  $: bgJsonString = activeBg ? serializeBackgroundJson(activeBg, jsonIndent) : '{}';
 
   // Resolved visuals for Stage preview
   $: resolvedVisual = activeBg
@@ -640,8 +641,58 @@
             {/if}
           </div>
         {:else}
-          <!-- Raw JSON Editor / Code Inspector -->
+          <!-- Raw JSON Editor / Code Inspector with Indent Controls -->
           <div class="json-inspect-wrap">
+            <div class="json-bar">
+              <div class="json-bar-left">
+                <span class="json-bar-title">INDENT:</span>
+                <select
+                  class="indent-select"
+                  title="Choose indentation style (number of spaces or tabs)"
+                  value={jsonIndent}
+                  on:change={(e) => {
+                    const v = e.target.value;
+                    jsonIndent = v === 'tab' ? 'tab' : Number(v);
+                  }}
+                >
+                  <option value={4}>4 spaces (Default)</option>
+                  <option value={2}>2 spaces</option>
+                  <option value={3}>3 spaces</option>
+                  <option value={8}>8 spaces</option>
+                  <option value="tab">Tabs (\t)</option>
+                  <option value={0}>Compact (0)</option>
+                </select>
+
+                {#if jsonIndent !== 'tab' && jsonIndent !== 0}
+                  <div class="custom-indent-box" title="Custom indentation level">
+                    <span class="hint">Spaces:</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max="12"
+                      class="indent-num-input"
+                      value={jsonIndent}
+                      on:input={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!isNaN(val) && val >= 0 && val <= 16) jsonIndent = val;
+                      }}
+                    />
+                  </div>
+                {/if}
+              </div>
+
+              <div class="json-bar-right">
+                <span class="json-lines-meta">{(bgJsonString.match(/\n/g) || []).length + 1} lines</span>
+                <button
+                  class="mini-btn"
+                  title="Copy formatted JSON to clipboard"
+                  on:click={() => { copyText(bgJsonString); notify('Copied background.json to clipboard'); }}
+                >
+                  📋 Copy JSON
+                </button>
+              </div>
+            </div>
+
             <textarea
               class="json-area"
               readonly
@@ -1283,6 +1334,67 @@
   .json-inspect-wrap {
     flex: 1;
     display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+  }
+
+  .json-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 6px 10px;
+    flex-shrink: 0;
+  }
+
+  .json-bar-left, .json-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .json-bar-title {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+  }
+
+  .indent-select {
+    background: var(--input-bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    color: var(--text-strong);
+    font-size: 11px;
+    padding: 3px 6px;
+  }
+
+  .custom-indent-box {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+  }
+
+  .indent-num-input {
+    width: 44px;
+    background: var(--input-bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    color: var(--text-strong);
+    font-size: 11px;
+    padding: 2px 4px;
+    text-align: center;
+  }
+
+  .json-lines-meta {
+    font-size: 10.5px;
+    color: var(--dim);
+    font-family: var(--mono);
   }
 
   .json-area {

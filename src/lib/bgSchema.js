@@ -176,10 +176,12 @@ export function serializeBackgroundObject(bg) {
 
 /**
  * Serializes internal Background definition into a formatted JSON string.
+ * Supports configurable indent (number of spaces or '\t' tab, default = 4).
  */
-export function serializeBackgroundJson(bg) {
+export function serializeBackgroundJson(bg, indent = 4) {
   const obj = serializeBackgroundObject(bg);
-  return JSON.stringify(obj, null, 2);
+  const ind = indent === 'tab' || indent === '\t' ? '\t' : (typeof indent === 'number' ? indent : 4);
+  return JSON.stringify(obj, null, ind);
 }
 
 /**

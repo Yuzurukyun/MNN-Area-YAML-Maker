@@ -272,7 +272,7 @@
     - **Courtroom & Camera Positions:** Toggleable position mode supporting standard court camera angles (`Normal`, `Witness`, `Prosecution`, `Defense`, `Judge`, `Juror`) or custom position tags.
     - **Asset Slots:** Dedicated drag-and-drop slots for Background Image (`★ background`), Foreground Overlay filter/desk (`foreground`), and Ambience Audio (`ambience`, relative to `base/sounds/ambient/`).
     - **Time of Day Variants (`time_variants`):** Visual rows for `day`, `evening`, `night`, and custom times of day with individual background, foreground, and ambience slots.
-    - **Dual view:** Instant toggling between the **Visual Builder** and **Live background.json** formatted code inspector.
+    - **Dual view & configurable indentation:** Instant toggling between the **Visual Builder** and **Live background.json** formatted code inspector, featuring an indent selector (dropdown + number input) with default `4 spaces`, `2 spaces`, `3 spaces`, `8 spaces`, `Tabs (\t)`, and `Compact (0)`.
     - **One-click area assignment:** **✓ Apply to Area #ID** sets the edited background folder directly onto the currently selected area.
 
 ### Interactive Live Stage Monitor
@@ -309,5 +309,5 @@
 
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **128 passed, 0 failed**.
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **130 passed, 0 failed**.
 - `npm run build:both`: rebuilt `export/yuzu_area_maker.html`, `export/yuzu_area_maker_nomusic.html`, and `docs/index.html`.

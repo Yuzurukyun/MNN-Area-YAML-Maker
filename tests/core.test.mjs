@@ -519,10 +519,13 @@ eq(visNormNight.foreground, 'default_night_night_filter.png', 'normal night fore
 eq(visNormNight.ambience, 'wsl/inner_forest_night.opus', 'normal night ambience matches');
 
 // Test serialization round-trip
-const serializedCafe = serializeBackgroundJson(parsedCafe);
+const serializedCafe = serializeBackgroundJson(parsedCafe, 4);
 const roundTripCafe = JSON.parse(serializedCafe);
 eq(roundTripCafe.default.background, 'default.webp', 'round trip preserves default background');
 eq(roundTripCafe.default.time_variants.evening.background, 'evening.webp', 'round trip preserves time variants');
+ok(serializedCafe.includes('    "background"'), 'indent 4 produces 4 spaces indent');
+const tabJson = serializeBackgroundJson(parsedCafe, '\t');
+ok(tabJson.includes('\t"background"'), 'indent tab produces tab indent');
 
 // Test ZIP archive builder
 const zipBuf = await buildZip([
