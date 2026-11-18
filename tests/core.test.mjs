@@ -554,5 +554,27 @@ eq(zipBuf[1], 0x4b, 'zip magic byte 1 (K)');
 eq(zipBuf[2], 0x03, 'zip magic byte 2');
 eq(zipBuf[3], 0x04, 'zip magic byte 3');
 
+// Test resolveBgPattern & background template auto-prefixing
+eq(M.resolveBgPattern('topic/topic/topic/topic/', 'Courtyard'), 'topic/topic/topic/topic/Courtyard', 'resolveBgPattern appends area name when trailing slash present');
+eq(M.resolveBgPattern('Umamusume/School/{name}', 'Cafeteria'), 'Umamusume/School/Cafeteria', 'resolveBgPattern replaces {name} placeholder');
+eq(M.resolveBgPattern('topic/topic/topic/topic', 'Courtyard', true), 'topic/topic/topic/topic/Courtyard', 'resolveBgPattern treats prefix as folder prefix when isPrefix is true');
+
+// Test addArea with bgPrefix
+const bgPrefixProj = { areas: [M.blankArea('Hub')], groups: [] };
+const newPrefixedArea = M.addArea(bgPrefixProj, { name: 'Library', bgPrefix: 'topic/topic/topic/topic/' });
+eq(newPrefixedArea.background, 'topic/topic/topic/topic/Library', 'addArea automatically prefixes background using bgPrefix');
+
+// Test addArea with template that defines bg_prefix
+const tplWithBg = {
+  id: 'tpl-school',
+  name: 'School Room',
+  include: [],
+  values: {},
+  bg_prefix: 'Umamusume/School/',
+};
+bgPrefixProj.templates = [tplWithBg];
+const newTplArea = M.addArea(bgPrefixProj, { name: 'Classroom', templateId: 'tpl-school' });
+eq(newTplArea.background, 'Umamusume/School/Classroom', 'addArea automatically applies template bg_prefix pattern');
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -269,7 +269,7 @@
 
 - **Dedicated visual builder (`src/components/modals/BackgroundMakerModal.svelte`, `src/lib/bgSchema.js`, `src/lib/bgStore.js`):**
     - Added a dedicated 3-column workspace accessible via the header **🖼 Backgrounds** button, the **Export ▾** menu, or directly from the Inspector beside the `background` input field.
-    - **Relative path normalization & split folder breadcrumbs:** Automatically strips `base/background/` or `background/` prefixes, and splits pathing into **Series / Parent Folder** (with quick dropdown picking from existing folders) and **Room / Scene Name**, so repetitive series prefixes (e.g. `Umamusume/School/`) never have to be re-typed.
+    - **Adaptive Unified / Split Path Bar:** By default presents a clean, combined single path bar (`base/background/` + `[ Subfolder/RoomName ]`) with native `<datalist>` auto-suggestions and a `▾ Folders` series quick-picker. Automatically shifts to split prefix/room boxes when the path is deeply nested (> 32 chars or 4+ levels) or when toggled via the `⇄ Split / Combined` button.
     - **Folder inheritance on creation:** Clicking **+ New** automatically creates the new background inside the currently active series folder.
     - **State Variants:** Supports the mandatory `default` state plus custom states (`crowded`, `festive`, `rainy`, etc.) with tab-based editing and state deletion.
     - **Courtroom & Camera Positions:** Toggleable position mode supporting standard court camera angles (`Normal`, `Witness`, `Prosecution`, `Defense`, `Judge`, `Juror`) or custom position tags.
@@ -277,6 +277,18 @@
     - **Time of Day Variants (`time_variants`):** Visual rows for `day`, `evening`, `night`, and custom times of day with individual background, foreground, and ambience slots.
     - **Dual view & configurable indentation:** Instant toggling between the **Visual Builder** and **Live background.json** formatted code inspector, featuring an indent selector (dropdown + number input) with default `4 spaces`, `2 spaces`, `3 spaces`, `8 spaces`, `Tabs (\t)`, and `Compact (0)`.
     - **One-click area assignment:** **✓ Apply to Area #ID** sets the edited background folder directly onto the currently selected area.
+
+### Background Folder Templates & Streamlined Area Creation
+
+- **Template Background Patterns (`src/lib/model.js`, `src/components/modals/TemplatesModal.svelte`):**
+    - Added `Background Folder Prefix / Pattern` (`bg_prefix`) support to area templates. Custom templates can specify a series path (e.g. `topic/topic/topic/topic/` or `series/room_{name}`), so newly created areas using the template automatically receive `<prefix>/<area_name>` as their background.
+    - Templates Modal allows setting or picking any existing series prefix with 1 click, and exports/imports template background prefixes in `area-templates.json`.
+- **Session BG Prefix Bar (`src/components/panels/AreaList.svelte`, `src/lib/state.js`, `src/App.svelte`, `src/components/graph/Graph.svelte`):**
+    - Added an active `BG Prefix` field in the Area List toolbar right beneath `Template:` with a dropdown of all series folders detected across the project.
+    - Creating areas anywhere (via `＋ Add Area` button, map double-click, or context menu) automatically applies the active prefix + area name without needing to duplicate areas or retype repetitive folder prefixes.
+- **Inspector Quick Prefix Stamping (`src/components/panels/Inspector.svelte`):**
+    - Added a 1-click `⚡ <prefix><area>` button and `▾ Pick prefix…` dropdown in the Inspector's `background:` row, allowing instant application of any series folder to an existing or renamed area.
+    - Added `<datalist>` auto-completion to the `background` input with all project folder combinations.
 
 ### Interactive Live Stage Monitor
 
@@ -312,5 +324,5 @@
 
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **133 passed, 0 failed**.
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **138 passed, 0 failed**.
 - `npm run build:both`: rebuilt `export/yuzu_area_maker.html`, `export/yuzu_area_maker_nomusic.html`, and `docs/index.html`.

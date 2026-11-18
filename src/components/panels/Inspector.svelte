@@ -31,6 +31,23 @@
   $: hub = P.areas[0];
   $: isHub = !!(a && hub && a.id === hub.id);
   $: tpl = a ? M.templateById(P, a.templateId) : null;
+  $: effectivePrefix = $state.activeBgPrefix || tpl?.bg_prefix || '';
+  $: knownPrefixes = (() => {
+    const set = new Set();
+    for (const ar of P.areas) {
+      if (ar.background && ar.background.includes('/')) {
+        const idx = ar.background.lastIndexOf('/');
+        set.add(ar.background.slice(0, idx + 1));
+      }
+    }
+    for (const bg of bgStoreState.backgrounds) {
+      if (bg.folder && bg.folder.includes('/')) {
+        const idx = bg.folder.lastIndexOf('/');
+        set.add(bg.folder.slice(0, idx + 1));
+      }
+    }
+    return Array.from(set).sort();
+  })();
   $: isDrifted = a ? M.drifted(P, a) : false;
   $: isDup = a ? M.dupNames(P).has(M.strip(a.area)) : false;
   $: allPresets = M.BUILTIN_TOD_PRESETS.concat(P.todPresets || []);
@@ -321,9 +338,55 @@
         {#if showK('background')}
           <Field fkey="background" mandatory={true}>
             <div style="display:flex;gap:4px">
-              <input type="text" style="flex:1" title="Background path relative to your server's backgrounds folder" placeholder="e.g. DR/Hallway" value={a.background} on:input={inputStr('background')} on:change={trimStr('background')} />
+              <input
+                type="text"
+                style="flex:1"
+                title="Background path relative to your server's backgrounds folder"
+                placeholder="e.g. DR/Hallway or series/subfolder/Room"
+                value={a.background}
+                list="known-inspector-prefixes"
+                on:input={inputStr('background')}
+                on:change={trimStr('background')}
+              />
               <button class="mini-btn" title="Open in Background.json Maker" on:click={() => bgStore.openMaker(a.background)}>🖼 Maker…</button>
             </div>
+            {#if effectivePrefix || knownPrefixes.length > 0}
+              <div style="display:flex;align-items:center;gap:4px;margin-top:4px;flex-wrap:wrap">
+                <span class="hint">Prefix:</span>
+                {#if effectivePrefix}
+                  <button
+                    class="mini-btn"
+                    style="font-size:10.5px;padding:2px 6px"
+                    title="Prepend '{effectivePrefix}' to '{a.area}'"
+                    on:click={() => withArea((s, ar) => (ar.background = M.resolveBgPattern(effectivePrefix, ar.area, true)))}
+                  >
+                    ⚡ {effectivePrefix}{a.area}
+                  </button>
+                {/if}
+                {#if knownPrefixes.length > 0}
+                  <select
+                    style="font-size:10.5px;padding:2px 4px;background:var(--input-bg);color:var(--dim);border:1px solid var(--line);border-radius:var(--radius);cursor:pointer"
+                    title="Apply a known folder prefix with this area's name"
+                    on:change={(e) => {
+                      if (e.target.value) {
+                        withArea((s, ar) => (ar.background = M.resolveBgPattern(e.target.value, ar.area, true)));
+                      }
+                      e.target.value = '';
+                    }}
+                  >
+                    <option value="">▾ Pick prefix…</option>
+                    {#each knownPrefixes as p}
+                      <option value={p}>{p}{a.area}</option>
+                    {/each}
+                  </select>
+                {/if}
+              </div>
+            {/if}
+            <datalist id="known-inspector-prefixes">
+              {#each knownPrefixes as p}
+                <option value="{p}{a.area}">{p}{a.area}</option>
+              {/each}
+            </datalist>
             {#if bgStoreState.backgrounds.length > 0}
               <div style="display:flex;align-items:center;gap:4px;margin-top:4px">
                 <span class="hint">Library:</span>

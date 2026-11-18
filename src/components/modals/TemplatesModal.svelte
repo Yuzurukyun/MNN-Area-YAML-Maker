@@ -15,6 +15,26 @@
   const driftCount = (t) => P.areas.filter((a) => a.templateId === t.id && M.drifted(P, a)).length;
   const isBool = (k) => Object.prototype.hasOwnProperty.call(M.BOOL_DEFAULT, k);
 
+  $: knownPrefixes = (() => {
+    const set = new Set();
+    for (const a of P.areas) {
+      if (a.background && a.background.includes('/')) {
+        const idx = a.background.lastIndexOf('/');
+        set.add(a.background.slice(0, idx + 1));
+      }
+    }
+    return Array.from(set).sort();
+  })();
+
+  function setBgPrefix(t, val) {
+    update((s) => {
+      const tp = s.project.templates.find((x) => x.id === t.id);
+      if (tp) {
+        tp.bg_prefix = val;
+      }
+    });
+  }
+
   function apply(t) {
     update((s) => {
       const ar = s.project.areas.find((x) => x.id === s.selectedId);
@@ -38,7 +58,18 @@
     const name = M.strip(newName) || 'Template ' + ((P.templates || []).length + 1);
     const values = {};
     M.TEMPLATE_FIELDS.forEach((k) => (values[k] = sel[k]));
-    const tpl = { id: 't' + Date.now().toString(36), name, values, include: [...M.TEMPLATE_FIELDS] };
+    let bg_prefix = '';
+    if (sel.background && sel.background.includes('/')) {
+      const idx = sel.background.lastIndexOf('/');
+      bg_prefix = sel.background.slice(0, idx + 1);
+    }
+    const tpl = {
+      id: 't' + Date.now().toString(36),
+      name,
+      values,
+      include: [...M.TEMPLATE_FIELDS],
+      bg_prefix,
+    };
     update((s) => {
       if (!Array.isArray(s.project.templates)) s.project.templates = [];
       s.project.templates.push(tpl);
@@ -80,7 +111,12 @@
   function exportJson() {
     const data = {
       kind: 'area-maker-templates',
-      templates: all.map((t) => ({ name: t.name, include: t.include, values: t.values })),
+      templates: all.map((t) => ({
+        name: t.name,
+        include: t.include,
+        values: t.values,
+        bg_prefix: t.bg_prefix || '',
+      })),
     };
     download('area-templates.json', JSON.stringify(data, null, 2), 'application/json');
     notify('Exported templates to area-templates.json.', 'ok');
@@ -105,6 +141,7 @@
                 name: M.strip(t2.name),
                 values: t2.values,
                 include: Array.isArray(t2.include) ? t2.include : Object.keys(t2.values),
+                bg_prefix: t2.bg_prefix || '',
               });
               count++;
             });
@@ -155,6 +192,38 @@
     </div>
     {#if editing}
       <h4 style="margin:12px 0 2px">Editing: {editing.name}</h4>
+
+      <div style="margin:8px 0 10px;padding:8px 10px;background:var(--panel2);border:1px solid var(--line2);border-radius:var(--radius)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span style="font-size:12px;font-weight:700">Background Folder Prefix / Pattern</span>
+          {#if knownPrefixes.length > 0}
+            <select
+              style="font-size:11px;padding:1px 4px;background:var(--input-bg);color:var(--dim);border:1px solid var(--line);border-radius:var(--radius);cursor:pointer"
+              title="Pick an existing series folder prefix"
+              on:change={(e) => {
+                if (e.target.value) setBgPrefix(editing, e.target.value);
+                e.target.value = '';
+              }}
+            >
+              <option value="">▾ Pick known prefix ({knownPrefixes.length})</option>
+              {#each knownPrefixes as p}
+                <option value={p}>{p}</option>
+              {/each}
+            </select>
+          {/if}
+        </div>
+        <input
+          type="text"
+          style="width:100%;font-size:12px;padding:3px 6px;background:var(--input-bg);border:1px solid var(--line);border-radius:var(--radius);color:var(--text)"
+          placeholder="e.g. topic/topic/topic/topic/ or series/subfolder/{'{name}'}"
+          value={editing.bg_prefix || ''}
+          on:input={(e) => setBgPrefix(editing, e.target.value)}
+        />
+        <div class="hint" style="margin-top:4px">
+          Newly created areas using this template will automatically get <code>prefix/&lt;area_name&gt;</code> as their background.
+        </div>
+      </div>
+
       <div class="hint">Ticked fields are written when applying the template.</div>
       <div class="tpl-fields">
         {#each M.TEMPLATE_FIELDS as k}

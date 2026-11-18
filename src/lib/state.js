@@ -48,6 +48,7 @@ export const state = writable({
   focus: true,
   query: '',
   newAreaTemplate: 'builtin-yuzu',
+  activeBgPrefix: '',
 });
 
 /* ================= theme preference ================= */

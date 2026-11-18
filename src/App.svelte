@@ -24,7 +24,10 @@
   function addArea() {
     update((s) => {
       const last = s.project.areas[s.project.areas.length - 1];
-      const a = M.addArea(s.project, { templateId: s.newAreaTemplate || null });
+      const a = M.addArea(s.project, {
+        templateId: s.newAreaTemplate || null,
+        bgPrefix: s.activeBgPrefix || null,
+      });
       if (last) {
         a.x = last.x + 60;
         a.y = last.y + 90;

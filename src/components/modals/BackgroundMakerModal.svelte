@@ -99,6 +99,11 @@
   $: activeSubfolder = currentFolderParts.subfolder;
   $: activeBgName = currentFolderParts.name;
 
+  // View mode for path bar: 'auto' (default: combined unless long), 'combined', or 'split'
+  let pathViewMode = 'auto';
+  $: isVeryLongPath = (activeBg?.folder || '').length > 32 || (activeBg?.folder || '').split('/').length > 3;
+  $: showSplitView = pathViewMode === 'split' || (pathViewMode === 'auto' && isVeryLongPath);
+
   function onSubfolderChange(newSub) {
     const cleanSub = normalizeBgPath(newSub);
     const newFull = cleanSub
@@ -360,24 +365,28 @@
     <div class="maker-head">
       <div class="head-left">
         <span class="maker-tag">// BACKGROUND.JSON MAKER</span>
-        <div class="split-path-bar">
-          <span class="prefix">base/background/</span>
-
-          <!-- Subfolder / Series picker + input -->
-          <div class="subfolder-box" title="Series / Parent folder prefix (e.g. Umamusume/School)">
+        {#if !showSplitView}
+          <!-- Unified / Combined path bar (default) -->
+          <div class="path-bar" title="Full relative folder path inside base/background/">
+            <span class="prefix">base/background/</span>
             <input
               type="text"
-              class="subfolder-input"
-              placeholder="Series / Subfolder"
-              value={activeSubfolder}
-              on:input={(e) => onSubfolderChange(e.target.value)}
+              class="folder-input"
+              placeholder="Subfolder/BackgroundName"
+              value={activeBg?.folder || ''}
+              list="known-bg-maker-folders"
+              on:input={(e) => updateBg((bg) => (bg.folder = normalizeBgPath(e.target.value)))}
             />
             {#if knownSubfolders.length > 0}
               <select
                 class="subfolder-dropdown"
-                title="Pick an existing series folder prefix"
+                title="Shortcut: Prefix with an existing series folder"
                 on:change={(e) => {
-                  if (e.target.value !== '') onSubfolderChange(e.target.value);
+                  if (e.target.value) {
+                    const parts = splitFolderPath(activeBg?.folder || '');
+                    const baseName = parts.name || 'Background';
+                    updateBg((bg) => (bg.folder = `${e.target.value}/${baseName}`));
+                  }
                   e.target.value = '';
                 }}
               >
@@ -387,20 +396,63 @@
                 {/each}
               </select>
             {/if}
+            {#if isVeryLongPath}
+              <button
+                class="view-toggle-btn"
+                title="Path is long: switch to split view"
+                on:click={() => (pathViewMode = 'split')}
+              >⇄ Split</button>
+            {/if}
           </div>
-
-          <span class="path-divider">/</span>
-
-          <!-- Room / Background Name -->
-          <input
-            type="text"
-            class="bgname-input"
-            title="Room or scene folder name (e.g. Cafeteria)"
-            placeholder="RoomName"
-            value={activeBgName}
-            on:input={(e) => onBgNameChange(e.target.value)}
-          />
-        </div>
+        {:else}
+          <!-- Split path bar (for long nested paths or manual split) -->
+          <div class="split-path-bar">
+            <span class="prefix">base/background/</span>
+            <div class="subfolder-box" title="Series / Parent folder prefix (e.g. Umamusume/School)">
+              <input
+                type="text"
+                class="subfolder-input"
+                placeholder="Series / Subfolder"
+                value={activeSubfolder}
+                on:input={(e) => onSubfolderChange(e.target.value)}
+              />
+              {#if knownSubfolders.length > 0}
+                <select
+                  class="subfolder-dropdown"
+                  title="Pick an existing series folder prefix"
+                  on:change={(e) => {
+                    if (e.target.value !== '') onSubfolderChange(e.target.value);
+                    e.target.value = '';
+                  }}
+                >
+                  <option value="">▾ Folders ({knownSubfolders.length})</option>
+                  {#each knownSubfolders as sub}
+                    <option value={sub}>{sub}/</option>
+                  {/each}
+                </select>
+              {/if}
+            </div>
+            <span class="path-divider">/</span>
+            <input
+              type="text"
+              class="bgname-input"
+              title="Room or scene folder name (e.g. Cafeteria)"
+              placeholder="RoomName"
+              value={activeBgName}
+              on:input={(e) => onBgNameChange(e.target.value)}
+            />
+            <button
+              class="view-toggle-btn"
+              title="Switch back to single combined input"
+              on:click={() => (pathViewMode = 'combined')}
+            >⇄ Combined</button>
+          </div>
+        {/if}
+        <datalist id="known-bg-maker-folders">
+          {#each knownSubfolders as sub}
+            <option value="{sub}/">{sub}/</option>
+          {/each}
+        </datalist>
       </div>
 
       <div class="head-actions">
@@ -984,6 +1036,47 @@
     font-weight: 800;
     letter-spacing: 0.12em;
     color: var(--accent);
+  }
+
+  .path-bar {
+    display: flex;
+    align-items: center;
+    background: var(--input-bg);
+    border: 1px solid var(--line2);
+    border-radius: var(--radius);
+    padding: 2px 8px;
+    font-family: inherit;
+    font-size: 12px;
+    gap: 6px;
+  }
+
+  .folder-input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-strong);
+    font-weight: 700;
+    font-size: 12px;
+    min-width: 240px;
+    padding: 2px 4px;
+  }
+  .folder-input:focus {
+    color: var(--accent);
+  }
+
+  .view-toggle-btn {
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    color: var(--dim);
+    font-size: 10px;
+    padding: 2px 6px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .view-toggle-btn:hover {
+    color: var(--accent);
+    border-color: var(--accent);
   }
 
   .split-path-bar {

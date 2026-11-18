@@ -590,6 +590,7 @@
     update((s) => {
       const a = M.addArea(s.project, {
         templateId: s.newAreaTemplate || null,
+        bgPrefix: s.activeBgPrefix || null,
         x: Math.round(w.x - NW / 2),
         y: Math.round(w.y - NH / 2),
       });

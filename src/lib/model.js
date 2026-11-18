@@ -177,6 +177,30 @@ export function duplicateArea(P, id) {
   return copy;
 }
 
+export function resolveBgPattern(pattern, areaName = '', isPrefix = false) {
+  if (!pattern || typeof pattern !== 'string') return '';
+  let p = pattern.trim().replace(/\\/g, '/');
+  p = p.replace(/^(\.\/)?(base\/)?background\//i, '');
+  p = p.replace(/^\/+/, '');
+  if (!p) return '';
+
+  const cleanName = typeof areaName === 'string' ? areaName.trim() : '';
+
+  if (p.includes('{name}')) {
+    return p.replace(/\{name\}/g, cleanName);
+  }
+  if (p.includes('{area}')) {
+    return p.replace(/\{area\}/g, cleanName);
+  }
+  if (p.endsWith('/')) {
+    return `${p}${cleanName}`;
+  }
+  if (isPrefix) {
+    return cleanName ? `${p}/${cleanName}` : `${p}/`;
+  }
+  return p;
+}
+
 export function addArea(P, opts = {}) {
   syncUid(P);
   const taken = new Set(P.areas.map((a) => strip(a.area)));
@@ -188,6 +212,11 @@ export function addArea(P, opts = {}) {
   if (opts.templateId) {
     const tpl = templateById(P, opts.templateId);
     if (tpl) applyTemplate(a, tpl);
+  }
+  if (opts.bgPrefix) {
+    a.background = resolveBgPattern(opts.bgPrefix, a.area, true);
+  } else if (!a.background && opts.bgPattern) {
+    a.background = resolveBgPattern(opts.bgPattern, a.area);
   }
   if (P.areas.length) {
     const hub = P.areas[0];
@@ -367,10 +396,18 @@ export function templateById(P, id) {
 }
 
 export function applyTemplate(area, tpl) {
-  tpl.include.forEach((k) => {
-    area[k] = tpl.values[k];
+  if (!tpl) return;
+  (tpl.include || []).forEach((k) => {
+    if (tpl.values && tpl.values[k] !== undefined) {
+      area[k] = tpl.values[k];
+    }
   });
   area.templateId = tpl.id;
+  if (tpl.bg_pattern) {
+    area.background = resolveBgPattern(tpl.bg_pattern, area.area);
+  } else if (tpl.bg_prefix) {
+    area.background = resolveBgPattern(tpl.bg_prefix, area.area, true);
+  }
 }
 
 export function drifted(P, area) {

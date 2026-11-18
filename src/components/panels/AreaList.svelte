@@ -1,5 +1,6 @@
 <script>
   import { state, update, selectOnly, uiScale, refocusView, notify, centerCameraOn } from '../../lib/state.js';
+  import { bgStore } from '../../lib/bgStore.js';
   import * as M from '../../lib/core.js';
 
   export let onAddArea;
@@ -15,6 +16,23 @@
   $: rows = P.areas
     .map((a, i) => ({ a, i }))
     .filter(({ a }) => !q || a.area.toLowerCase().includes(q) || String(i) === q);
+
+  $: knownPrefixes = (() => {
+    const set = new Set();
+    for (const a of P.areas) {
+      if (a.background && a.background.includes('/')) {
+        const idx = a.background.lastIndexOf('/');
+        set.add(a.background.slice(0, idx + 1));
+      }
+    }
+    for (const bg of $bgStore.backgrounds) {
+      if (bg.folder && bg.folder.includes('/')) {
+        const idx = bg.folder.lastIndexOf('/');
+        set.add(bg.folder.slice(0, idx + 1));
+      }
+    }
+    return Array.from(set).sort();
+  })();
 
   function badges(a, i) {
     const out = [];
@@ -225,6 +243,50 @@
       {/each}
     </select>
   </div>
+  <div class="tpl-row" style="margin-top:4px">
+    <span class="hint" title="Background folder prefix automatically applied to new areas (e.g. topic/topic/topic/topic/)">BG Prefix</span>
+    <div style="flex:1;display:flex;gap:3px;align-items:center;min-width:0">
+      <input
+        type="text"
+        placeholder="e.g. series/subfolder/"
+        style="flex:1;font-size:11px;padding:2px 5px;min-width:0;background:var(--input-bg);color:var(--text);border:1px solid var(--line);border-radius:var(--radius)"
+        title="Background prefix automatically applied when creating areas (e.g. topic/topic/topic/topic/)"
+        value={$state.activeBgPrefix || ''}
+        list="known-area-prefixes"
+        on:input={(e) => update((s) => (s.activeBgPrefix = e.target.value), { skipHistory: true })}
+      />
+      {#if knownPrefixes.length > 0}
+        <select
+          style="width:20px;padding:0 2px;font-size:11px;background:var(--input-bg);color:var(--dim);border:1px solid var(--line);border-radius:var(--radius);cursor:pointer"
+          title="Pick from known series folder prefixes"
+          on:change={(e) => {
+            if (e.target.value) {
+              update((s) => (s.activeBgPrefix = e.target.value), { skipHistory: true });
+            }
+            e.target.value = '';
+          }}
+        >
+          <option value="">▾</option>
+          {#each knownPrefixes as p}
+            <option value={p}>{p}</option>
+          {/each}
+        </select>
+      {/if}
+      {#if $state.activeBgPrefix}
+        <button
+          class="mini-btn"
+          style="padding:1px 4px;font-size:10px"
+          title="Clear active background prefix"
+          on:click={() => update((s) => (s.activeBgPrefix = ''), { skipHistory: true })}
+        >✕</button>
+      {/if}
+    </div>
+  </div>
+  <datalist id="known-area-prefixes">
+    {#each knownPrefixes as p}
+      <option value={p}></option>
+    {/each}
+  </datalist>
   <input type="file" accept=".yaml,.yml,.txt" hidden bind:this={fileYamlAdd} on:change={mergeYaml} />
   <input type="file" accept=".json" hidden bind:this={fileJsonAdd} on:change={mergeJson} />
 </div>
