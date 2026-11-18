@@ -404,6 +404,24 @@
     }
   }
 
+  function frameRouteAreas(areaIds) {
+    if (!wrapEl || !areaIds || !areaIds.length) return;
+    const areasInRoute = areaIds.map(byId).filter(Boolean);
+    if (!areasInRoute.length) return;
+    const minX = Math.min(...areasInRoute.map((a) => a.x)) - 60;
+    const minY = Math.min(...areasInRoute.map((a) => a.y)) - 60;
+    const maxX = Math.max(...areasInRoute.map((a) => a.x + NW)) + 60;
+    const maxY = Math.max(...areasInRoute.map((a) => a.y + NH)) + 60;
+    const bw = Math.max(100, maxX - minX);
+    const bh = Math.max(100, maxY - minY);
+    const vw = wrapEl.clientWidth;
+    const vh = wrapEl.clientHeight;
+    const k = clamp(Math.min((vw - 80) / bw, (vh - 80) / bh), 0.15, 1.8);
+    const targetX = (vw - bw * k) / 2 - minX * k;
+    const targetY = (vh - bh * k) / 2 - minY * k;
+    animateViewTo(targetX, targetY, k, 320);
+  }
+
   let lastCmdTs = 0;
   $: if ($cameraCommand && $cameraCommand.ts !== lastCmdTs) {
     lastCmdTs = $cameraCommand.ts;
@@ -1331,6 +1349,7 @@
       on:routeChange={(e) => { activeRoutePath = e.detail.path || []; }}
       on:close={() => { routeActive = false; activeRoutePath = []; }}
       onStepClick={(id) => centerOnNode(id, true)}
+      onFrameRoute={frameRouteAreas}
     />
   {/if}
 

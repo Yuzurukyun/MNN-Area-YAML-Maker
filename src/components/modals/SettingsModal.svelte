@@ -210,17 +210,17 @@
       <!-- Live preview of line thickness, glow, and style -->
       <div class="preview-box">
         <div class="hint" style="margin-bottom:6px">Line appearance live preview:</div>
-        <svg width="100%" height="46" style="display:block">
+        <svg viewBox="0 0 400 46" width="100%" height="46" style="display:block;overflow:visible">
           {#if ($settings.edgeStyle || 'curved') === 'straight'}
             <line
-              x1="20" y1="23" x2="90%" y2="23"
+              x1="20" y1="23" x2="380" y2="23"
               stroke="var(--edge-oneway)"
               stroke-width="{$settings.edgeThickness * 1.2}px"
               style="filter: drop-shadow(0 0 {$settings.edgeGlow}px var(--edge-oneway))"
             />
           {:else if ($settings.edgeStyle || 'curved') === 'orthogonal'}
             <path
-              d="M 20 33 L 45% 33 L 45% 13 L 90% 13"
+              d="M 20 33 L 200 33 L 200 13 L 380 13"
               fill="none"
               stroke="var(--edge-oneway)"
               stroke-width="{$settings.edgeThickness * 1.2}px"
@@ -228,7 +228,7 @@
             />
           {:else}
             <path
-              d="M 20 33 C 45% 33, 55% 13, 90% 13"
+              d="M 20 33 C 140 33, 260 13, 380 13"
               fill="none"
               stroke="var(--edge-oneway)"
               stroke-width="{$settings.edgeThickness * 1.2}px"

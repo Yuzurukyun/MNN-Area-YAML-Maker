@@ -1,10 +1,32 @@
 // Smart pathfinding & map audit for TsuMNN / MNN area networks.
-// Uses effectiveIds(P, a, 'reachable') to respect modes (list, ALL, none).
+// Only explicit list passages are treated as physical walkable paths.
+// <ALL> is strictly excluded (including on hubs, lobbies, and private areas).
 
-import { effectiveIds } from './links.js';
+/**
+ * Returns strictly explicit, walkable outgoing exits for an area.
+ * <ALL> mode is never expanded because it represents global/special reachability,
+ * not a physical walkable passage.
+ */
+export function walkableExits(P, a) {
+  if (!a || !a.links || !a.links.reachable) return [];
+  const L = a.links.reachable;
+  if (L.mode !== 'list') return [];
+  const validIds = new Set(P.areas.map((x) => x.id));
+  const seen = new Set();
+  const out = [];
+  for (const t of L.targets || []) {
+    if (t !== a.id && validIds.has(t) && !seen.has(t)) {
+      seen.add(t);
+      out.push(t);
+    }
+  }
+  return out;
+}
 
 /**
  * Finds the shortest walkable path between two areas using Breadth-First Search (BFS).
+ * Strictly traverses explicit list passages; ignores <ALL>, and excludes private/lobby
+ * areas from being used as intermediate transit hallways.
  * @param {object} P - The project object with areas array
  * @param {string} fromId - Starting area ID
  * @param {string} toId - Destination area ID
@@ -31,7 +53,12 @@ export function findShortestPath(P, fromId, toId) {
     const currArea = byId.get(currId);
     if (!currArea) continue;
 
-    const exits = effectiveIds(P, currArea, 'reachable');
+    // Do not traverse through intermediate private or lobby areas
+    if ((currArea.private_area || currArea.lobby_area) && currId !== fromId && currId !== toId) {
+      continue;
+    }
+
+    const exits = walkableExits(P, currArea);
     for (const nextId of exits) {
       if (!parent.has(nextId)) {
         parent.set(nextId, currId);
@@ -78,7 +105,7 @@ export function auditMap(P) {
   const incoming = new Map();
 
   P.areas.forEach((a) => {
-    const exits = effectiveIds(P, a, 'reachable');
+    const exits = walkableExits(P, a);
     outgoing.set(a.id, exits);
     if (!incoming.has(a.id)) incoming.set(a.id, []);
     exits.forEach((targetId) => {

@@ -171,6 +171,7 @@ rect.mask {
 }
 
 .edge {
+  fill: none !important;
   stroke: var(--edge-both);
   stroke-width: var(--edge-thickness, 1.6px);
   filter: drop-shadow(0 0 var(--edge-glow, 0px) var(--edge-both));

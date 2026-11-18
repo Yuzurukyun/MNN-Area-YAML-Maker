@@ -52,12 +52,14 @@
           <path
             class="edge-hit"
             {d}
+            fill="none"
             on:pointerdown={(e) => onPickEdge(e, p)}
           />
         {/if}
         <path
           class="edge {p.ghost ? 'ghost' : isSel ? 'sel' : ''} {p.derived ? 'derived' : ''} {p.allOnly ? 'all-mesh' : ''} {oneway ? (selIn ? 'oneway-in' : 'oneway') : ''} {isRoute ? 'route-active' : ''}"
           {d}
+          fill="none"
           opacity={isRoute ? 1 : dim ? 0.07 : p.ghost ? 0.5 : p.derived ? 0.42 : 1}
           marker-end={oneway ? `url(#${isRoute ? 'arrowRoute' : p.derived ? 'arrow' : isSel ? 'arrowSel' : selIn ? 'arrowAmber' : 'arrowRed'})` : undefined}
         />

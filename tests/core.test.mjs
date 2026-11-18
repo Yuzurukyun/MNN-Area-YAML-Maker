@@ -414,5 +414,33 @@ eq(audit.islands.map((a) => a.area), ['Island'], 'audit identifies isolated isla
 eq(audit.deadEnds.map((a) => a.area), ['Island', 'DeadEnd'], 'audit identifies dead ends (0 exits)');
 eq(audit.oneWayTraps.map((a) => a.area), ['Dungeon', 'DeadEnd'], 'audit identifies one-way traps (cannot return to Hub)');
 
+/* ---- Route Finder ignores <ALL> and excludes intermediate private/lobby areas ---- */
+const allProj = {
+  areas: ['Hub', 'Room A', 'Room B', 'Private Room', 'Secret Garden'].map(M.blankArea),
+  groups: [],
+};
+// Hub has <ALL>
+allProj.areas[0].links.reachable = { mode: 'all', targets: [] };
+// Room A has list to Room B
+allProj.areas[1].links.reachable = { mode: 'list', targets: [allProj.areas[2].id] };
+// Room B has list to Private Room
+allProj.areas[2].links.reachable = { mode: 'list', targets: [allProj.areas[3].id] };
+allProj.areas[3].private_area = true;
+// Private Room has list to Secret Garden
+allProj.areas[3].links.reachable = { mode: 'list', targets: [allProj.areas[4].id] };
+
+// Path from Room A to Secret Garden would have to pass THROUGH Private Room
+const pathThruPrivate = findShortestPath(allProj, allProj.areas[1].id, allProj.areas[4].id);
+ok(!pathThruPrivate.found, 'cannot route through intermediate private area');
+
+// But you CAN route directly TO the private room
+const pathToPrivate = findShortestPath(allProj, allProj.areas[1].id, allProj.areas[3].id);
+ok(pathToPrivate.found, 'can route directly to a private room as destination');
+eq(pathToPrivate.path, [allProj.areas[1].id, allProj.areas[2].id, allProj.areas[3].id], 'valid route directly to private room');
+
+// Hub has <ALL>, but Route Finder ignores <ALL> so Hub cannot magical-teleport to Room B
+const pathFromHubAll = findShortestPath(allProj, allProj.areas[0].id, allProj.areas[2].id);
+ok(!pathFromHubAll.found, 'Route Finder strictly ignores <ALL> on Hub or other areas');
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
