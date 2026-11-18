@@ -236,13 +236,15 @@
 
 ### Map Network Audit
 
-- **Comprehensive map health auditor (`src/lib/pathAudit.js`, `src/components/modals/AuditModal.svelte`, `Graph.svelte`, `GraphToolbar.svelte`):**
+- **Refined map network auditor (`src/lib/pathAudit.js`, `src/components/modals/AuditModal.svelte`, `Graph.svelte`, `GraphToolbar.svelte`):**
     - Added a one-click network audit tool opened via the **🔍 Audit** button in the canvas toolbar.
-    - Automatically checks the graph and flags:
-        - **Unreachable Islands:** Non-hub rooms with zero incoming list connections from the rest of the world.
-        - **Dead Ends:** Rooms with zero outgoing list connections.
-        - **One-Way Traps:** Rooms that can be entered via list connections but have no exit leading back into the network.
-    - Provides instant **⌖ View** buttons beside each flagged room to smoothly center the camera on it for inspection.
+    - Accurately distinguishes between structural oversights and intentional RP design choices, strictly excluding `<ALL>` areas from being flagged as dead ends.
+    - Categorizes notices into 4 clean tabs:
+        - **Dead Ends:** Rooms entered from the network that have 0 outgoing exits (`<ALL>` areas are never flagged as dead ends).
+        - **One-Way Trips:** Rooms that can be entered, but have no path leading back to the Hub or any `<ALL>` area.
+        - **Completely Disconnected:** Isolated nodes with zero incoming and zero outgoing links.
+        - **No Incoming Corridors:** Rooms with exits into the world, but zero incoming links from other rooms (entered via `<ALL>` or menu teleport).
+    - Features a 620px expanded layout and instant **⌖ View** buttons beside each flagged room to smoothly center the camera on it for inspection.
 
 ### Connection Line Styles in Settings
 
@@ -309,5 +311,5 @@
 
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **130 passed, 0 failed**.
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **133 passed, 0 failed**.
 - `npm run build:both`: rebuilt `export/yuzu_area_maker.html`, `export/yuzu_area_maker_nomusic.html`, and `docs/index.html`.

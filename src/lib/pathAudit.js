@@ -87,73 +87,105 @@ export function findShortestPath(P, fromId, toId) {
 }
 
 /**
- * Audits the map network for connectivity issues:
- * - Islands: Areas completely unreachable from the Hub (Area 0)
- * - Dead Ends: Areas with 0 exits (nowhere to go)
- * - One-Way Traps: Areas reachable from the Hub that have NO path back to the Hub
+ * Audits the map network for connectivity patterns and potential oversights:
+ * - Disconnected: Areas with 0 incoming and 0 outgoing connections (completely isolated nodes)
+ * - Dead Ends: Areas that can be entered, but have 0 outgoing exits (players cannot leave).
+ *              Areas with <ALL> mode are strictly excluded because they can exit everywhere.
+ * - One-Way Trips: Areas that can be entered, but have no path back to the Hub or any <ALL> area.
+ * - No Incoming: Areas with 0 incoming links (only accessible via menu teleport or <ALL>).
  * @param {object} P - The project object
- * @returns {{ islands: object[], deadEnds: object[], oneWayTraps: object[], hub: object|null }}
+ * @returns {{ hub: object|null, disconnected: object[], deadEnds: object[], oneWayTrips: object[], noIncoming: object[], islands: object[] }}
  */
 export function auditMap(P) {
   if (!P || !P.areas || !P.areas.length) {
-    return { islands: [], deadEnds: [], oneWayTraps: [], hub: null };
+    return { hub: null, disconnected: [], deadEnds: [], oneWayTrips: [], noIncoming: [], islands: [] };
   }
 
   const hub = P.areas[0];
   const byId = new Map(P.areas.map((a) => [a.id, a]));
+  const isAllMode = (a) => a?.links?.reachable?.mode === 'all';
+  const validIds = new Set(P.areas.map((x) => x.id));
+
   const outgoing = new Map();
   const incoming = new Map();
 
   P.areas.forEach((a) => {
-    const exits = walkableExits(P, a);
+    const L = a.links?.reachable;
+    const exits = [];
+    if (L && L.mode === 'list') {
+      for (const t of L.targets || []) {
+        if (t !== a.id && validIds.has(t)) exits.push(t);
+      }
+    }
     outgoing.set(a.id, exits);
     if (!incoming.has(a.id)) incoming.set(a.id, []);
-    exits.forEach((targetId) => {
-      if (!incoming.has(targetId)) incoming.set(targetId, []);
-      incoming.get(targetId).push(a.id);
+    exits.forEach((t) => {
+      if (!incoming.has(t)) incoming.set(t, []);
+      incoming.get(t).push(a.id);
     });
   });
 
-  // 1. Forward reachability from Hub (find islands)
-  const reachableFromHub = new Set([hub.id]);
-  const fwdQueue = [hub.id];
-  while (fwdQueue.length > 0) {
-    const curr = fwdQueue.shift();
-    for (const nxt of outgoing.get(curr) || []) {
-      if (!reachableFromHub.has(nxt)) {
-        reachableFromHub.add(nxt);
-        fwdQueue.push(nxt);
+  const allModeIds = new Set(P.areas.filter(isAllMode).map((a) => a.id));
+
+  // 1. Completely Disconnected: 0 outgoing, 0 incoming, NOT <ALL>
+  const disconnected = P.areas.filter((a) => {
+    if (isAllMode(a)) return false;
+    const outs = outgoing.get(a.id) || [];
+    const ins = incoming.get(a.id) || [];
+    return outs.length === 0 && ins.length === 0;
+  });
+
+  // 2. True Dead Ends: 0 outgoing exits, BUT has incoming, NOT <ALL>
+  const deadEnds = P.areas.filter((a) => {
+    if (isAllMode(a)) return false;
+    const outs = outgoing.get(a.id) || [];
+    const ins = incoming.get(a.id) || [];
+    return outs.length === 0 && ins.length > 0;
+  });
+
+  // 3. One-Way Trips: Can enter, has exits, but can NEVER reach Hub or any <ALL> area
+  const canReachSafety = (startId) => {
+    if (startId === hub.id || allModeIds.has(startId)) return true;
+    const visited = new Set([startId]);
+    const q = [startId];
+    while (q.length > 0) {
+      const curr = q.shift();
+      for (const nxt of outgoing.get(curr) || []) {
+        if (nxt === hub.id || allModeIds.has(nxt)) return true;
+        if (!visited.has(nxt)) {
+          visited.add(nxt);
+          q.push(nxt);
+        }
       }
     }
-  }
+    return false;
+  };
 
-  const islands = P.areas.filter((a) => a.id !== hub.id && !reachableFromHub.has(a.id));
+  const oneWayTrips = P.areas.filter((a) => {
+    if (isAllMode(a) || a.id === hub.id) return false;
+    const outs = outgoing.get(a.id) || [];
+    const ins = incoming.get(a.id) || [];
+    // Must have outgoing exits (otherwise it's classified under dead ends)
+    if (outs.length === 0) return false;
+    // Must have incoming connections (people can enter it)
+    if (ins.length === 0) return false;
+    return !canReachSafety(a.id);
+  });
 
-  // 2. Dead ends: Areas with 0 outgoing exits
-  const deadEnds = P.areas.filter((a) => (outgoing.get(a.id) || []).length === 0);
-
-  // 3. Backward reachability to Hub (find one-way traps)
-  // An area is a trap if you can walk there from Hub, but can NEVER walk back to Hub
-  const canReachHub = new Set([hub.id]);
-  const revQueue = [hub.id];
-  while (revQueue.length > 0) {
-    const curr = revQueue.shift();
-    for (const prev of incoming.get(curr) || []) {
-      if (!canReachHub.has(prev)) {
-        canReachHub.add(prev);
-        revQueue.push(prev);
-      }
-    }
-  }
-
-  const oneWayTraps = P.areas.filter(
-    (a) => a.id !== hub.id && reachableFromHub.has(a.id) && !canReachHub.has(a.id)
-  );
+  // 4. No Incoming Connections: has exits, but 0 incoming links from other rooms
+  const noIncoming = P.areas.filter((a) => {
+    if (a.id === hub.id || isAllMode(a)) return false;
+    const outs = outgoing.get(a.id) || [];
+    const ins = incoming.get(a.id) || [];
+    return ins.length === 0 && outs.length > 0;
+  });
 
   return {
     hub,
-    islands,
+    disconnected,
     deadEnds,
-    oneWayTraps,
+    oneWayTrips,
+    noIncoming,
+    islands: [...disconnected, ...noIncoming],
   };
 }

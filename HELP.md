@@ -50,7 +50,7 @@ Each area has three link types, switched cleanly via the tabs above the map:
 
 - **Minimap Radar:** Collapsible birds-eye radar in the bottom-left corner with real-time camera viewport box. Click or drag to jump camera across large maps. Press **M** to toggle.
 - **Smart Route Finder (🧭 Route):** Finds the shortest walkable path between any two areas, displays turn-by-turn steps, highlights corridors with emerald neon on the map, and respects RP privacy rules (private rooms and lobbies cannot be used as public transit shortcuts).
-- **Network Audit (🔍 Audit):** Scans your area network for unreachable islands, dead ends, and one-way traps, with instant **⌖ View** buttons to inspect them.
+- **Network Audit (🔍 Audit):** Scans your area network for true dead ends, one-way trips, disconnected areas, and rooms with no incoming corridors, respecting `<ALL>` exits and framing flags as informational design notices with instant **⌖ View** buttons.
 - **Connection Line Styles:** Switch between Curved (smooth Bézier), Orthogonal (90° circuit), and Straight lines in the **⚙ Settings** cog.
 - **Focus / Isolate:** **Focus** dims unrelated nodes around your selection. **Isolate** hides everything except your selected area and its direct neighbours (`Esc` exits).
 - **Hide hub / Hide `<ALL>`:** Temporarily declutter the board without changing any data.

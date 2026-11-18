@@ -419,9 +419,23 @@ const pathBlocked = findShortestPath(auditProj, auditProj.areas[0].id, auditProj
 ok(!pathBlocked.found, 'findShortestPath reports not found for isolated island');
 
 const audit = auditMap(auditProj);
-eq(audit.islands.map((a) => a.area), ['Island'], 'audit identifies isolated island');
-eq(audit.deadEnds.map((a) => a.area), ['Island', 'DeadEnd'], 'audit identifies dead ends (0 exits)');
-eq(audit.oneWayTraps.map((a) => a.area), ['Dungeon', 'DeadEnd'], 'audit identifies one-way traps (cannot return to Hub)');
+eq(audit.disconnected.map((a) => a.area), ['Island'], 'audit identifies completely disconnected area');
+eq(audit.deadEnds.map((a) => a.area), ['DeadEnd'], 'audit identifies actual dead end (has incoming, 0 outgoing)');
+eq(audit.oneWayTrips.map((a) => a.area), ['Dungeon'], 'audit identifies one-way trip (cannot return to Hub or ALL)');
+
+// Verify <ALL> areas are never considered dead ends and don't falsely turn connected areas into islands
+const allAuditProj = {
+  areas: ['Hub', 'Room 1', 'Room 2'].map(M.blankArea),
+  groups: [],
+};
+allAuditProj.areas[0].links.reachable = { mode: 'all', targets: [] };
+allAuditProj.areas[1].links.reachable = { mode: 'list', targets: [allAuditProj.areas[2].id] };
+allAuditProj.areas[2].links.reachable = { mode: 'list', targets: [allAuditProj.areas[0].id] };
+
+const allAudit = auditMap(allAuditProj);
+ok(!allAudit.deadEnds.some((a) => a.area === 'Hub'), '<ALL> hub is never flagged as a dead end');
+eq(allAudit.disconnected.length, 0, 'no areas disconnected when connected to <ALL> hub');
+eq(allAudit.oneWayTrips.length, 0, 'no one-way traps when room routes back to <ALL> hub');
 
 /* ---- Route Finder ignores <ALL> and excludes intermediate private/lobby areas ---- */
 const allProj = {

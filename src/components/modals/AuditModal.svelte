@@ -9,9 +9,13 @@
   const dispatch = createEventDispatcher();
 
   $: audit = auditMap(project);
-  $: totalIssues = (audit.islands?.length || 0) + (audit.deadEnds?.length || 0) + (audit.oneWayTraps?.length || 0);
+  $: totalNotices =
+    (audit.deadEnds?.length || 0) +
+    (audit.oneWayTrips?.length || 0) +
+    (audit.disconnected?.length || 0) +
+    (audit.noIncoming?.length || 0);
 
-  let activeTab = 'all'; // 'all' | 'islands' | 'deadEnds' | 'oneWayTraps'
+  let activeTab = 'all'; // 'all' | 'deadEnds' | 'oneWayTrips' | 'disconnected' | 'noIncoming'
 
   function jumpTo(area) {
     if (onFocusArea) onFocusArea(area.id);
@@ -27,70 +31,54 @@
     <button class="modal-x" title="Close (Esc)" on:click={() => dispatch('close')}>✕</button>
     <div class="modal-hdr-row">
       <h3>🔍 Map Network Audit</h3>
-      {#if totalIssues === 0}
+      {#if totalNotices === 0}
         <span class="status-pill ok">✓ Clean</span>
       {:else}
-        <span class="status-pill warn">{totalIssues} issues</span>
+        <span class="status-pill info">{totalNotices} notices</span>
       {/if}
     </div>
-    <div class="hint">Inspect area connectivity, unreachable island rooms, dead ends, and one-way traps.</div>
+    <div class="hint">
+      Highlights potential oversights or structural dead ends. Some of these can be intentional design choices (e.g. prisons, one-way puzzle routes, or secret rooms).
+    </div>
 
     <!-- Category Tabs -->
     <div class="audit-tabs">
       <button
         class="audit-tab {activeTab === 'all' ? 'active' : ''}"
         on:click={() => (activeTab = 'all')}
-      >All ({totalIssues})</button>
-      <button
-        class="audit-tab {activeTab === 'islands' ? 'active' : ''}"
-        on:click={() => (activeTab = 'islands')}
-      >🏝️ Islands ({audit.islands.length})</button>
+      >All ({totalNotices})</button>
       <button
         class="audit-tab {activeTab === 'deadEnds' ? 'active' : ''}"
         on:click={() => (activeTab = 'deadEnds')}
       >🛑 Dead Ends ({audit.deadEnds.length})</button>
       <button
-        class="audit-tab {activeTab === 'oneWayTraps' ? 'active' : ''}"
-        on:click={() => (activeTab = 'oneWayTraps')}
-      >🚪 Traps ({audit.oneWayTraps.length})</button>
+        class="audit-tab {activeTab === 'oneWayTrips' ? 'active' : ''}"
+        on:click={() => (activeTab = 'oneWayTrips')}
+      >🚪 One-Way Trips ({audit.oneWayTrips.length})</button>
+      <button
+        class="audit-tab {activeTab === 'disconnected' ? 'active' : ''}"
+        on:click={() => (activeTab = 'disconnected')}
+      >🏝️ Disconnected ({audit.disconnected.length})</button>
+      <button
+        class="audit-tab {activeTab === 'noIncoming' ? 'active' : ''}"
+        on:click={() => (activeTab = 'noIncoming')}
+      >🚶 No Way In ({audit.noIncoming.length})</button>
     </div>
 
     <div class="audit-content">
-      {#if totalIssues === 0}
+      {#if totalNotices === 0}
         <div class="clean-box">
           <div class="clean-icon">✓</div>
-          <div class="clean-title">No connectivity issues found!</div>
-          <div class="hint">Every area is walkable from Hub (Area 0), has valid exits, and can route back to the Hub.</div>
+          <div class="clean-title">Network topology is balanced!</div>
+          <div class="hint">No completely isolated areas, dead ends without exits, or unreturnable one-way traps detected.</div>
         </div>
       {:else}
-        <!-- Islands Section -->
-        {#if (activeTab === 'all' || activeTab === 'islands') && audit.islands.length > 0}
-          <div class="issue-section">
-            <div class="issue-title">
-              <span>🏝️ Unreachable Islands ({audit.islands.length})</span>
-              <span class="issue-desc">Areas that players cannot walk to from the Hub</span>
-            </div>
-            <div class="issue-list">
-              {#each audit.islands as a}
-                {@const idx = project.areas.indexOf(a)}
-                <div class="issue-row">
-                  <div class="area-info">
-                    <span class="id-badge">#{idx}</span>
-                    <span class="area-name">{a.area}</span>
-                  </div>
-                  <button class="mini-btn focus-btn" title="Center camera on area" on:click={() => jumpTo(a)}>⌖ View</button>
-                </div>
-              {/each}
-            </div>
-          </div>
-        {/if}
-
         <!-- Dead Ends Section -->
         {#if (activeTab === 'all' || activeTab === 'deadEnds') && audit.deadEnds.length > 0}
           <div class="issue-section">
             <div class="issue-title">
               <span>🛑 Dead Ends ({audit.deadEnds.length})</span>
-              <span class="issue-desc">Areas with 0 outgoing exits (players get stuck here)</span>
+              <span class="issue-desc">Rooms entered from the network with 0 outgoing exits (&lt;ALL&gt; areas are excluded)</span>
             </div>
             <div class="issue-list">
               {#each audit.deadEnds as a}
@@ -108,14 +96,58 @@
         {/if}
 
         <!-- One-Way Traps Section -->
-        {#if (activeTab === 'all' || activeTab === 'oneWayTraps') && audit.oneWayTraps.length > 0}
+        {#if (activeTab === 'all' || activeTab === 'oneWayTrips') && audit.oneWayTrips.length > 0}
           <div class="issue-section">
             <div class="issue-title">
-              <span>🚪 One-Way Traps ({audit.oneWayTraps.length})</span>
-              <span class="issue-desc">Areas reachable from Hub, but with no walkable path back to Hub</span>
+              <span>🚪 One-Way Trips ({audit.oneWayTrips.length})</span>
+              <span class="issue-desc">Rooms that can be entered, but have no path leading back to the Hub or an &lt;ALL&gt; area</span>
             </div>
             <div class="issue-list">
-              {#each audit.oneWayTraps as a}
+              {#each audit.oneWayTrips as a}
+                {@const idx = project.areas.indexOf(a)}
+                <div class="issue-row">
+                  <div class="area-info">
+                    <span class="id-badge">#{idx}</span>
+                    <span class="area-name">{a.area}</span>
+                  </div>
+                  <button class="mini-btn focus-btn" title="Center camera on area" on:click={() => jumpTo(a)}>⌖ View</button>
+                </div>
+              {/each}
+            </div>
+          </div>
+        {/if}
+
+        <!-- Disconnected Section -->
+        {#if (activeTab === 'all' || activeTab === 'disconnected') && audit.disconnected.length > 0}
+          <div class="issue-section">
+            <div class="issue-title">
+              <span>🏝️ Completely Disconnected ({audit.disconnected.length})</span>
+              <span class="issue-desc">Areas with zero incoming and zero outgoing links (isolated nodes)</span>
+            </div>
+            <div class="issue-list">
+              {#each audit.disconnected as a}
+                {@const idx = project.areas.indexOf(a)}
+                <div class="issue-row">
+                  <div class="area-info">
+                    <span class="id-badge">#{idx}</span>
+                    <span class="area-name">{a.area}</span>
+                  </div>
+                  <button class="mini-btn focus-btn" title="Center camera on area" on:click={() => jumpTo(a)}>⌖ View</button>
+                </div>
+              {/each}
+            </div>
+          </div>
+        {/if}
+
+        <!-- No Incoming Section -->
+        {#if (activeTab === 'all' || activeTab === 'noIncoming') && audit.noIncoming.length > 0}
+          <div class="issue-section">
+            <div class="issue-title">
+              <span>🚶 No Incoming Corridors ({audit.noIncoming.length})</span>
+              <span class="issue-desc">Rooms with exits, but 0 incoming links from other areas (entered only via &lt;ALL&gt; or teleport)</span>
+            </div>
+            <div class="issue-list">
+              {#each audit.noIncoming as a}
                 {@const idx = project.areas.indexOf(a)}
                 <div class="issue-row">
                   <div class="area-info">
@@ -139,7 +171,7 @@
 
 <style>
   .audit-modal {
-    width: 490px;
+    width: min(620px, 94vw);
     max-width: 95vw;
   }
   .modal-hdr-row {
@@ -158,10 +190,10 @@
     color: #10b981;
     border: 1px solid rgba(16, 185, 129, 0.3);
   }
-  .status-pill.warn {
-    background: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
-    border: 1px solid rgba(239, 68, 68, 0.3);
+  .status-pill.info {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.3);
   }
   .audit-tabs {
     display: flex;
