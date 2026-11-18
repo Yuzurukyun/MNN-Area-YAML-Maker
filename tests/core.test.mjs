@@ -309,5 +309,33 @@ const rangeTest3 = computeZoneRange([7]);
 ok(rangeTest3.isRange, 'single area is a range');
 eq(rangeTest3.val1, '7, 7', 'single area produces min, max');
 
+/* ---- auto-arrange with groups ---- */
+const groupProj = {
+  areas: ['Hub', 'A1', 'A2', 'A3', 'B1', 'B2', 'Solo'].map(M.blankArea),
+  groups: [
+    { id: 'g1', name: 'Group A', x: 200, y: 100, w: 400, h: 300 },
+    { id: 'g2', name: 'Group B', x: 700, y: 100, w: 400, h: 300 },
+  ],
+};
+// Place A1, A2, A3 inside g1
+groupProj.areas[1].x = 250; groupProj.areas[1].y = 150;
+groupProj.areas[2].x = 350; groupProj.areas[2].y = 150;
+groupProj.areas[3].x = 450; groupProj.areas[3].y = 150;
+// Place B1, B2 inside g2
+groupProj.areas[4].x = 750; groupProj.areas[4].y = 150;
+groupProj.areas[5].x = 850; groupProj.areas[5].y = 150;
+// Solo is ungrouped
+groupProj.areas[6].x = 100; groupProj.areas[6].y = 600;
+
+M.autoArrange(groupProj);
+
+const memsA = M.groupMembers(groupProj, groupProj.groups[0]).map((a) => a.area);
+eq(memsA, ['A1', 'A2', 'A3'], 'autoArrange keeps all Group A members inside Group A');
+
+const memsB = M.groupMembers(groupProj, groupProj.groups[1]).map((a) => a.area);
+eq(memsB, ['B1', 'B2'], 'autoArrange keeps all Group B members inside Group B');
+
+ok(!M.groupOfArea(groupProj, groupProj.areas[6]), 'Solo area is not inside any group');
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

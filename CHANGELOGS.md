@@ -165,6 +165,9 @@
 
 ### Board Groups Colouring, Visibility & /zone Range Commands
 
+- **Group-preserving Auto-Arrange (`src/lib/arrange.js`):**
+    - Fixed an issue where running Auto-arrange ignored board groups, causing member nodes to fly to default cluster coordinates and leave their group empty behind.
+    - Auto-arrange now treats spatial groups as first-class containers: member areas are neatly arranged in sequential index order inside their respective group box, each group boundary automatically resizes and frames around them with comfortable padding and tab clearance, and groups are arranged in clean shelves across the canvas without collisions.
 - **Group `/zone` range command copy blocks (`ContextMenu.svelte`, `Graph.svelte`):**
     - Right-clicking any spatial group now inspects its member area indices and provides two instant copy-paste code blocks:
         1. Just the range: `<lowest>, <highest>` (e.g. `4, 12`).
