@@ -17,4 +17,10 @@
 		<input class="music-vol" type="range" min="0" max="1" step="0.01" bind:value={volume} title="Volume" />
 		<audio src={musicUrl} loop preload="metadata" bind:paused bind:volume></audio>
 	</div>
+{:else}
+	<div class="music-player musicless" title={CAPTION}>
+		<div class="music-label" title={CAPTION}>
+			<div class="music-scroll"><span>{CAPTION}</span><span>{CAPTION}</span></div>
+		</div>
+	</div>
 {/if}

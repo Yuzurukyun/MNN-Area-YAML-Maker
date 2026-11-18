@@ -159,6 +159,10 @@ header select {
   padding: 2px 11px 2px 3px;
 }
 
+.music-player.musicless {
+  padding: 3px 12px;
+}
+
 .music-player .music-btn {
   border-radius: 50%;
   width: 24px;
