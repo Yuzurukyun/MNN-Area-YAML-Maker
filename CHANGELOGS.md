@@ -269,7 +269,11 @@
 
 - **Dedicated visual builder (`src/components/modals/BackgroundMakerModal.svelte`, `src/lib/bgSchema.js`, `src/lib/bgStore.js`):**
     - Added a dedicated 3-column workspace accessible via the header **🖼 Backgrounds** button, the **Export ▾** menu, or directly from the Inspector beside the `background` input field.
-    - **Dedicated Full-Width Terminal Path Strip:** Relocated the background path bar to its own horizontal strip directly beneath the header, spanning 100% across the modal without interfering with the title or action buttons. Styled with terminal directory prompt (`> base/background/`), a crimson left accent stripe, full-width monospace typing input, `▾ Folders` series dropdown, 1-click `📋 Copy Path` button, and `⇄ Split / Combined` toggle. Automatically adapts to split mode on deeply nested paths (> 32 chars or 4+ levels).
+    - **Unified 3-Part Proportional Path Strip:** Relocated the background path bar to its own full-width horizontal strip directly beneath the header, divided into 3 dedicated sections:
+        1. Fixed Root Badge: `> base/background/`.
+        2. Directory Path Input: Takes ~70% of available width with auto-truncation for long series subfolders (`text-overflow: ellipsis`), and houses the `▾ Folders` shortcut dropdown.
+        3. Background / File Name Input: Takes ~30% of available width, highlighted in accent orange.
+        - Includes a `📋 Copy` button on the far right and a small monospace full-path label directly beneath the inputs displaying the complete computed server asset path (`FULL PATH: base/background/<subfolder>/<room>/background.json`).
     - **Folder inheritance on creation:** Clicking **+ New** automatically creates the new background inside the currently active series folder.
     - **State Variants:** Supports the mandatory `default` state plus custom states (`crowded`, `festive`, `rainy`, etc.) with tab-based editing and state deletion.
     - **Courtroom & Camera Positions:** Toggleable position mode supporting standard court camera angles (`Normal`, `Witness`, `Prosecution`, `Defense`, `Judge`, `Juror`) or custom position tags.
@@ -290,10 +294,15 @@
     - Added a 1-click `⚡ <prefix><area>` button and `▾ Pick prefix…` dropdown in the Inspector's `background:` row, allowing instant application of any series folder to an existing or renamed area.
     - Added `<datalist>` auto-completion to the `background` input with all project folder combinations.
 
-### Interactive Live Stage Monitor
+### Interactive Live Stage Monitor & Aspect Ratio Controls
 
-- **Real-time visual composite preview (`BackgroundMakerModal.svelte`):**
+- **Real-time visual composite preview & letterboxing (`BackgroundMakerModal.svelte`, `src/components/panels/Inspector.svelte`):**
     - Live canvas displaying composite layer blending (Background image + layered Foreground filter/desk overlay).
+    - **Letterboxed display with black bars:** Defaults to `16:9` resolution with pure black bars (`#000000`, `object-fit: contain`) so visuals match target aspect ratio without cropping or distortion.
+    - **Selectable aspect ratio presets:** Quick dropdown with `16:9 (Default)`, `4:3`, `21:9`, `1:1`, and `Auto` (automatically adopts natural loaded image dimensions).
+    - **Custom aspect ratio editing:** Dual-input numeric editors (`[ W ] : [ H ]`) allowing direct editing of either dimension on the fly.
+    - **Letterbox vs Cover toggle:** 1-click toggle between `◼ Letterbox` (full contained view with black bars) and `⛶ Cover` (viewport fill).
+    - Inspector background scene preview updated to `object-fit: contain` with black bars for unified consistency.
     - Interactive testing controls: Switch between time-of-day variants (`☀ Day`, `🌆 Evening`, `🌙 Night`), positions, and states to preview visual changes live.
     - Built-in ambience audio player with Play/Pause button and loop playback for dropped sound files.
 

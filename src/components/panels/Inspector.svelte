@@ -295,7 +295,7 @@
         </div>
       {:else if currentBgUrl}
         <div class="node-image-preview" style="margin-top:6px;border-radius:5px;overflow:hidden;border:1px solid var(--line2);background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;max-height:180px;position:relative">
-          <img src={currentBgUrl} alt="Background scene" style="max-width:100%;max-height:180px;width:100%;height:auto;object-fit:cover;display:block" />
+          <img src={currentBgUrl} alt="Background scene" style="max-width:100%;max-height:180px;width:auto;height:auto;object-fit:contain;display:block" />
           <div style="position:absolute;bottom:4px;right:6px;background:rgba(0,0,0,0.7);padding:1px 6px;border-radius:3px;font-size:9.5px;color:#fff">
             Background: {a.background}
           </div>

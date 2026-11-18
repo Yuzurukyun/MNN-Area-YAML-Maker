@@ -53,6 +53,53 @@
   // Test stage state
   let stageTod = 'day';
 
+  // Stage Aspect Ratio & letterbox state
+  let stageAspectPreset = '16:9'; // '16:9' | '4:3' | '21:9' | '1:1' | 'auto' | 'custom'
+  let stageAspectW = 16;
+  let stageAspectH = 9;
+  let stageNaturalW = 0;
+  let stageNaturalH = 0;
+  let stageFitMode = 'contain'; // 'contain' (letterbox with black bars) | 'cover'
+
+  function onStageImageLoad(e) {
+    if (e.target) {
+      stageNaturalW = e.target.naturalWidth || 0;
+      stageNaturalH = e.target.naturalHeight || 0;
+      if (stageAspectPreset === 'auto' && stageNaturalW && stageNaturalH) {
+        stageAspectW = stageNaturalW;
+        stageAspectH = stageNaturalH;
+      }
+    }
+  }
+
+  function setAspectPreset(preset) {
+    stageAspectPreset = preset;
+    if (preset === '16:9') {
+      stageAspectW = 16;
+      stageAspectH = 9;
+    } else if (preset === '4:3') {
+      stageAspectW = 4;
+      stageAspectH = 3;
+    } else if (preset === '21:9') {
+      stageAspectW = 21;
+      stageAspectH = 9;
+    } else if (preset === '1:1') {
+      stageAspectW = 1;
+      stageAspectH = 1;
+    } else if (preset === 'auto') {
+      if (stageNaturalW && stageNaturalH) {
+        stageAspectW = stageNaturalW;
+        stageAspectH = stageNaturalH;
+      }
+    }
+  }
+
+  function onAspectCustomChange(w, h) {
+    stageAspectPreset = 'custom';
+    if (typeof w === 'number' && w > 0) stageAspectW = w;
+    if (typeof h === 'number' && h > 0) stageAspectH = h;
+  }
+
   // Audio preview element
   let audioEl;
   let isPlayingAudio = false;
@@ -84,14 +131,19 @@
 
   // Folder splitting & smart prefix management
   function splitFolderPath(folder) {
-    const norm = normalizeBgPath(folder) || '';
-    const lastSlash = norm.lastIndexOf('/');
+    if (!folder || typeof folder !== 'string') {
+      return { subfolder: '', name: '' };
+    }
+    let s = folder.trim().replace(/\\/g, '/');
+    s = s.replace(/^(\.\/)?(base\/)?background\//i, '');
+    s = s.replace(/^\/+/, '');
+    const lastSlash = s.lastIndexOf('/');
     if (lastSlash === -1) {
-      return { subfolder: '', name: norm };
+      return { subfolder: '', name: s };
     }
     return {
-      subfolder: norm.slice(0, lastSlash),
-      name: norm.slice(lastSlash + 1),
+      subfolder: s.slice(0, lastSlash),
+      name: s.slice(lastSlash + 1),
     };
   }
 
@@ -99,24 +151,16 @@
   $: activeSubfolder = currentFolderParts.subfolder;
   $: activeBgName = currentFolderParts.name;
 
-  // View mode for path bar: 'auto' (default: combined unless long), 'combined', or 'split'
-  let pathViewMode = 'auto';
-  $: isVeryLongPath = (activeBg?.folder || '').length > 32 || (activeBg?.folder || '').split('/').length > 3;
-  $: showSplitView = pathViewMode === 'split' || (pathViewMode === 'auto' && isVeryLongPath);
-
   function onSubfolderChange(newSub) {
-    const cleanSub = normalizeBgPath(newSub);
-    const newFull = cleanSub
-      ? `${cleanSub}/${activeBgName || 'Background'}`
-      : (activeBgName || 'Background');
+    let s = (newSub || '').trim().replace(/\\/g, '/').replace(/^(\.\/)?(base\/)?background\//i, '').replace(/^\/+/, '');
+    s = s.replace(/\/+$/, '');
+    const newFull = s ? `${s}/${activeBgName}` : activeBgName;
     updateBg((bg) => (bg.folder = newFull));
   }
 
   function onBgNameChange(newName) {
-    const cleanName = newName.replace(/^\/+/, '').replace(/\/+$/, '');
-    const newFull = activeSubfolder
-      ? `${activeSubfolder}/${cleanName || 'Untitled'}`
-      : (cleanName || 'Untitled');
+    let s = (newName || '').trim().replace(/\\/g, '/').replace(/^\/+/, '');
+    const newFull = activeSubfolder ? `${activeSubfolder}/${s}` : s;
     updateBg((bg) => (bg.folder = newFull));
   }
 
@@ -410,123 +454,75 @@
       </div>
     </div>
 
-    <!-- FULL-WIDTH HORIZONTAL PATH STRIP (Dedicated Row Below) -->
+    <!-- FULL-WIDTH HORIZONTAL PATH STRIP (3-Part Layout + Full Path Label) -->
     <div class="maker-path-strip" title="MNN server relative path for this background">
-      {#if !showSplitView}
-        <!-- Unified / Combined path bar (default) -->
-        <div class="path-bar-inner">
-          <div class="path-prefix-pill">
-            <span class="terminal-prompt">&gt;</span>
-            <span class="prefix-text">base/background/</span>
-          </div>
-
-          <input
-            type="text"
-            class="folder-input"
-            placeholder="Series/Subfolder/BackgroundName"
-            value={activeBg?.folder || ''}
-            list="known-bg-maker-folders"
-            on:input={(e) => updateBg((bg) => (bg.folder = normalizeBgPath(e.target.value)))}
-          />
-
-          <div class="path-tools">
-            {#if knownSubfolders.length > 0}
-              <select
-                class="subfolder-dropdown"
-                title="Shortcut: Prefix with an existing series folder"
-                on:change={(e) => {
-                  if (e.target.value) {
-                    const parts = splitFolderPath(activeBg?.folder || '');
-                    const baseName = parts.name || 'Background';
-                    updateBg((bg) => (bg.folder = `${e.target.value}/${baseName}`));
-                  }
-                  e.target.value = '';
-                }}
-              >
-                <option value="">▾ Folders ({knownSubfolders.length})</option>
-                {#each knownSubfolders as sub}
-                  <option value={sub}>{sub}/</option>
-                {/each}
-              </select>
-            {/if}
-
-            <button
-              class="icon-tool-btn"
-              title="Copy relative folder path to clipboard"
-              on:click={() => { copyText(activeBg?.folder || ''); notify('Copied background folder path'); }}
-            >📋 Copy Path</button>
-
-            {#if isVeryLongPath}
-              <button
-                class="view-toggle-btn"
-                title="Path is long: switch to split view"
-                on:click={() => (pathViewMode = 'split')}
-              >⇄ Split</button>
-            {/if}
-          </div>
+      <div class="path-strip-row">
+        <!-- Part 1: Fixed base/background/ badge -->
+        <div class="path-part-prefix" title="Root directory in MNN asset package">
+          <span class="terminal-prompt">&gt;</span>
+          <span class="prefix-text">base/background/</span>
         </div>
-      {:else}
-        <!-- Split path bar (for long nested paths or manual split) -->
-        <div class="split-path-bar-inner">
-          <div class="path-prefix-pill">
-            <span class="terminal-prompt">&gt;</span>
-            <span class="prefix-text">base/background/</span>
-          </div>
 
-          <div class="subfolder-box" title="Series / Parent folder prefix (e.g. Umamusume/School)">
-            <input
-              type="text"
-              class="subfolder-input"
-              placeholder="Series / Subfolder"
-              value={activeSubfolder}
-              on:input={(e) => onSubfolderChange(e.target.value)}
-            />
-            {#if knownSubfolders.length > 0}
-              <select
-                class="subfolder-dropdown"
-                title="Pick an existing series folder prefix"
-                on:change={(e) => {
-                  if (e.target.value !== '') onSubfolderChange(e.target.value);
-                  e.target.value = '';
-                }}
-              >
-                <option value="">▾ Folders ({knownSubfolders.length})</option>
-                {#each knownSubfolders as sub}
-                  <option value={sub}>{sub}/</option>
-                {/each}
-              </select>
-            {/if}
-          </div>
-
-          <span class="path-divider">/</span>
-
+        <!-- Part 2: Directory Path (70% width, with shortcut dropdown) -->
+        <div class="path-part-dir" title="Directory path / series subfolders (e.g. WS Lambda/Montreal)">
           <input
             type="text"
-            class="bgname-input"
-            title="Room or scene folder name (e.g. Cafeteria)"
+            class="dir-input"
+            placeholder="Directory / Series Subfolder (e.g. WS Lambda/Montreal)"
+            value={activeSubfolder}
+            list="known-bg-maker-folders"
+            on:input={(e) => onSubfolderChange(e.target.value)}
+          />
+          {#if knownSubfolders.length > 0}
+            <select
+              class="subfolder-dropdown"
+              title="Shortcut: Pick an existing directory path"
+              on:change={(e) => {
+                if (e.target.value !== '') onSubfolderChange(e.target.value);
+                e.target.value = '';
+              }}
+            >
+              <option value="">▾ Folders ({knownSubfolders.length})</option>
+              {#each knownSubfolders as sub}
+                <option value={sub}>{sub}/</option>
+              {/each}
+            </select>
+          {/if}
+        </div>
+
+        <!-- Slash divider -->
+        <span class="path-divider">/</span>
+
+        <!-- Part 3: File / Room Name (30% width) -->
+        <div class="path-part-file" title="Background scene folder / file name">
+          <input
+            type="text"
+            class="file-input"
             placeholder="RoomName"
             value={activeBgName}
             on:input={(e) => onBgNameChange(e.target.value)}
           />
-
-          <div class="path-tools">
-            <button
-              class="icon-tool-btn"
-              title="Copy relative folder path to clipboard"
-              on:click={() => { copyText(activeBg?.folder || ''); notify('Copied background folder path'); }}
-            >📋 Copy Path</button>
-
-            <button
-              class="view-toggle-btn"
-              title="Switch back to single combined input"
-              on:click={() => (pathViewMode = 'combined')}
-            >⇄ Combined</button>
-          </div>
         </div>
-      {/if}
+
+        <!-- Copy button -->
+        <button
+          class="icon-tool-btn"
+          title="Copy relative folder path to clipboard"
+          on:click={() => { copyText(activeBg?.folder || ''); notify('Copied background folder path'); }}
+        >
+          📋 Copy
+        </button>
+      </div>
+
+      <!-- Small font label below input boxes displaying full path -->
+      <div class="path-strip-full" title="Computed full server asset path">
+        <span class="full-path-tag">FULL PATH:</span>
+        <code class="full-path-text">base/background/{normalizeBgPath(activeBg?.folder) || 'Untitled'}/background.json</code>
+      </div>
+
       <datalist id="known-bg-maker-folders">
         {#each knownSubfolders as sub}
-          <option value="{sub}/">{sub}/</option>
+          <option value="{sub}">{sub}/</option>
         {/each}
       </datalist>
     </div>
@@ -897,10 +893,67 @@
             <span class="mon-live">LIVE</span>
           </div>
 
-          <!-- Scaled Canvas Viewport -->
-          <div class="canvas-viewport">
+          <!-- Aspect Ratio Toolbar -->
+          <div class="stage-aspect-bar">
+            <div class="aspect-left">
+              <span class="aspect-label">RATIO:</span>
+              <select
+                class="aspect-select"
+                value={stageAspectPreset}
+                on:change={(e) => setAspectPreset(e.target.value)}
+                title="Stage display aspect ratio"
+              >
+                <option value="16:9">16:9</option>
+                <option value="4:3">4:3</option>
+                <option value="21:9">21:9</option>
+                <option value="1:1">1:1</option>
+                <option value="auto">Auto</option>
+                <option value="custom">Custom</option>
+              </select>
+
+              <div class="aspect-ratio-inputs" title="Edit custom aspect ratio (Width : Height)">
+                <input
+                  type="number"
+                  min="1"
+                  max="9999"
+                  class="aspect-num-input"
+                  value={stageAspectW}
+                  on:input={(e) => onAspectCustomChange(parseInt(e.target.value, 10) || 16, stageAspectH)}
+                />
+                <span class="aspect-colon">:</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="9999"
+                  class="aspect-num-input"
+                  value={stageAspectH}
+                  on:input={(e) => onAspectCustomChange(stageAspectW, parseInt(e.target.value, 10) || 9)}
+                />
+              </div>
+            </div>
+
+            <div class="aspect-right">
+              <button
+                class="mini-btn {stageFitMode === 'contain' ? 'active-filter' : ''}"
+                style="font-size:10px;padding:2px 6px"
+                title={stageFitMode === 'contain' ? 'Letterboxed with black bars (full image visible)' : 'Cropped to fill viewport'}
+                on:click={() => (stageFitMode = stageFitMode === 'contain' ? 'cover' : 'contain')}
+              >
+                {stageFitMode === 'contain' ? '◼ Letterbox' : '⛶ Cover'}
+              </button>
+            </div>
+          </div>
+
+          <!-- Scaled Canvas Viewport with letterboxing (black bars) -->
+          <div class="canvas-viewport" style="--stage-aspect:{stageAspectW} / {stageAspectH}">
             {#if resolvedBgUrl}
-              <img src={resolvedBgUrl} alt="Background" class="stage-bg-layer" />
+              <img
+                src={resolvedBgUrl}
+                alt="Background"
+                class="stage-bg-layer"
+                style="object-fit:{stageFitMode}"
+                on:load={onStageImageLoad}
+              />
             {:else}
               <div class="stage-fallback">
                 <span class="stage-msg">No image assigned</span>
@@ -909,7 +962,12 @@
             {/if}
 
             {#if resolvedFgUrl}
-              <img src={resolvedFgUrl} alt="Foreground" class="stage-fg-layer" />
+              <img
+                src={resolvedFgUrl}
+                alt="Foreground"
+                class="stage-fg-layer"
+                style="object-fit:{stageFitMode}"
+              />
             {/if}
           </div>
 
@@ -1085,16 +1143,17 @@
 
   .maker-path-strip {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     width: 100%;
     min-width: 0;
     background: var(--panel2);
     border: 1px solid var(--line);
     border-left: 3px solid var(--accent);
     border-radius: var(--radius);
-    padding: 4px 10px;
+    padding: 6px 10px 5px 10px;
     box-sizing: border-box;
     flex-shrink: 0;
+    gap: 4px;
     transition: all 0.15s ease;
   }
   .maker-path-strip:focus-within {
@@ -1104,8 +1163,7 @@
     background: var(--input-bg);
   }
 
-  .path-bar-inner,
-  .split-path-bar-inner {
+  .path-strip-row {
     display: flex;
     align-items: center;
     width: 100%;
@@ -1114,14 +1172,15 @@
     font-family: var(--font-mono);
   }
 
-  .path-prefix-pill {
-    display: flex;
+  /* Part 1: Fixed base/background/ badge */
+  .path-part-prefix {
+    display: inline-flex;
     align-items: center;
     gap: 5px;
     background: var(--input-bg);
     border: 1px solid var(--line);
     border-radius: 3px;
-    padding: 2px 8px;
+    padding: 3px 8px;
     font-size: 11px;
     color: var(--dim);
     user-select: none;
@@ -1138,7 +1197,24 @@
     letter-spacing: 0.03em;
   }
 
-  .folder-input {
+  /* Part 2: Directory Path (70% width, with shortcut dropdown) */
+  .path-part-dir {
+    flex: 7;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--input-bg);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 1px 4px 1px 8px;
+    transition: border-color 0.12s ease;
+  }
+  .path-part-dir:focus-within {
+    border-color: var(--accent);
+  }
+
+  .dir-input {
     flex: 1 1 0;
     min-width: 0;
     width: 0;
@@ -1146,26 +1222,15 @@
     border: none;
     outline: none;
     color: var(--text-strong);
-    font-weight: 700;
-    font-size: 13px;
     font-family: var(--font-mono);
-    padding: 3px 6px;
-  }
-  .folder-input:focus {
-    color: var(--text-strong);
-  }
-
-  .path-tools {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-    white-space: nowrap;
-    margin-right: 6px;
+    font-weight: 700;
+    font-size: 12.5px;
+    padding: 3px 0;
+    text-overflow: ellipsis;
   }
 
   .subfolder-dropdown {
-    background: var(--input-bg);
+    background: var(--panel2);
     border: 1px solid var(--line2);
     border-radius: 3px;
     outline: none;
@@ -1173,13 +1238,53 @@
     font-family: var(--font-mono);
     font-size: 11px;
     font-weight: 700;
-    padding: 4px 10px;
+    padding: 3px 8px;
     cursor: pointer;
+    flex-shrink: 0;
+    max-width: 140px;
     transition: all 0.15s ease;
   }
   .subfolder-dropdown:hover {
     border-color: var(--accent);
     color: var(--accent);
+  }
+
+  .path-divider {
+    color: var(--dim);
+    font-weight: 800;
+    font-size: 14px;
+    flex-shrink: 0;
+    user-select: none;
+  }
+
+  /* Part 3: File / Room Name (30% width) */
+  .path-part-file {
+    flex: 3;
+    min-width: 110px;
+    display: flex;
+    align-items: center;
+    background: var(--input-bg);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 1px 8px;
+    transition: border-color 0.12s ease;
+  }
+  .path-part-file:focus-within {
+    border-color: var(--accent);
+  }
+
+  .file-input {
+    flex: 1 1 0;
+    min-width: 0;
+    width: 0;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-weight: 800;
+    font-size: 12.5px;
+    padding: 3px 0;
   }
 
   .icon-tool-btn {
@@ -1192,7 +1297,7 @@
     font-family: var(--font-mono);
     font-size: 11px;
     font-weight: 700;
-    padding: 3px 8px;
+    padding: 4px 10px;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -1204,71 +1309,33 @@
     color: var(--text-strong);
   }
 
-  .view-toggle-btn {
-    flex-shrink: 0;
-    width: auto;
-    background: var(--input-bg);
-    border: 1px solid var(--line);
-    border-radius: 3px;
-    color: var(--dim);
-    font-family: var(--font-mono);
-    font-size: 10.5px;
-    font-weight: 700;
-    padding: 3px 8px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-  .view-toggle-btn:hover {
-    color: var(--accent);
-    border-color: var(--accent);
-  }
-
-  .subfolder-box {
+  /* Small font label below input boxes displaying full path */
+  .path-strip-full {
     display: flex;
     align-items: center;
-    background: var(--input-bg);
-    border: 1px solid var(--line);
-    border-radius: 3px;
-    padding: 1px 4px;
-    flex: 2;
-    min-width: 0;
-  }
-
-  .subfolder-input {
-    flex: 1;
-    min-width: 0;
-    background: transparent;
-    border: none;
-    outline: none;
-    color: var(--text-strong);
-    font-family: var(--font-mono);
-    font-weight: 700;
-    font-size: 12px;
-    padding: 3px 4px;
-  }
-
-  .path-divider {
+    gap: 6px;
+    font-size: 10px;
     color: var(--dim);
-    font-weight: 800;
-    font-size: 13px;
-    flex-shrink: 0;
+    padding: 2px 4px 0 4px;
+    font-family: var(--font-mono);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-top: 1px dashed color-mix(in srgb, var(--line) 60%, transparent);
   }
 
-  .bgname-input {
-    background: var(--input-bg);
-    border: 1px solid var(--line);
-    border-radius: 3px;
-    outline: none;
-    color: var(--accent);
-    font-family: var(--font-mono);
+  .full-path-tag {
     font-weight: 800;
-    font-size: 12px;
-    padding: 4px 8px;
-    flex: 1;
-    min-width: 0;
+    color: var(--dim);
+    letter-spacing: 0.06em;
+    font-size: 9.5px;
   }
-  .bgname-input:focus, .subfolder-input:focus {
-    border-color: var(--accent);
+
+  .full-path-text {
+    color: var(--text);
+    opacity: 0.85;
+    font-size: 10.5px;
+    user-select: text;
   }
 
   .bg-item-titles {
@@ -1827,9 +1894,91 @@
     letter-spacing: 0.08em;
   }
 
+  /* Aspect Ratio Toolbar */
+  .stage-aspect-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    background: var(--input-bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 3px 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    flex-shrink: 0;
+  }
+
+  .aspect-left {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .aspect-label {
+    font-weight: 800;
+    color: var(--dim);
+    font-size: 9px;
+    letter-spacing: 0.05em;
+  }
+
+  .aspect-select {
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    color: var(--text);
+    font-size: 10.5px;
+    font-family: var(--font-mono);
+    padding: 2px 4px;
+    outline: none;
+    cursor: pointer;
+  }
+  .aspect-select:hover {
+    border-color: var(--line2);
+  }
+
+  .aspect-ratio-inputs {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .aspect-num-input {
+    width: 28px;
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    color: var(--text-strong);
+    font-size: 10.5px;
+    font-family: var(--font-mono);
+    text-align: center;
+    padding: 2px 1px;
+    outline: none;
+    -moz-appearance: textfield;
+  }
+  .aspect-num-input::-webkit-outer-spin-button,
+  .aspect-num-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .aspect-num-input:focus {
+    border-color: var(--accent);
+  }
+
+  .aspect-colon {
+    font-weight: 800;
+    color: var(--dim);
+    padding: 0 1px;
+  }
+
+  .aspect-right {
+    display: flex;
+    align-items: center;
+  }
+
   .canvas-viewport {
     width: 100%;
-    aspect-ratio: 16 / 9;
+    aspect-ratio: var(--stage-aspect, 16 / 9);
     border: 1px solid var(--line2);
     border-radius: var(--radius);
     background: #000;
@@ -1838,12 +1987,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: aspect-ratio 0.15s ease;
   }
 
   .stage-bg-layer {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     display: block;
   }
 
@@ -1852,7 +2002,7 @@
     inset: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     pointer-events: none;
   }
 
