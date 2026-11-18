@@ -269,7 +269,7 @@
 
 - **Dedicated visual builder (`src/components/modals/BackgroundMakerModal.svelte`, `src/lib/bgSchema.js`, `src/lib/bgStore.js`):**
     - Added a dedicated 3-column workspace accessible via the header **🖼 Backgrounds** button, the **Export ▾** menu, or directly from the Inspector beside the `background` input field.
-    - **Adaptive Unified / Split Path Bar:** By default presents a clean, combined single path bar (`base/background/` + `[ Subfolder/RoomName ]`) with native `<datalist>` auto-suggestions and a `▾ Folders` series quick-picker. Automatically shifts to split prefix/room boxes when the path is deeply nested (> 32 chars or 4+ levels) or when toggled via the `⇄ Split / Combined` button.
+    - **Dedicated Full-Width Terminal Path Strip:** Relocated the background path bar to its own horizontal strip directly beneath the header, spanning 100% across the modal without interfering with the title or action buttons. Styled with terminal directory prompt (`> base/background/`), a crimson left accent stripe, full-width monospace typing input, `▾ Folders` series dropdown, 1-click `📋 Copy Path` button, and `⇄ Split / Combined` toggle. Automatically adapts to split mode on deeply nested paths (> 32 chars or 4+ levels).
     - **Folder inheritance on creation:** Clicking **+ New** automatically creates the new background inside the currently active series folder.
     - **State Variants:** Supports the mandatory `default` state plus custom states (`crowded`, `festive`, `rainy`, etc.) with tab-based editing and state deletion.
     - **Courtroom & Camera Positions:** Toggleable position mode supporting standard court camera angles (`Normal`, `Witness`, `Prosecution`, `Defense`, `Judge`, `Juror`) or custom position tags.
