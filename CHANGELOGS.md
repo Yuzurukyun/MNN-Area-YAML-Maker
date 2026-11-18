@@ -153,6 +153,13 @@
 
 ## v2.0.5 — Light Terminal Theme, Custom Node & Group Colors, Full Map Screenshots, Hover Summaries & Multi-Reordering
 
+### Discord Embed & Open Graph Metadata
+
+- **Rich Discord embed cards & Open Graph tags (`index.html`, `scripts/collect-builds.mjs`, `public/og-image.png`):**
+    - Added complete Open Graph (`og:*`), Twitter Card (`summary_large_image`), and `<meta name="theme-color">` metadata to GitHub Pages.
+    - Designed and generated a 1200×630 high-resolution branded preview banner (`og-image.png`) featuring the terminal prompt, `v2.0.5`, `Made by Yuzu`, and connected node-graph visuals with spatial grouping.
+    - Embedded links in Discord now present a full rich card preview with title, description, large image banner, and Discord's accent border tinted to the UI's crimson accent (`#e0533c`).
+
 ### Theme Naming & Inspector Alignment Fixes
 
 - **Renamed theme to "Light Terminal" (`Header.svelte`):** Matched terminology with `Dark Terminal`.
