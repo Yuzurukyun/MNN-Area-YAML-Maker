@@ -18,6 +18,18 @@
   let activeTab = 'all'; // 'all' | 'deadEnds' | 'oneWayTrips' | 'disconnected' | 'noIncoming'
   let searchQuery = '';
 
+  $: displayedLists = (() => {
+    switch (activeTab) {
+      case 'deadEnds': return [audit.deadEnds];
+      case 'oneWayTrips': return [audit.oneWayTrips];
+      case 'disconnected': return [audit.disconnected];
+      case 'noIncoming': return [audit.noIncoming];
+      default: return [audit.deadEnds, audit.oneWayTrips, audit.disconnected, audit.noIncoming];
+    }
+  })();
+  $: currentFilteredCount = displayedLists.reduce((sum, list) => sum + filterList(list).length, 0);
+  $: currentCategoryTotal = displayedLists.reduce((sum, list) => sum + list.length, 0);
+
   function jumpTo(area) {
     if (onFocusArea) onFocusArea(area.id);
     dispatch('close');
@@ -63,56 +75,77 @@
       </span>
     </div>
 
-    <!-- Category Tabs Bar (Untruncated Pill Layout) -->
-    <div class="audit-tabs-bar">
-      <div class="audit-tabs">
-        <button
-          class="audit-pill-tab {activeTab === 'all' ? 'active' : ''}"
-          on:click={() => (activeTab = 'all')}
-        >
-          <span>All</span>
-          <span class="pill-badge {totalNotices > 0 ? 'warn' : 'zero'}">{totalNotices}</span>
-        </button>
-        <button
-          class="audit-pill-tab {activeTab === 'deadEnds' ? 'active' : ''}"
-          on:click={() => (activeTab = 'deadEnds')}
-        >
-          <span>🛑 Dead Ends</span>
-          <span class="pill-badge {audit.deadEnds.length > 0 ? 'danger' : 'zero'}">{audit.deadEnds.length}</span>
-        </button>
-        <button
-          class="audit-pill-tab {activeTab === 'oneWayTrips' ? 'active' : ''}"
-          on:click={() => (activeTab = 'oneWayTrips')}
-        >
-          <span>🚪 One-Way Trips</span>
-          <span class="pill-badge {audit.oneWayTrips.length > 0 ? 'warn' : 'zero'}">{audit.oneWayTrips.length}</span>
-        </button>
-        <button
-          class="audit-pill-tab {activeTab === 'disconnected' ? 'active' : ''}"
-          on:click={() => (activeTab = 'disconnected')}
-        >
-          <span>🏝️ Disconnected</span>
-          <span class="pill-badge {audit.disconnected.length > 0 ? 'danger' : 'zero'}">{audit.disconnected.length}</span>
-        </button>
-        <button
-          class="audit-pill-tab {activeTab === 'noIncoming' ? 'active' : ''}"
-          on:click={() => (activeTab = 'noIncoming')}
-        >
-          <span>🚶 No Way In</span>
-          <span class="pill-badge {audit.noIncoming.length > 0 ? 'info' : 'zero'}">{audit.noIncoming.length}</span>
-        </button>
+    <!-- Category Tabs Row (Never truncated, wraps comfortably) -->
+    <div class="audit-tabs-row" role="tablist" aria-label="Issue category filters">
+      <button
+        class="audit-pill-tab {activeTab === 'all' ? 'active' : ''}"
+        role="tab"
+        aria-selected={activeTab === 'all'}
+        on:click={() => (activeTab = 'all')}
+      >
+        <span>All Issues</span>
+        <span class="pill-badge {totalNotices > 0 ? 'warn' : 'zero'}">{totalNotices}</span>
+      </button>
+      <button
+        class="audit-pill-tab {activeTab === 'deadEnds' ? 'active' : ''}"
+        role="tab"
+        aria-selected={activeTab === 'deadEnds'}
+        on:click={() => (activeTab = 'deadEnds')}
+      >
+        <span>🛑 Dead Ends</span>
+        <span class="pill-badge {audit.deadEnds.length > 0 ? 'danger' : 'zero'}">{audit.deadEnds.length}</span>
+      </button>
+      <button
+        class="audit-pill-tab {activeTab === 'oneWayTrips' ? 'active' : ''}"
+        role="tab"
+        aria-selected={activeTab === 'oneWayTrips'}
+        on:click={() => (activeTab = 'oneWayTrips')}
+      >
+        <span>🚪 One-Way Trips</span>
+        <span class="pill-badge {audit.oneWayTrips.length > 0 ? 'warn' : 'zero'}">{audit.oneWayTrips.length}</span>
+      </button>
+      <button
+        class="audit-pill-tab {activeTab === 'disconnected' ? 'active' : ''}"
+        role="tab"
+        aria-selected={activeTab === 'disconnected'}
+        on:click={() => (activeTab = 'disconnected')}
+      >
+        <span>🏝️ Disconnected</span>
+        <span class="pill-badge {audit.disconnected.length > 0 ? 'danger' : 'zero'}">{audit.disconnected.length}</span>
+      </button>
+      <button
+        class="audit-pill-tab {activeTab === 'noIncoming' ? 'active' : ''}"
+        role="tab"
+        aria-selected={activeTab === 'noIncoming'}
+        on:click={() => (activeTab = 'noIncoming')}
+      >
+        <span>🚶 No Way In</span>
+        <span class="pill-badge {audit.noIncoming.length > 0 ? 'info' : 'zero'}">{audit.noIncoming.length}</span>
+      </button>
+    </div>
+
+    <!-- Search & Filter Controls Toolbar (Dedicated Row Below) -->
+    <div class="audit-toolbar-row">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input
+          type="search"
+          class="audit-search-input"
+          placeholder="Search notices by room name, background or #ID..."
+          bind:value={searchQuery}
+        />
+        {#if searchQuery}
+          <button class="clear-search-btn" title="Clear filter" on:click={() => (searchQuery = '')}>✕</button>
+        {/if}
       </div>
 
-      {#if totalNotices > 3}
-        <div class="audit-search-wrap">
-          <input
-            type="search"
-            class="audit-search-input"
-            placeholder="Filter notices (name, #id)..."
-            bind:value={searchQuery}
-          />
-        </div>
-      {/if}
+      <div class="audit-filter-summary">
+        {#if searchQuery.trim()}
+          <span>Matching: <b class="highlight">{currentFilteredCount}</b> of {currentCategoryTotal}</span>
+        {:else}
+          <span>Category: <b class="highlight">{currentCategoryTotal}</b> notice{currentCategoryTotal === 1 ? '' : 's'}</span>
+        {/if}
+      </div>
     </div>
 
     <!-- Audit Content Area -->
@@ -342,37 +375,29 @@
     flex-shrink: 0;
   }
 
-  /* Reworked Untruncated Pill Tabs */
-  .audit-tabs-bar {
+  /* Category Tabs Row (Multi-item, wraps cleanly without truncation) */
+  .audit-tabs-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     flex-wrap: wrap;
     gap: 8px;
-    border-bottom: 1px solid var(--line);
-    padding-bottom: 8px;
-  }
-
-  .audit-tabs {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 6px;
+    padding-bottom: 2px;
   }
 
   .audit-pill-tab {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 7px;
     background: var(--panel2);
     border: 1px solid var(--line);
     border-radius: 6px;
-    padding: 5px 10px;
-    font-size: 11.5px;
+    padding: 6px 12px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--dim);
     cursor: pointer;
     white-space: nowrap;
+    flex: 0 0 auto;
     transition: all 0.15s ease;
   }
   .audit-pill-tab:hover {
@@ -385,13 +410,14 @@
     background: color-mix(in srgb, var(--accent) 14%, var(--panel2));
     border-color: var(--accent);
     font-weight: 700;
+    box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 20%, transparent);
   }
 
   .pill-badge {
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 10.5px;
     font-weight: 700;
-    padding: 1px 6px;
+    padding: 1px 7px;
     border-radius: 999px;
   }
   .pill-badge.zero {
@@ -411,21 +437,69 @@
     color: #60a5fa;
   }
 
-  .audit-search-wrap {
+  /* Dedicated Toolbar Row Below Category Tabs */
+  .audit-toolbar-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 10px;
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+  }
+
+  .search-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    max-width: 480px;
+  }
+
+  .search-icon {
+    font-size: 12px;
+    color: var(--dim);
+    user-select: none;
+  }
+
+  .audit-search-input {
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 3px 0;
+    font-size: 12px;
+    color: var(--text-strong);
+    width: 100%;
+    font-family: inherit;
+  }
+  .audit-search-input::placeholder {
+    color: var(--dim);
+    font-size: 11.5px;
+  }
+
+  .clear-search-btn {
+    background: transparent;
+    border: none;
+    color: var(--dim);
+    cursor: pointer;
+    font-size: 11px;
+    padding: 0 4px;
+    line-height: 1;
+  }
+  .clear-search-btn:hover {
+    color: var(--text-strong);
+  }
+
+  .audit-filter-summary {
+    font-size: 11px;
+    color: var(--dim);
+    white-space: nowrap;
     flex-shrink: 0;
   }
-  .audit-search-input {
-    background: var(--input-bg);
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    padding: 4px 8px;
-    font-size: 11px;
-    color: var(--text);
-    min-width: 170px;
-  }
-  .audit-search-input:focus {
-    border-color: var(--accent);
-    outline: none;
+  .audit-filter-summary .highlight {
+    color: var(--accent);
+    font-family: var(--font-mono);
   }
 
   .audit-content {

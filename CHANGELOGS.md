@@ -361,8 +361,9 @@
         - Background Maker Actions: `💾 Export JSON`, `📦 Export Package (.zip)`, and `📚 Library ▾` menu with `💾 Export Library Backup (.json)`, `📦 Export All Backgrounds & Assets (.zip)`, `📥 Import Package or JSON (.json, .zip)…`, and `🧹 Purge Unused Assets`.
 - **Map Network Audit Rework (`src/components/modals/AuditModal.svelte`):**
     - Expanded modal width to `min(840px, 96vw)` for a spacious, comfortable inspection view.
-    - Replaced truncated tabs with clear, untruncated pill tabs displaying dedicated count badges: `All [N]`, `🛑 Dead Ends [N]`, `🚪 One-Way Trips [N]`, `🏝️ Disconnected [N]`, `🚶 No Way In [N]`.
-    - Added an inline search filter (`audit-search-input`) allowing quick filtering of issue notices by room name or `#ID`.
+    - Decoupled category filter tabs and search into dedicated rows:
+        - Row 1: Full-width category pill tabs (`All Issues [N]`, `🛑 Dead Ends [N]`, `🚪 One-Way Trips [N]`, `🏝️ Disconnected [N]`, `🚶 No Way In [N]`) with `white-space: nowrap; flex: 0 0 auto; flex-wrap: wrap;` so category titles never truncate with `...` under any resolution.
+        - Row 2: Dedicated search toolbar with live matching count summary (`Matching: X of Y`) and instant clear (`✕`) button.
     - Added a `⌖ View Node` button on every notice row to center the camera on the affected node directly.
 - **Strict Duplicate Path Collision Prevention (`src/lib/bgStore.js`, `BackgroundMakerModal.svelte`):**
     - Added `ensureUniqueBgFolder(folder, excludeId)` to prevent duplicate background folder collisions.
