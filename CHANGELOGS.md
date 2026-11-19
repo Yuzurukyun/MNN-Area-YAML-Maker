@@ -688,12 +688,21 @@
     - Updated HTML meta tags, OpenGraph descriptions, and Twitter Card metadata in `index.html` to reflect `v2.1.0` capabilities.
     - Re-rendered pixel-perfect 1200×630 embed preview (`og-image.png`) across `public/`, `docs/`, and `export/`.
 
+### Library Dropdown Positioning & Modal Clipping Fix
+
+- **Library Dropdown Anchoring & Overflow Prevention (`src/components/modals/BackgroundMakerModal.svelte`):**
+    - Fixed an issue where clicking `📚 Library ▾` caused the dropdown menu to clip past the right border of the modal and truncate menu items (such as "Export Library Backup" and "Export All Backgrounds & Assets").
+    - Anchored `.library-drop-menu` to `right: 0; left: auto;`, aligning the menu cleanly to the right edge of the button and opening inward to the left where extensive modal clearance exists.
+    - Set explicit `min-width: 320px`, `width: max-content`, `max-width: 380px`, and `white-space: nowrap` for menu action labels.
+    - Added styled `LIBRARY & ASSETS` menu section header tag and event stop-propagation handlers, preventing unintentional scrim dismissal.
+
 ### Verification
 
 - `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **302 passed, 0 failed** (all assertions covering `getReferencedAssetInfo` alias/URL tracking, used vs unused asset disambiguation, ambience auto-switching, volume slider clamping [0, 1] and 0.30 default, resilient root directory import with images and audio retention, bloat filtering of `characters/`, `animations/`, `configs/`, `sounds/music/`, case-insensitive root repository import with `Base/` and `sounds/ambience/`, empty courtroom position foreground resolution, INI parser witness foreground retention, arbitrary root detection `MM/`, single-folder roots with ONLY `background` or ONLY `sounds`, clean room folder extraction, `clearAllBackgrounds()` zero-reset, INI parsing, courtroom position mapping with Witness default, duplicate asset collision disambiguation, audio server fallback, slot alias preservation, camera position duplication, slot clearing on purge, and state duplication).
-- `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5229 KB), `export/yuzu_area_maker_nomusic.html` (576 KB), and `docs/index.html` (576 KB) with 0 warnings and 0 errors.
+- `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5230 KB), `export/yuzu_area_maker_nomusic.html` (576 KB), and `docs/index.html` (576 KB) with 0 warnings and 0 errors.
 - Verified on real disk assets: tested against actual repository `base/` (6,343 files) — successfully extracted 140 backgrounds, imported 346 unique images and 175 ambient audios (521 total assets), and cleanly filtered out 5,602 non-background/non-ambient bloat files with 0 dropped images or sounds.
 - Live browser CDP tests verified:
+    - **Library Dropdown Unclipped Alignment:** Verified via headless Chrome CDP that clicking `📚 Library ▾` opens cleanly with 143.2px of horizontal clearance inside the modal (`isFullyInsideHorizontally: true`, `isFullyInsideVertically: true`) with zero text clipping ([verified_library_dropdown_unclipped.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_library_dropdown_unclipped.png)).
     - **Embed OG-Image & "Made by Yuzuru" Footer Badge:** Verified 1200×630 embed preview generation with "made by Yuzuru" footer badge, v2.1.0 version tag, and Background.json Maker pitch ([verified_updated_embed_og_image.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_updated_embed_og_image.png)).
     - **Horizontal Split Layout & Solid Sticky Table Header:** Verified two-column split in `repo-inspect-modal` with letterboxed preview on left and usages listing on right. Confirmed `.repo-usages-table th` has solid opaque background (`rgb(21, 21, 27)`) and sticky position without text bleed-through ([verified_repo_asset_horizontal_split_modal.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_repo_asset_horizontal_split_modal.png)).
     - **Fullscreen Live Stage Monitor Popup:** Clicking the Live Stage Monitor canvas opened the fullscreen popup with high-resolution canvas, TOD pills, aspect ratio, and clean Escape dismissal ([verified_fullscreen_stage_monitor.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_fullscreen_stage_monitor.png)).

@@ -2156,7 +2156,9 @@
             📚 Library ▾
           </button>
           {#if libraryMenuOpen}
-            <div class="drop-menu library-drop-menu">
+            <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+            <div class="drop-menu library-drop-menu" on:pointerdown|stopPropagation on:click|stopPropagation>
+              <div class="menu-header-tag">LIBRARY &amp; ASSETS</div>
               <button
                 title="Download backgrounds-library.json backup containing all background definitions"
                 on:click={() => { libraryMenuOpen = false; bgStore.downloadLibraryJson(); }}
@@ -4956,6 +4958,21 @@
     flex-direction: column;
     gap: 2px;
     z-index: 1000;
+  }
+  .library-drop-menu {
+    right: 0;
+    left: auto;
+    min-width: 320px;
+    width: max-content;
+    max-width: 380px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    z-index: 1000;
+  }
+  .library-drop-menu button {
+    white-space: nowrap;
   }
   .nav-import-drop-menu {
     left: 0;
