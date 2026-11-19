@@ -50,6 +50,30 @@
   let newTplName = '';
   let newTplDesc = '';
 
+  // Purge menu & confirmation modal state
+  let purgeMenuOpen = false;
+  let showPurgeConfirmModal = false;
+  let purgeTargetMode = 'unused'; // 'unused' | 'all'
+
+  function openPurgeModal(mode = 'unused') {
+    purgeTargetMode = mode;
+    purgeMenuOpen = false;
+    libraryMenuOpen = false;
+    showPurgeConfirmModal = true;
+  }
+
+  async function executePurge() {
+    showPurgeConfirmModal = false;
+    if (purgeTargetMode === 'unused') {
+      const count = await bgStore.purgeUnusedAssets();
+      notify(`Purged ${count} unused asset(s)`, 'ok');
+    } else if (purgeTargetMode === 'all') {
+      const count = assetPool.length;
+      await bgStore.clearAllAssets();
+      notify(`Purged all ${count} asset(s) from memory and cache`, 'ok');
+    }
+  }
+
   // Local drag-over indicator
   let isDraggingOverPool = false;
 
@@ -555,7 +579,7 @@
   }
 
   // Referenced and unused asset counts
-  $: referencedAssetNames = bgStore.getReferencedAssetNames();
+  $: referencedAssetNames = bgStore.getReferencedAssetNames(backgrounds);
   $: usedAssetsCount = assetPool.filter((a) => referencedAssetNames.has(a.name) || referencedAssetNames.has(a.relPath) || referencedAssetNames.has(a.fullRelPath)).length;
   $: unusedAssetCount = Math.max(0, assetPool.length - usedAssetsCount);
 
@@ -575,12 +599,14 @@
 </script>
 
 <svelte:window
-  on:click={() => { libraryMenuOpen = false; tplMenuOpen = false; }}
+  on:click={() => { libraryMenuOpen = false; tplMenuOpen = false; purgeMenuOpen = false; }}
   on:keydown={(e) => {
     if (e.key === 'Escape') {
-      if (showAddTodModal) { showAddTodModal = false; e.stopPropagation(); }
+      if (showPurgeConfirmModal) { showPurgeConfirmModal = false; e.stopPropagation(); }
+      else if (showAddTodModal) { showAddTodModal = false; e.stopPropagation(); }
       else if (showAddStateModal) { showAddStateModal = false; e.stopPropagation(); }
       else if (showManageTemplatesModal) { showManageTemplatesModal = false; e.stopPropagation(); }
+      else if (purgeMenuOpen) { purgeMenuOpen = false; e.stopPropagation(); }
     }
   }}
 />
@@ -680,20 +706,22 @@
               >
                 📥 Import Package or JSON (.json, .zip)…
               </button>
-              {#if unusedAssetCount > 0}
+              {#if assetPool.length > 0}
                 <div class="menu-divider"></div>
                 <button
-                  class="danger-item"
+                  class="menu-item"
+                  disabled={unusedAssetCount === 0}
                   title="Remove {unusedAssetCount} unreferenced assets from memory and cache"
-                  on:click={async () => {
-                    libraryMenuOpen = false;
-                    if (confirm(`Purge ${unusedAssetCount} unused assets from memory and IndexedDB?`)) {
-                      const count = await bgStore.purgeUnusedAssets();
-                      notify(`Purged ${count} unused asset(s)`, 'ok');
-                    }
-                  }}
+                  on:click={() => openPurgeModal('unused')}
                 >
                   🧹 Purge Unused Assets ({unusedAssetCount})
+                </button>
+                <button
+                  class="danger-item"
+                  title="Clear all {assetPool.length} imported assets from memory and cache"
+                  on:click={() => openPurgeModal('all')}
+                >
+                  🗑 Purge All Assets ({assetPool.length})
                 </button>
               {/if}
             </div>
@@ -1366,20 +1394,37 @@
         </div>
 
         <div class="dock-actions">
-          {#if unusedAssetCount > 0}
+          <span class="drop-wrap">
             <button
-              class="mini-btn purge-btn"
-              title="Remove {unusedAssetCount} unreferenced assets from memory and cache"
-              on:click={async () => {
-                if (confirm(`Purge ${unusedAssetCount} unused assets from memory and IndexedDB?`)) {
-                  const n = await bgStore.purgeUnusedAssets();
-                  notify(`Purged ${n} unused asset(s)`, 'ok');
-                }
-              }}
+              class="mini-btn purge-btn {purgeMenuOpen ? 'active' : ''}"
+              title="Purge assets from memory and cache"
+              disabled={assetPool.length === 0}
+              on:click|stopPropagation={() => { purgeMenuOpen = !purgeMenuOpen; }}
             >
-              🧹 Purge Unused ({unusedAssetCount})
+              🧹 Purge ▾
             </button>
-          {/if}
+            {#if purgeMenuOpen}
+              <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+              <div class="drop-menu purge-drop-menu" on:pointerdown|stopPropagation on:click|stopPropagation>
+                <button
+                  class="menu-item"
+                  disabled={unusedAssetCount === 0}
+                  title="Remove unreferenced assets from memory and IndexedDB cache"
+                  on:click={() => openPurgeModal('unused')}
+                >
+                  🧹 Purge Unused ({unusedAssetCount})
+                </button>
+                <button
+                  class="danger-item"
+                  disabled={assetPool.length === 0}
+                  title="Clear all assets from memory and IndexedDB cache"
+                  on:click={() => openPurgeModal('all')}
+                >
+                  🗑 Purge All ({assetPool.length})
+                </button>
+              </div>
+            {/if}
+          </span>
           <button class="mini-btn" on:click={() => fileInputGeneral.click()}>+ Upload Files</button>
           <button class="mini-btn" on:click={() => fileInputFolder.click()}>+ Upload Folder</button>
           <input type="file" accept="image/*,audio/*,.json,.zip" multiple hidden bind:this={fileInputGeneral} on:change={(e) => handleFiles(e.target.files)} />
@@ -1639,6 +1684,48 @@
   </div>
 {/if}
 
+{#if showPurgeConfirmModal}
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+  <div class="modal-bg submodal-scrim" on:click={() => (showPurgeConfirmModal = false)}>
+    <div class="modal submodal-card purge-confirm-dialog" on:click|stopPropagation>
+      <button class="modal-x" title="Close (Esc)" on:click={() => (showPurgeConfirmModal = false)}>✕</button>
+
+      {#if purgeTargetMode === 'all'}
+        <h3>🗑 Purge All Assets</h3>
+        <div class="purge-warning-box">
+          <div class="purge-warning-badge">⚠️ Destructive Action</div>
+          <div class="purge-warning-text">
+            This will permanently remove <b>all {assetPool.length} imported asset(s)</b> from memory and browser storage (IndexedDB).
+          </div>
+          <div class="purge-impact-note">
+            Existing backgrounds and states referencing these files will not be deleted, but will show missing asset placeholders until re-imported.
+          </div>
+        </div>
+      {:else}
+        <h3>🧹 Purge Unused Assets</h3>
+        <div class="purge-info-box">
+          <div class="purge-info-text">
+            Remove <b>{unusedAssetCount} unreferenced asset(s)</b> from memory and browser storage (IndexedDB)?
+          </div>
+          <div class="purge-impact-note">
+            Assets currently assigned to backgrounds, states, or time variants will remain untouched.
+          </div>
+        </div>
+      {/if}
+
+      <div class="submodal-actions">
+        <button on:click={() => (showPurgeConfirmModal = false)}>Cancel</button>
+        <button
+          class="primary {purgeTargetMode === 'all' ? 'danger-btn' : ''}"
+          on:click={executePurge}
+        >
+          {purgeTargetMode === 'all' ? `🗑 Yes, Purge All (${assetPool.length})` : `🧹 Purge (${unusedAssetCount})`}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
 <style>
   .bg-maker-modal {
     width: min(1320px, 96vw);
@@ -1839,9 +1926,73 @@
     border-color: rgba(239, 68, 68, 0.5) !important;
     color: #ef4444 !important;
   }
-  .purge-btn:hover {
+  .purge-btn:hover,
+  .purge-btn.active {
     background: rgba(239, 68, 68, 0.15) !important;
     border-color: #ef4444 !important;
+  }
+  .purge-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    border-color: var(--line) !important;
+    color: var(--dim) !important;
+    background: none !important;
+  }
+
+  .purge-drop-menu {
+    top: auto;
+    bottom: calc(100% + 6px);
+    right: 0;
+    left: auto;
+    min-width: 210px;
+    z-index: 100;
+  }
+  .purge-confirm-dialog {
+    width: min(480px, 92vw);
+  }
+  .purge-warning-box {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: var(--radius);
+  }
+  .purge-warning-badge {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: #ef4444;
+    text-transform: uppercase;
+  }
+  .purge-warning-text,
+  .purge-info-text {
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--text);
+  }
+  .purge-info-box {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+  }
+  .purge-impact-note {
+    font-size: 11px;
+    color: var(--dim);
+    line-height: 1.4;
+  }
+  .danger-btn {
+    background: #dc2626 !important;
+    border-color: #ef4444 !important;
+    color: #fff !important;
+  }
+  .danger-btn:hover {
+    background: #b91c1c !important;
   }
 
   .path-divider {

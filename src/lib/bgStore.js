@@ -621,7 +621,8 @@ export const bgStore = {
   /**
    * Scans all backgrounds in the library and collects all referenced filenames.
    */
-  getReferencedAssetNames() {
+  getReferencedAssetNames(bgs = null) {
+    const targetBgs = Array.isArray(bgs) ? bgs : backgrounds;
     const referenced = new Set();
     function collect(obj) {
       if (!obj) return;
@@ -634,7 +635,7 @@ export const bgStore = {
         if (soundFile) referenced.add(soundFile);
       }
     }
-    for (const bg of backgrounds) {
+    for (const bg of targetBgs) {
       for (const st of Object.values(bg.states || {})) {
         collect(st);
         if (st.time_variants) {
@@ -801,6 +802,10 @@ export function getAreaBgUrl(bgFolder, customStoreState) {
   // Fallback: match by last segment filename in asset pool
   const last = bgFolder.split('/').pop();
   return bgStore.getAssetUrl(last, 'image');
+}
+
+if (typeof window !== 'undefined') {
+  window.__bgStore = bgStore;
 }
 
 /**

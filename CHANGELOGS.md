@@ -407,11 +407,30 @@
         - Added `📋 Templates ▾` dropdown in the builder bar for 1-click application of any template.
         - Added **Manage & Save Templates** dialog to inspect presets, save the active background structure as a custom reusable template, and manage custom templates.
 
+### Real-Time Purge Reactivity & Purge Dropdown QoL
+
+- **Real-Time Purge Unused Reactivity (`src/lib/bgStore.js`, `src/components/modals/BackgroundMakerModal.svelte`):**
+    - Fixed reactivity bug where deleting backgrounds did not immediately mark their unreferenced assets as unused until closing and reopening the modal.
+    - Updated `bgStore.getReferencedAssetNames(bgs = null)` to accept the reactive `backgrounds` list as an argument, and bound `$: referencedAssetNames = bgStore.getReferencedAssetNames(backgrounds);` so Svelte recalculates referenced assets instantly whenever backgrounds or states are added, modified, or deleted.
+- **Purge Dropdown Menu (`BackgroundMakerModal.svelte`, `src/styles/chrome.css`):**
+    - Converted the single purge button in the Asset Repository Pool dock into a clean `[ 🧹 Purge ▾ ]` dropdown opening upwards (`bottom: calc(100% + 6px)`).
+    - Includes two dedicated actions:
+        - `🧹 Purge Unused (N)`: Disabled when `unusedAssetCount === 0`.
+        - `🗑 Purge All (N)`: Destructive purge option to completely clear all assets from memory and IndexedDB.
+    - Added the same two options under the modal header's `📚 Library ▾` menu.
+- **Dedicated Purge Confirmation Modals (`BackgroundMakerModal.svelte`):**
+    - Replaced generic browser `confirm()` popups with a custom styled confirmation modal (`.purge-confirm-dialog`).
+    - Surfaces clear explanations of what will be purged, distinguishing between safe unused asset cleanup and destructive full pool purges (`⚠️ Destructive Action` badge).
+
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **180 passed, 0 failed** (11 new assertions verifying `BUILTIN_BG_TEMPLATES`, `extractBgTemplateStructure`, `applyBgTemplate`, and `bgStore` template persistence).
-- `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5139 KB), `export/yuzu_area_maker_nomusic.html` (486 KB), and `docs/index.html` (486 KB) with 0 warnings.
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **187 passed, 0 failed** (7 new assertions verifying `bgStore.getReferencedAssetNames(bgs)` reactivity on background array mutations, empty array handling, and asset purge/clear).
+- `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5143 KB), `export/yuzu_area_maker_nomusic.html` (490 KB), and `docs/index.html` (490 KB) with 0 warnings.
 - Live browser CDP tests verified:
+    - `[ 🧹 Purge ▾ ]` dropdown renders in the bottom dock and opens upwards with `🧹 Purge Unused (N)` and `🗑 Purge All (N)`.
+    - Clicking `🧹 Purge Unused` opens styled confirmation modal; confirming purges unreferenced assets from memory and IndexedDB.
+    - **Real-time reactivity verified:** Deleting backgrounds immediately marks assets as unreferenced and updates the `Unused` pill and purge counter from 0 to 1 in real time without closing or reopening the modal.
+    - Clicking `🗑 Purge All` opens destructive confirmation modal with warning badge; confirming clears all assets and disables the Purge dropdown.
     - Variant delete `✕` button renders on far right end of `.tod-row-card` (child 5 of 5) isolated from the badge.
     - `+ Time Variant` button opens modal with preset and library time-of-day dropdown.
     - `+ State` button opens modal with suggested and library state dropdown.

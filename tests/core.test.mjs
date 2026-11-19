@@ -744,5 +744,29 @@ ok(allTpls.some((t) => t.name === 'Custom Courtroom'), 'getAllTemplates includes
 bgStore.deleteTemplate(savedTpl.id);
 ok(!bgStore.getAllTemplates().some((t) => t.id === savedTpl.id), 'deleteTemplate removes custom template');
 
+/* ---- getReferencedAssetNames reactivity and purging ---- */
+const sampleBg1 = createBackground('Test/SceneA');
+sampleBg1.states.default.background = 'scene_a.png';
+sampleBg1.states.default.ambience = 'rain.opus';
+
+const sampleBg2 = createBackground('Test/SceneB');
+sampleBg2.states.default.background = 'scene_b.png';
+
+// Test with passed background array
+const refBoth = bgStore.getReferencedAssetNames([sampleBg1, sampleBg2]);
+ok(refBoth.has('scene_a.png'), 'refBoth has scene_a.png');
+ok(refBoth.has('rain.opus'), 'refBoth has rain.opus');
+ok(refBoth.has('scene_b.png'), 'refBoth has scene_b.png');
+ok(!refBoth.has('orphan.png'), 'refBoth does not have orphan.png');
+
+// When sampleBg2 is removed from the array:
+const refOnly1 = bgStore.getReferencedAssetNames([sampleBg1]);
+ok(refOnly1.has('scene_a.png'), 'refOnly1 still has scene_a.png');
+ok(!refOnly1.has('scene_b.png'), 'refOnly1 no longer references scene_b.png after deletion');
+
+// When all backgrounds are empty/deleted:
+const refNone = bgStore.getReferencedAssetNames([]);
+eq(refNone.size, 0, 'empty background list references zero assets');
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
