@@ -496,15 +496,32 @@
         - **Live Stage Monitor:** Switch Fit Mode (Contain / Cover), Inspect Stage Image Preview, Copy Live Visual Config JSON.
     - Added full-screen Lightbox asset preview modal (`.inspect-lightbox`) opened via context menu or double-clicking any slot or pool card, displaying full-resolution images or playing audio with scrub controls and file metadata.
 
+### Scrim Drag-Out Protection, Slot Double-Click Renaming & Lightbox In-Line Dual Renaming
+
+- **Universal Scrim Drag-Out Protection Across All Modals (`src/components/modals/*.svelte`):**
+    - Fixed issue where selecting or dragging text inside input fields or textareas (e.g. rename inputs, JSON inspectors, settings sliders, or template names) and releasing the mouse button outside the dialog card triggered an accidental backdrop click event that closed the modal.
+    - Added backdrop drag-out protection tracking `scrimMouseDownTarget === e.currentTarget && e.target === e.currentTarget` alongside `on:mousedown|stopPropagation` on modal cards across all modals (`BackgroundMakerModal`, `AuditModal`, `ExportModal`, `SettingsModal`, `TemplatesModal`, `ConfirmModal`, `HelpModal`, and `TestMode`).
+    - Modals now only close when a user explicitly initiates and completes a click directly on the backdrop scrim, never from dragging text selection out of inputs.
+- **Double-Click Slot Label to Rename (`BackgroundMakerModal.svelte`):**
+    - Double-clicking the filename label on any slot card (Background Image, Foreground, Ambience) or Time of Day mini-slot immediately opens the Rename Export Filename modal.
+    - Added `.clickable-rename` with hover color highlighting and dotted underline cues for intuitive discoverability alongside the pencil icon `✏️`.
+- **Single-Click Lightbox Preview & In-Line Dual Renaming (`BackgroundMakerModal.svelte`):**
+    - Single-clicking slot thumbnails or Asset Repository Pool cards directly opens the full-screen Lightbox asset inspector (with internal drag-detection flag `assetDragOccurred` ensuring drag-to-slot functionality remains completely uninterrupted).
+    - Double-clicking asset cards in the pool directly triggers the Global Asset Rename modal.
+    - Replaced the static Lightbox header with two in-line input boxes placed strictly in-line with the `[IMAGE]` / `[AUDIO]` tag badge:
+        - `GLOBAL:` Renames the asset in the pool globally across all backgrounds, states, time variants, and active project nodes in real time.
+        - `EXPORT:` Customizes the export filename alias written into `background.json` and ZIP export for the active background without altering the global asset.
+    - Unified vertical height (`height: 26px`) and flex-center alignment across `.lightbox-badge`, `.lightbox-input-box`, and close button `✕`, achieving 0.00px vertical offset for a clean, cyber-themed header bar.
+
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **204 passed, 0 failed** (11 new assertions covering slot clearing on purge, global asset renaming propagation, slot export alias tracking, duplicate background, folder rename, state duplication, and time variant duplication).
-- `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5299 KB), `export/yuzu_area_maker_nomusic.html` (534 KB), and `docs/index.html` (534 KB) with 0 warnings.
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **204 passed, 0 failed** (all assertions covering slot clearing on purge, global asset renaming propagation, slot export alias tracking, duplicate background, folder rename, state duplication, and time variant duplication).
+- `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5182 KB), `export/yuzu_area_maker_nomusic.html` (529 KB), and `docs/index.html` (529 KB) with 0 warnings.
 - Live browser CDP tests verified:
-    - **Header & Toolbar Layout:** Title row renders `// BACKGROUND.JSON MAKER_` with blinking cursor without the gray badge; action buttons occupy their own dedicated row below without title clipping ([verified_bg_maker_header_and_toolbar.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_bg_maker_header_and_toolbar.png)).
-    - **Purge All Slot Clearing:** Clicking `Purge All` removes assets and cleanly resets all slots and Live Stage Monitor to empty state without leaving ghost references ([verified_purge_all_clean_slots.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_purge_all_clean_slots.png)).
-    - **Asset Context Menu:** Right-clicking asset cards opens options menu with global rename, preview, quick-assign, copy, and delete ([verified_asset_context_menu.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_asset_context_menu.png)).
-    - **Slot Context Menu:** Right-clicking slot cards opens slot actions with rename export filename, inspect, copy path, and clear slot ([verified_slot_context_menu.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_slot_context_menu.png)).
-    - **Slot Export Renaming & Aliasing:** Renaming slot export filename displays `alias of [original_name]` and updates Live Stage Monitor without altering pool asset ([verified_slot_alias_tag.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_slot_alias_tag.png)).
+    - **Universal Scrim Drag-Out Protection:** Selecting text inside rename input and dragging mouse completely outside dialog card onto backdrop before releasing mouseup does NOT dismiss the dialog; direct backdrop clicks still close cleanly (`verified_double_click_rename_dialog.png`).
+    - **Double-Click Slot Label to Rename:** Double-clicking slot filename labels on Background, Foreground, Ambience, and TOD mini-slots immediately opens the Rename Export Filename dialog with value pre-filled (`verified_double_click_rename_dialog.png`).
+    - **Single-Click Lightbox Preview:** Single-clicking slot thumbnails or pool asset cards opens the Lightbox asset inspector smoothly while preserving asset drag-to-slot capability (`verified_lightbox_dual_inline_rename.png`).
+    - **Strictly In-Line Dual Renaming Header:** Lightbox header displays `[IMAGE]` badge and `GLOBAL:` / `EXPORT:` input boxes vertically centered with 0.00px offset (`verified_lightbox_dual_inline_rename.png`).
+    - **Dual Renaming Propagation:** Editing `GLOBAL:` renames asset globally across pool and library; editing `EXPORT:` creates/updates background slot alias and displays `alias of [original_name]` tag on slot (`verified_slots_reflecting_renames.png`).
     - Music player left completely untouched.
     - Verified strictly on branch `v2.1.0-dev`.

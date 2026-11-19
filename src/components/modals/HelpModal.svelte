@@ -109,14 +109,22 @@
     return out.join('\n');
   }
 
+  let scrimMouseDownTarget = null;
   $: html = md(readme);
 </script>
 
 <svelte:window on:keydown={(e) => e.key === 'Escape' && onClose()} />
 
 <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-<div class="modal-bg" on:click={onClose}>
-  <div class="modal help-card" on:click|stopPropagation>
+<div
+  class="modal-bg"
+  on:mousedown={(e) => (scrimMouseDownTarget = e.target)}
+  on:click={(e) => {
+    if (scrimMouseDownTarget === e.currentTarget && e.target === e.currentTarget) onClose();
+    scrimMouseDownTarget = null;
+  }}
+>
+  <div class="modal help-card" on:mousedown|stopPropagation on:click|stopPropagation>
     <button class="modal-x" title="Close" on:click={onClose}>✕</button>
     <div class="help-body">{@html html}</div>
   </div>

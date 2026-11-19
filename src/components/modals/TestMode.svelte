@@ -42,13 +42,22 @@
   function onFilterKey(e) {
     if (e.key === 'Enter' && shownExits.length) go(shownExits[0]);
   }
+
+  let scrimMouseDownTarget = null;
 </script>
 
 <svelte:window on:keydown={(e) => e.key === 'Escape' && onClose()} />
 
 <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-<div class="modal-bg" on:click={onClose}>
-  <div class="modal test-modal" on:click|stopPropagation>
+<div
+  class="modal-bg"
+  on:mousedown={(e) => (scrimMouseDownTarget = e.target)}
+  on:click={(e) => {
+    if (scrimMouseDownTarget === e.currentTarget && e.target === e.currentTarget) onClose();
+    scrimMouseDownTarget = null;
+  }}
+>
+  <div class="modal test-modal" on:mousedown|stopPropagation on:click|stopPropagation>
     <button class="modal-x" title="Close" on:click={onClose}>✕</button>
     <h3>Test mode — walking the map</h3>
     {#if current}

@@ -91,17 +91,34 @@
     bgContextMenu = null;
   }
 
-  // Lightbox Preview Modal State
-  let inspectModalAsset = null; // { name, url, type, size, relPath }
+  // Scrim Drag-Out Protection (Prevents text selection from accidentally closing modals)
+  let scrimMouseDownTarget = null;
+  function onScrimMouseDown(e) {
+    scrimMouseDownTarget = e.target;
+  }
+  function handleScrimClose(e, closeFn) {
+    if (scrimMouseDownTarget === e.currentTarget && e.target === e.currentTarget) {
+      closeFn();
+    }
+    scrimMouseDownTarget = null;
+  }
 
-  function inspectAsset(assetOrName, displayName = '', type = 'image') {
+  // Lightbox Preview Modal State
+  let inspectModalAsset = null; // { name, url, type, size, relPath, id }
+  let inspectSlotContext = null; // { slotType, todKey } or null
+  let inspectGlobalName = '';
+  let inspectExportName = '';
+
+  function inspectAsset(assetOrName, displayName = '', type = 'image', slotContext = null) {
     closeContextMenu();
+    inspectSlotContext = slotContext;
+
     if (typeof assetOrName === 'object' && assetOrName !== null) {
-      inspectModalAsset = assetOrName;
+      inspectModalAsset = { ...assetOrName };
     } else if (typeof assetOrName === 'string') {
       const matched = assetPool.find((a) => a.name === assetOrName || a.relPath === assetOrName);
       if (matched) {
-        inspectModalAsset = matched;
+        inspectModalAsset = { ...matched };
       } else {
         const url = bgStore.getAssetUrl(assetOrName, type, activeBg);
         inspectModalAsset = {
@@ -111,6 +128,109 @@
           size: 0,
           relPath: assetOrName,
         };
+      }
+    }
+
+    if (inspectModalAsset) {
+      const sourceName = activeBg?.assetSources?.[inspectModalAsset.name] || inspectModalAsset.name;
+      inspectGlobalName = sourceName;
+
+      // Determine export name for this background
+      if (slotContext?.slotType) {
+        const targetObj = slotContext.todKey
+          ? (usePositions ? activePos?.time_variants?.[slotContext.todKey] : activeState?.time_variants?.[slotContext.todKey])
+          : (usePositions ? activePos : activeState);
+        inspectExportName = targetObj?.[slotContext.slotType] || inspectModalAsset.name;
+      } else {
+        let assignedExport = null;
+        if (activeBg?.assetSources) {
+          for (const [expName, srcName] of Object.entries(activeBg.assetSources)) {
+            if (srcName === sourceName) {
+              assignedExport = expName;
+              break;
+            }
+          }
+        }
+        inspectExportName = assignedExport || inspectModalAsset.name;
+      }
+    }
+  }
+
+  async function applyInspectGlobalRename() {
+    if (!inspectModalAsset || !inspectGlobalName) return;
+    const clean = inspectGlobalName.trim();
+    if (!clean) return;
+
+    const oldName = activeBg?.assetSources?.[inspectModalAsset.name] || inspectModalAsset.name;
+    if (clean === oldName) return;
+
+    const poolAsset = assetPool.find((a) => a.id === inspectModalAsset.id || a.name === oldName || a.relPath === oldName || a.name === inspectModalAsset.name || a.relPath === inspectModalAsset.name);
+    if (poolAsset) {
+      const res = await bgStore.renameAsset(poolAsset.id, clean);
+      if (!res.success) {
+        notify(res.error || 'Failed to rename global asset', 'warn');
+        inspectGlobalName = oldName;
+        return;
+      }
+      inspectModalAsset.id = poolAsset.id;
+      inspectModalAsset.name = clean;
+      inspectModalAsset.relPath = clean;
+      notify(`Renamed asset to "${clean}" globally across all backgrounds and nodes.`, 'ok');
+    } else {
+      updateBg((bg) => {
+        bg.assetSources = bg.assetSources || {};
+        for (const [k, v] of Object.entries(bg.assetSources)) {
+          if (v === oldName || v === inspectModalAsset.name) bg.assetSources[k] = clean;
+        }
+        function updateSlots(obj) {
+          if (!obj) return;
+          if (obj.background === oldName || obj.background === inspectModalAsset.name) obj.background = clean;
+          if (obj.foreground === oldName || obj.foreground === inspectModalAsset.name) obj.foreground = clean;
+          if (obj.ambience === oldName || obj.ambience === inspectModalAsset.name) obj.ambience = clean;
+          if (obj.positions) {
+            for (const p of Object.values(obj.positions)) updateSlots(p);
+          }
+          if (obj.time_variants) {
+            for (const tv of Object.values(obj.time_variants)) updateSlots(tv);
+          }
+        }
+        for (const st of Object.values(bg.states || {})) updateSlots(st);
+      });
+      inspectModalAsset.name = clean;
+      inspectModalAsset.relPath = clean;
+      notify(`Updated asset reference to "${clean}".`, 'ok');
+    }
+  }
+
+  function applyInspectExportRename() {
+    if (!activeBg || !inspectExportName) return;
+    const clean = inspectExportName.trim();
+    if (!clean) return;
+
+    if (inspectSlotContext?.slotType) {
+      setSlotExportName(inspectSlotContext.slotType, clean, inspectSlotContext.todKey);
+      inspectModalAsset.name = clean;
+    } else {
+      const targetObj = usePositions ? activePos : activeState;
+      let foundSlot = null;
+      if (targetObj) {
+        for (const st of ['background', 'foreground', 'ambience']) {
+          if (targetObj[st] === inspectGlobalName || targetObj[st] === inspectModalAsset?.name || activeBg.assetSources?.[targetObj[st]] === inspectGlobalName) {
+            foundSlot = st;
+            break;
+          }
+        }
+      }
+      if (foundSlot) {
+        setSlotExportName(foundSlot, clean);
+        inspectModalAsset.name = clean;
+      } else {
+        updateBg((bg) => {
+          bg.assetSources = bg.assetSources || {};
+          bg.assetSources[clean] = inspectGlobalName || inspectModalAsset.name;
+        });
+        inspectModalAsset.name = clean;
+        notify(`Registered export alias "${clean}" for "${inspectGlobalName}".`, 'ok');
       }
     }
   }
@@ -1089,7 +1209,9 @@
   }
 
   // Drag asset onto slot or canvas node
+  let assetDragOccurred = false;
   function onAssetDragStart(e, asset) {
+    assetDragOccurred = true;
     draggedAsset = asset;
     e.dataTransfer.setData('text/plain', asset.relPath);
     try {
@@ -1105,9 +1227,15 @@
   }
 
   function onAssetDragEnd() {
+    setTimeout(() => { assetDragOccurred = false; }, 120);
     draggedAsset = null;
     dragOverSlot = null;
     dragOverSlotValid = false;
+  }
+
+  function onAssetCardClick(asset) {
+    if (assetDragOccurred) return;
+    inspectAsset(asset);
   }
 
   function onSlotDrop(e, slotType, tod = null) {
@@ -1240,7 +1368,12 @@
   }}
 />
 
-<div class="modal-bg" role="presentation" on:click|self={() => dispatch('close')}>
+<div
+  class="modal-bg"
+  role="presentation"
+  on:mousedown={onScrimMouseDown}
+  on:click={(e) => handleScrimClose(e, () => dispatch('close'))}
+>
   <div
     class="modal bg-maker-modal {isDraggingOverModal ? 'dragover' : ''}"
     role="dialog"
@@ -1670,18 +1803,29 @@
               </div>
 
               {#if activeBgVal}
-                <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-                <div
-                  class="slot-content has-asset"
-                  title="Double-click to inspect; right-click for options"
-                  on:dblclick={() => inspectAsset(activeBgVal, `${activeBg?.folder || 'Scene'} Background`, 'image')}
-                >
+                <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions a11y_no_noninteractive_element_interactions -->
+                <div class="slot-content has-asset">
                   {#if activeBgThumb}
-                    <img draggable="false" src={activeBgThumb} alt={activeBgVal} class="slot-thumb" />
+                    <img
+                      draggable="false"
+                      src={activeBgThumb}
+                      alt={activeBgVal}
+                      class="slot-thumb clickable-preview"
+                      title="Click to view & inspect in Lightbox"
+                      on:click|stopPropagation={() => inspectAsset(activeBgVal, `${activeBg?.folder || 'Scene'} Background`, 'image', { slotType: 'background' })}
+                    />
                   {:else}
-                    <div class="no-thumb-box">🖼</div>
+                    <div
+                      class="no-thumb-box clickable-preview"
+                      title="Click to view & inspect in Lightbox"
+                      on:click|stopPropagation={() => inspectAsset(activeBgVal, `${activeBg?.folder || 'Scene'} Background`, 'image', { slotType: 'background' })}
+                    >🖼</div>
                   {/if}
-                  <div class="slot-name-col">
+                  <div
+                    class="slot-name-col clickable-rename"
+                    title="Double-click to rename export filename; right-click for options"
+                    on:dblclick|stopPropagation={() => triggerRenameSlotExport('background')}
+                  >
                     <span class="asset-filename" title={activeBgVal} use:autoscroll>{activeBgVal}</span>
                     {#if activeBg?.assetSources?.[activeBgVal]}
                       <span class="alias-tag" title="Custom export filename (source: {activeBg.assetSources[activeBgVal]})">
@@ -1739,18 +1883,29 @@
               </div>
 
               {#if activeFgVal}
-                <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-                <div
-                  class="slot-content has-asset"
-                  title="Double-click to inspect; right-click for options"
-                  on:dblclick={() => inspectAsset(activeFgVal, `${activeBg?.folder || 'Scene'} Foreground`, 'image')}
-                >
+                <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions a11y_no_noninteractive_element_interactions -->
+                <div class="slot-content has-asset">
                   {#if activeFgThumb}
-                    <img draggable="false" src={activeFgThumb} alt={activeFgVal} class="slot-thumb" />
+                    <img
+                      draggable="false"
+                      src={activeFgThumb}
+                      alt={activeFgVal}
+                      class="slot-thumb clickable-preview"
+                      title="Click to view & inspect in Lightbox"
+                      on:click|stopPropagation={() => inspectAsset(activeFgVal, `${activeBg?.folder || 'Scene'} Foreground`, 'image', { slotType: 'foreground' })}
+                    />
                   {:else}
-                    <div class="no-thumb-box">🌫</div>
+                    <div
+                      class="no-thumb-box clickable-preview"
+                      title="Click to view & inspect in Lightbox"
+                      on:click|stopPropagation={() => inspectAsset(activeFgVal, `${activeBg?.folder || 'Scene'} Foreground`, 'image', { slotType: 'foreground' })}
+                    >🌫</div>
                   {/if}
-                  <div class="slot-name-col">
+                  <div
+                    class="slot-name-col clickable-rename"
+                    title="Double-click to rename export filename; right-click for options"
+                    on:dblclick|stopPropagation={() => triggerRenameSlotExport('foreground')}
+                  >
                     <span class="asset-filename" title={activeFgVal} use:autoscroll>{activeFgVal}</span>
                     {#if activeBg?.assetSources?.[activeFgVal]}
                       <span class="alias-tag" title="Custom export filename (source: {activeBg.assetSources[activeFgVal]})">
@@ -1809,13 +1964,17 @@
 
               {#if activeAmbienceVal}
                 <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-                <div
-                  class="slot-content has-asset"
-                  title="Double-click to inspect/listen; right-click for options"
-                  on:dblclick={() => inspectAsset(activeAmbienceVal, `${activeBg?.folder || 'Scene'} Ambience`, 'audio')}
-                >
-                  <div class="no-thumb-box audio">🎵</div>
-                  <div class="slot-name-col">
+                <div class="slot-content has-asset">
+                  <div
+                    class="no-thumb-box audio clickable-preview"
+                    title="Click to view & play in Lightbox"
+                    on:click|stopPropagation={() => inspectAsset(activeAmbienceVal, `${activeBg?.folder || 'Scene'} Ambience`, 'audio', { slotType: 'ambience' })}
+                  >🎵</div>
+                  <div
+                    class="slot-name-col clickable-rename"
+                    title="Double-click to rename export filename; right-click for options"
+                    on:dblclick|stopPropagation={() => triggerRenameSlotExport('ambience')}
+                  >
                     <span class="asset-filename" title={activeAmbienceVal} use:autoscroll>{activeAmbienceVal}</span>
                     {#if activeBg?.assetSources?.[activeAmbienceVal] || (activeAmbienceVal && activeBg?.assetSources?.[activeAmbienceVal.split('/').pop()])}
                       <span class="alias-tag" title="Custom export filename">
@@ -1871,7 +2030,11 @@
                       on:drop={(e) => onSlotDrop(e, 'background', todKey)}
                     >
                       <span class="mslot-lbl">BG:</span>
-                      <span class="mslot-val" title={tv.background || 'Same as base'}>{tv.background || 'Same as base'}</span>
+                      <span
+                        class="mslot-val clickable-rename"
+                        title="{tv.background || 'Same as base'} (Double-click to rename)"
+                        on:dblclick|stopPropagation={() => tv.background && triggerRenameSlotExport('background', todKey)}
+                      >{tv.background || 'Same as base'}</span>
                       {#if tv.background && activeBg?.assetSources?.[tv.background]}
                         <span class="mslot-alias-dot" title="Alias of {activeBg.assetSources[tv.background]}">●</span>
                       {/if}
@@ -1892,7 +2055,11 @@
                       on:drop={(e) => onSlotDrop(e, 'foreground', todKey)}
                     >
                       <span class="mslot-lbl">FG:</span>
-                      <span class="mslot-val" title={tv.foreground || 'None'}>{tv.foreground || 'None'}</span>
+                      <span
+                        class="mslot-val clickable-rename"
+                        title="{tv.foreground || 'None'} (Double-click to rename)"
+                        on:dblclick|stopPropagation={() => tv.foreground && triggerRenameSlotExport('foreground', todKey)}
+                      >{tv.foreground || 'None'}</span>
                       {#if tv.foreground && activeBg?.assetSources?.[tv.foreground]}
                         <span class="mslot-alias-dot" title="Alias of {activeBg.assetSources[tv.foreground]}">●</span>
                       {/if}
@@ -1913,7 +2080,11 @@
                       on:drop={(e) => onSlotDrop(e, 'ambience', todKey)}
                     >
                       <span class="mslot-lbl">Audio:</span>
-                      <span class="mslot-val" title={tv.ambience || 'Same as base'}>{tv.ambience || 'Same as base'}</span>
+                      <span
+                        class="mslot-val clickable-rename"
+                        title="{tv.ambience || 'Same as base'} (Double-click to rename)"
+                        on:dblclick|stopPropagation={() => tv.ambience && triggerRenameSlotExport('ambience', todKey)}
+                      >{tv.ambience || 'Same as base'}</span>
                       {#if tv.ambience && (activeBg?.assetSources?.[tv.ambience] || activeBg?.assetSources?.[tv.ambience.split('/').pop()])}
                         <span class="mslot-alias-dot" title="Alias">●</span>
                       {/if}
@@ -2230,16 +2401,18 @@
             </div>
           {:else}
             {#each filteredAssets as asset (asset.id)}
+              <!-- svelte-ignore a11y_click_events_have_key_events -->
               <div
                 class="asset-card"
                 role="button"
                 tabindex="0"
                 draggable="true"
-                title="Drag onto any slot, double-click to preview, or right-click: {asset.relPath} ({Math.round(asset.size / 1024)} KB)"
+                title="Click to view & edit in Lightbox, drag onto any slot, double-click to rename: {asset.relPath} ({Math.round(asset.size / 1024)} KB)"
                 on:dragstart={(e) => onAssetDragStart(e, asset)}
                 on:dragend={onAssetDragEnd}
                 on:contextmenu|preventDefault|stopPropagation={(e) => openAssetContextMenu(e, asset)}
-                on:dblclick={() => inspectAsset(asset)}
+                on:click={() => onAssetCardClick(asset)}
+                on:dblclick|stopPropagation={() => triggerRenameAsset(asset)}
               >
                 {#if asset.type === 'image'}
                   <div class="card-thumb-wrap">
@@ -2262,8 +2435,8 @@
 
 {#if showAddTodModal}
   <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-  <div class="modal-bg submodal-scrim" on:click={() => (showAddTodModal = false)}>
-    <div class="modal submodal-card" on:click|stopPropagation>
+  <div class="modal-bg submodal-scrim" on:mousedown={onScrimMouseDown} on:click={(e) => handleScrimClose(e, () => (showAddTodModal = false))}>
+    <div class="modal submodal-card" on:mousedown|stopPropagation on:click|stopPropagation>
       <button class="modal-x" title="Close (Esc)" on:click={() => (showAddTodModal = false)}>✕</button>
       <h3>🕒 Add Time of Day Variant</h3>
       <div class="hint">Configure a time-of-day visual variant for this {usePositions ? 'position' : 'state'}.</div>
@@ -2328,8 +2501,8 @@
 
 {#if showAddStateModal}
   <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-  <div class="modal-bg submodal-scrim" on:click={() => (showAddStateModal = false)}>
-    <div class="modal submodal-card" on:click|stopPropagation>
+  <div class="modal-bg submodal-scrim" on:mousedown={onScrimMouseDown} on:click={(e) => handleScrimClose(e, () => (showAddStateModal = false))}>
+    <div class="modal submodal-card" on:mousedown|stopPropagation on:click|stopPropagation>
       <button class="modal-x" title="Close (Esc)" on:click={() => (showAddStateModal = false)}>✕</button>
       <h3>✨ Add State Variant</h3>
       <div class="hint">Create an alternative scene state (e.g. crowded, festive, damaged, rainy).</div>
@@ -2404,8 +2577,8 @@
 
 {#if showManageTemplatesModal}
   <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-  <div class="modal-bg submodal-scrim" on:click={() => (showManageTemplatesModal = false)}>
-    <div class="modal submodal-card bg-templates-dialog" on:click|stopPropagation>
+  <div class="modal-bg submodal-scrim" on:mousedown={onScrimMouseDown} on:click={(e) => handleScrimClose(e, () => (showManageTemplatesModal = false))}>
+    <div class="modal submodal-card bg-templates-dialog" on:mousedown|stopPropagation on:click|stopPropagation>
       <button class="modal-x" title="Close (Esc)" on:click={() => (showManageTemplatesModal = false)}>✕</button>
       <h3>📋 Background Templates</h3>
       <div class="hint">Apply structural presets (courtroom positions, day/night cycles, trial states) or save custom templates.</div>
@@ -2477,8 +2650,8 @@
 
 {#if showPurgeConfirmModal}
   <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-  <div class="modal-bg submodal-scrim" on:click={() => (showPurgeConfirmModal = false)}>
-    <div class="modal submodal-card purge-confirm-dialog" on:click|stopPropagation>
+  <div class="modal-bg submodal-scrim" on:mousedown={onScrimMouseDown} on:click={(e) => handleScrimClose(e, () => (showPurgeConfirmModal = false))}>
+    <div class="modal submodal-card purge-confirm-dialog" on:mousedown|stopPropagation on:click|stopPropagation>
       <button class="modal-x" title="Close (Esc)" on:click={() => (showPurgeConfirmModal = false)}>✕</button>
 
       {#if purgeTargetMode === 'all'}
@@ -2546,8 +2719,8 @@
 <!-- Rename Dialog Submodal -->
 {#if showRenameModal}
   <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-  <div class="modal-bg submodal-scrim" on:click={() => (showRenameModal = false)}>
-    <div class="modal submodal-card rename-dialog" on:click|stopPropagation>
+  <div class="modal-bg submodal-scrim" on:mousedown={onScrimMouseDown} on:click={(e) => handleScrimClose(e, () => (showRenameModal = false))}>
+    <div class="modal submodal-card rename-dialog" on:mousedown|stopPropagation on:click|stopPropagation>
       <button class="modal-x" title="Close (Esc)" on:click={() => (showRenameModal = false)}>✕</button>
       <h3>{renameModalConfig.title}</h3>
       {#if renameModalConfig.hint}
@@ -2581,12 +2754,49 @@
 <!-- Lightbox Asset Inspection Modal -->
 {#if inspectModalAsset}
   <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-  <div class="modal-bg submodal-scrim lightbox-scrim" on:click={() => (inspectModalAsset = null)}>
-    <div class="modal submodal-card inspect-lightbox" on:click|stopPropagation>
-      <button class="modal-x" title="Close (Esc)" on:click={() => (inspectModalAsset = null)}>✕</button>
+  <div class="modal-bg submodal-scrim lightbox-scrim" on:mousedown={onScrimMouseDown} on:click={(e) => handleScrimClose(e, () => (inspectModalAsset = null))}>
+    <div class="modal submodal-card inspect-lightbox" on:mousedown|stopPropagation on:click|stopPropagation>
       <div class="lightbox-head">
-        <span class="lightbox-badge">{inspectModalAsset.type?.toUpperCase() || 'ASSET'}</span>
-        <h3 class="lightbox-title text-truncate" title={inspectModalAsset.name}>{inspectModalAsset.name}</h3>
+        <div class="lightbox-head-left">
+          <span class="lightbox-badge">{inspectModalAsset.type?.toUpperCase() || 'ASSET'}</span>
+          <div class="lightbox-inputs-row">
+            <div class="lightbox-input-box" title="Global asset filename in repository pool (updates all backgrounds & areas)">
+              <span class="lightbox-tag-prefix">GLOBAL:</span>
+              <input
+                type="text"
+                class="lightbox-input-text"
+                bind:value={inspectGlobalName}
+                on:blur={applyInspectGlobalRename}
+                on:change={applyInspectGlobalRename}
+                on:keydown={(e) => {
+                  if (e.key === 'Enter') {
+                    applyInspectGlobalRename();
+                    e.currentTarget.blur();
+                  }
+                }}
+                placeholder="asset_name.png"
+              />
+            </div>
+            <div class="lightbox-input-box" title="Export filename for this background (written to background.json & zip export)">
+              <span class="lightbox-tag-prefix">EXPORT:</span>
+              <input
+                type="text"
+                class="lightbox-input-text"
+                bind:value={inspectExportName}
+                on:blur={applyInspectExportRename}
+                on:change={applyInspectExportRename}
+                on:keydown={(e) => {
+                  if (e.key === 'Enter') {
+                    applyInspectExportRename();
+                    e.currentTarget.blur();
+                  }
+                }}
+                placeholder="export_name.png"
+              />
+            </div>
+          </div>
+        </div>
+        <button class="modal-x" title="Close (Esc)" on:click={() => (inspectModalAsset = null)}>✕</button>
       </div>
       <div class="lightbox-body">
         {#if inspectModalAsset.type === 'image' || (inspectModalAsset.name && inspectModalAsset.name.match(/\.(png|webp|jpg|jpeg|gif|svg|avif)$/i))}
@@ -4346,8 +4556,8 @@
   }
 
   .inspect-lightbox {
-    max-width: 720px;
-    width: 90vw;
+    max-width: 780px;
+    width: 92vw;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -4356,25 +4566,107 @@
   .lightbox-head {
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .lightbox-head-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
   }
 
   .lightbox-badge {
-    font-size: 9.5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 26px;
+    padding: 0 8px;
+    font-size: 10px;
     font-weight: 800;
-    padding: 2px 6px;
-    border-radius: 3px;
-    background: var(--panel2);
-    border: 1px solid var(--line2);
+    border-radius: var(--radius-sm, 4px);
+    background: rgba(255, 90, 44, 0.08);
+    border: 1px solid var(--accent);
     color: var(--accent);
     font-family: var(--font-mono);
+    flex-shrink: 0;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    box-sizing: border-box;
   }
 
-  .lightbox-title {
-    margin: 0;
-    font-size: 13.5px;
+  .lightbox-inputs-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .lightbox-input-box {
+    display: inline-flex;
+    align-items: center;
+    height: 26px;
+    background: var(--bg-surface, var(--panel));
+    border: 1px solid var(--line2, var(--border-subtle, #333));
+    border-radius: var(--radius-sm, 4px);
+    padding: 0 8px;
+    gap: 6px;
+    flex: 1;
+    min-width: 140px;
+    max-width: 320px;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .lightbox-input-box:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px rgba(255, 90, 44, 0.25);
+  }
+
+  .lightbox-tag-prefix {
+    font-size: 9.5px;
+    font-family: var(--font-mono);
     font-weight: 700;
-    color: var(--text-strong);
+    color: var(--text-muted, var(--dim));
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+    user-select: none;
+  }
+
+  .lightbox-input-text {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-strong, #fff);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+  }
+
+  .clickable-preview {
+    cursor: pointer;
+    transition: transform 0.12s ease, filter 0.12s ease;
+  }
+  .clickable-preview:hover {
+    filter: brightness(1.18);
+    transform: scale(1.03);
+  }
+
+  .clickable-rename {
+    cursor: pointer;
+    transition: color 0.12s ease;
+  }
+  .clickable-rename:hover .asset-filename,
+  .clickable-rename:hover.mslot-val {
+    color: var(--accent);
+    text-decoration: underline dotted;
   }
 
   .lightbox-body {

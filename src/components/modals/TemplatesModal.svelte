@@ -155,13 +155,22 @@
       notify('Could not read templates from that JSON file.', 'error');
     });
   }
+
+  let scrimMouseDownTarget = null;
 </script>
 
 <svelte:window on:keydown={(e) => e.key === 'Escape' && dispatch('close')} />
 
 <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-<div class="modal-bg" on:click={() => dispatch('close')}>
-  <div class="modal" on:click|stopPropagation>
+<div
+  class="modal-bg"
+  on:mousedown={(e) => (scrimMouseDownTarget = e.target)}
+  on:click={(e) => {
+    if (scrimMouseDownTarget === e.currentTarget && e.target === e.currentTarget) dispatch('close');
+    scrimMouseDownTarget = null;
+  }}
+>
+  <div class="modal" on:mousedown|stopPropagation on:click|stopPropagation>
     <button class="modal-x" title="Close" on:click={() => dispatch('close')}>✕</button>
     <h3>Templates</h3>
     <div class="hint">
