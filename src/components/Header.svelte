@@ -198,7 +198,7 @@
 <svelte:window on:click={() => { newMenu = false; exampleMenu = false; importMenu = false; exportMenu = false; }} />
 
 <header>
-  <div class="brand" title="Made by Yuzu">
+  <div class="brand" title="Made by Yuzuru">
     <span class="brand-mark">&gt;</span>
     <h1>MNN Area List <span>YAML Maker</span><span class="cursor">_</span></h1>
   </div>
