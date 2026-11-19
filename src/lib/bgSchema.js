@@ -47,7 +47,7 @@ export function createTimeVariant(opts = {}) {
 /**
  * Creates a position entry
  */
-export function createPosition(name = 'Normal', opts = {}) {
+export function createPosition(name = 'wit', opts = {}) {
   return {
     name,
     background: opts.background || '',
@@ -99,7 +99,7 @@ export function createBackground(folder = 'NewBackground', opts = {}) {
     description: opts.description || '',
     states,
     activeState: 'default',
-    activePosition: opts.activePosition || 'Witness',
+    activePosition: opts.activePosition || 'wit',
     activeTod: 'day',
   };
 }
@@ -267,47 +267,56 @@ export function parseBackgroundJson(raw, folder = 'ImportedBackground') {
 
   if (bg.states.default?.usePositions && bg.states.default.positions) {
     const posKeys = Object.keys(bg.states.default.positions);
-    bg.activePosition = posKeys.includes('Witness')
+    bg.activePosition = posKeys.includes('wit')
+      ? 'wit'
+      : posKeys.includes('Witness')
       ? 'Witness'
       : posKeys.includes('Normal')
       ? 'Normal'
-      : posKeys[0] || 'Witness';
+      : posKeys[0] || 'wit';
   }
 
   return bg;
 }
 
 /**
- * Maps standard Ace Attorney Online / MNN shorthand position codes to human-friendly position names.
+ * Maps standard Ace Attorney Online / MNN shorthand position codes.
+ * Kept identical to standard courtroom shorthand names (wit, def, pro, etc.)
+ * in lowercase for maximum clarity when converting INI -> JSON.
  */
 export const INI_POSITION_MAP = {
-  wit: 'Witness',
-  witness: 'Witness',
-  def: 'Defense',
-  defense: 'Defense',
-  pro: 'Prosecution',
-  prosecution: 'Prosecution',
-  jud: 'Judge',
-  judge: 'Judge',
-  hld: 'Counsel',
-  hlp: 'Counsel Prosecution',
-  jur: 'Jury',
-  jury: 'Jury',
-  sea: 'Gallery',
-  gal: 'Gallery',
-  gallery: 'Gallery',
-  coun: 'Counsel',
-  counsel: 'Counsel',
-  norm: 'Witness',
-  normal: 'Witness',
-  helper: 'Counsel',
+  wit: 'wit',
+  witness: 'wit',
+  norm: 'wit',
+  normal: 'wit',
+  def: 'def',
+  defense: 'def',
+  defence: 'def',
+  pro: 'pro',
+  prosecution: 'pro',
+  jud: 'jud',
+  judge: 'jud',
+  hld: 'hld',
+  counsel: 'hld',
+  helper: 'hld',
+  hlp: 'hlp',
+  'counsel prosecution': 'hlp',
+  'counsel_prosecution': 'hlp',
+  'helper prosecution': 'hlp',
+  'helper_prosecution': 'hlp',
+  jur: 'jur',
+  jury: 'jur',
+  sea: 'sea',
+  gal: 'sea',
+  gallery: 'sea',
+  coun: 'hld',
 };
 
 export function mapIniPositionName(rawCode) {
-  if (!rawCode) return 'Witness';
+  if (!rawCode) return 'wit';
   const clean = rawCode.trim().toLowerCase();
   if (INI_POSITION_MAP[clean]) return INI_POSITION_MAP[clean];
-  return rawCode.trim().charAt(0).toUpperCase() + rawCode.trim().slice(1);
+  return clean;
 }
 
 /**
@@ -424,10 +433,10 @@ export function parseBackgroundIni(iniText, folder = 'ImportedBackground') {
 
   if (hasPositions) {
     const posKeys = Object.keys(positions);
-    // The default MUST BE "Witness" (mapped from "wit")
-    bg.activePosition = posKeys.includes('Witness') ? 'Witness' : posKeys[0] || 'Witness';
+    // The default MUST BE "wit"
+    bg.activePosition = posKeys.includes('wit') ? 'wit' : (posKeys.includes('Witness') ? 'Witness' : posKeys[0] || 'wit');
   } else {
-    bg.activePosition = 'Witness';
+    bg.activePosition = 'wit';
   }
 
   return bg;
@@ -436,14 +445,19 @@ export function parseBackgroundIni(iniText, folder = 'ImportedBackground') {
 /**
  * Resolves the active visual assets (background, foreground, ambience) for a given state, position, and TOD.
  */
-export function resolveActiveVisual(bg, { state = 'default', position = 'Witness', tod = 'day' } = {}) {
+export function resolveActiveVisual(bg, { state = 'default', position = 'wit', tod = 'day' } = {}) {
   if (!bg || !bg.states) return { background: '', foreground: '', ambience: '' };
 
   const st = bg.states[state] || bg.states.default;
   if (!st) return { background: '', foreground: '', ambience: '' };
 
   if (st.usePositions && st.positions) {
-    const pos = (position && st.positions[position]) || st.positions.Witness || st.positions.Normal || Object.values(st.positions)[0];
+    const pos = (position && st.positions[position])
+      || st.positions.wit
+      || st.positions.Witness
+      || st.positions.norm
+      || st.positions.Normal
+      || Object.values(st.positions)[0];
     if (pos) {
       // Check if position has time variant
       const tv = pos.time_variants?.[tod];
@@ -563,16 +577,16 @@ export const BUILTIN_BG_TEMPLATES = [
   {
     id: 'builtin-courtroom-5',
     name: 'Courtroom (5 Positions)',
-    description: 'Courtroom setup: Witness (default), Defense, Prosecution, Judge, Counsel',
+    description: 'Courtroom setup: wit (default), def, pro, jud, hld',
     builtin: true,
     structure: {
       usePositions: true,
       positions: {
-        Witness: { background: '', foreground: '', ambience: '', time_variants: {} },
-        Defense: { background: '', foreground: '', ambience: '', time_variants: {} },
-        Prosecution: { background: '', foreground: '', ambience: '', time_variants: {} },
-        Judge: { background: '', foreground: '', ambience: '', time_variants: {} },
-        Counsel: { background: '', foreground: '', ambience: '', time_variants: {} },
+        wit: { background: '', foreground: '', ambience: '', time_variants: {} },
+        def: { background: '', foreground: '', ambience: '', time_variants: {} },
+        pro: { background: '', foreground: '', ambience: '', time_variants: {} },
+        jud: { background: '', foreground: '', ambience: '', time_variants: {} },
+        hld: { background: '', foreground: '', ambience: '', time_variants: {} },
       },
       time_variants: {},
       states: ['default'],
@@ -581,16 +595,16 @@ export const BUILTIN_BG_TEMPLATES = [
   {
     id: 'builtin-courtroom-day-night',
     name: 'Courtroom + Day / Night Cycle',
-    description: '5 courtroom positions with Day & Night time variants (Witness default)',
+    description: '5 courtroom positions (wit default, def, pro, jud, hld) with Day & Night time variants',
     builtin: true,
     structure: {
       usePositions: true,
       positions: {
-        Witness: { background: '', foreground: '', ambience: '', time_variants: { day: {}, night: {} } },
-        Defense: { background: '', foreground: '', ambience: '', time_variants: { day: {}, night: {} } },
-        Prosecution: { background: '', foreground: '', ambience: '', time_variants: { day: {}, night: {} } },
-        Judge: { background: '', foreground: '', ambience: '', time_variants: { day: {}, night: {} } },
-        Counsel: { background: '', foreground: '', ambience: '', time_variants: { day: {}, night: {} } },
+        wit: { background: '', foreground: '', ambience: '', time_variants: { day: {}, night: {} } },
+        def: { background: '', foreground: '', ambience: '', time_variants: { day: {}, night: {} } },
+        pro: { background: '', foreground: '', ambience: '', time_variants: { day: {}, night: {} } },
+        jud: { background: '', foreground: '', ambience: '', time_variants: { day: {}, night: {} } },
+        hld: { background: '', foreground: '', ambience: '', time_variants: { day: {}, night: {} } },
       },
       time_variants: {},
       states: ['default'],
@@ -692,7 +706,9 @@ export function applyBgTemplate(bg, template) {
         }
       }
       if (!st.positions[bg.activePosition]) {
-        bg.activePosition = st.positions.Witness ? 'Witness' : (Object.keys(st.positions)[0] || 'Witness');
+        bg.activePosition = st.positions.wit
+          ? 'wit'
+          : (st.positions.Witness ? 'Witness' : (Object.keys(st.positions)[0] || 'wit'));
       }
     } else {
       if (!st.time_variants) st.time_variants = {};

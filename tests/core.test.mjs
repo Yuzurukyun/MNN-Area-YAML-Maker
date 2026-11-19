@@ -725,14 +725,14 @@ ok(Array.isArray(BUILTIN_BG_TEMPLATES) && BUILTIN_BG_TEMPLATES.length >= 6, 'BUI
 const tplDayNight = BUILTIN_BG_TEMPLATES.find((t) => t.id === 'builtin-day-night');
 ok(Boolean(tplDayNight && tplDayNight.structure.time_variants.day), 'day-night template defines day variant');
 const tplCourtroom = BUILTIN_BG_TEMPLATES.find((t) => t.id === 'builtin-courtroom-5');
-ok(Boolean(tplCourtroom && tplCourtroom.structure.positions.Judge), 'courtroom-5 template defines Judge position');
+ok(Boolean(tplCourtroom && tplCourtroom.structure.positions.jud), 'courtroom-5 template defines jud position');
 
 // Test apply template
 const freshBg = createBackground('Trial/TestRoom');
 applyBgTemplate(freshBg, tplCourtroom);
 ok(freshBg.states.default.usePositions, 'applying courtroom template enables usePositions');
 eq(Object.keys(freshBg.states.default.positions).length, 5, 'applying courtroom template creates 5 positions');
-ok(Boolean(freshBg.states.default.positions.Prosecution), 'Prosecution position exists');
+ok(Boolean(freshBg.states.default.positions.pro), 'pro position exists');
 
 // Test template extraction
 const extracted = extractBgTemplateStructure(freshBg);
@@ -875,26 +875,31 @@ const parsedIni = parseBackgroundIni(samplePositionsIni, 'WS Lambda/East Island/
 eq(parsedIni.folder, 'WS Lambda/East Island/Manor/Manor Second Floor [Day]', 'parseBackgroundIni preserves folder path');
 ok(parsedIni.states.default.usePositions, 'parseBackgroundIni detects courtroom positions mode');
 eq(Object.keys(parsedIni.states.default.positions).length, 6, 'parseBackgroundIni parses all 6 courtroom positions');
-ok(Boolean(parsedIni.states.default.positions.Witness), 'shorthand [wit] mapped to Witness');
-ok(Boolean(parsedIni.states.default.positions.Defense), 'shorthand [def] mapped to Defense');
-ok(Boolean(parsedIni.states.default.positions.Prosecution), 'shorthand [pro] mapped to Prosecution');
-ok(Boolean(parsedIni.states.default.positions.Judge), 'shorthand [jud] mapped to Judge');
-ok(Boolean(parsedIni.states.default.positions.Counsel), 'shorthand [hld] mapped to Counsel');
-ok(Boolean(parsedIni.states.default.positions['Counsel Prosecution']), 'shorthand [hlp] mapped to Counsel Prosecution');
-eq(parsedIni.states.default.positions.Witness.background, 'witnessempty.webp', 'Witness background slot matches');
-eq(parsedIni.states.default.positions.Witness.ambience, 'wsl/generic_room_day.opus', 'Witness ambience slot matches');
-eq(parsedIni.states.default.positions.Defense.background, 'cloudy_back.webp', 'Defense background slot matches');
-eq(parsedIni.states.default.positions.Defense.foreground, 'rain_front.webp', 'Defense foreground slot matches');
-eq(parsedIni.activePosition, 'Witness', 'active position defaults to Witness (wit)');
+ok(Boolean(parsedIni.states.default.positions.wit), 'shorthand [wit] mapped to wit');
+ok(Boolean(parsedIni.states.default.positions.def), 'shorthand [def] mapped to def');
+ok(Boolean(parsedIni.states.default.positions.pro), 'shorthand [pro] mapped to pro');
+ok(Boolean(parsedIni.states.default.positions.jud), 'shorthand [jud] mapped to jud');
+ok(Boolean(parsedIni.states.default.positions.hld), 'shorthand [hld] mapped to hld');
+ok(Boolean(parsedIni.states.default.positions.hlp), 'shorthand [hlp] mapped to hlp');
+eq(parsedIni.states.default.positions.wit.background, 'witnessempty.webp', 'wit background slot matches');
+eq(parsedIni.states.default.positions.wit.ambience, 'wsl/generic_room_day.opus', 'wit ambience slot matches');
+eq(parsedIni.states.default.positions.def.background, 'cloudy_back.webp', 'def background slot matches');
+eq(parsedIni.states.default.positions.def.foreground, 'rain_front.webp', 'def foreground slot matches');
+eq(parsedIni.activePosition, 'wit', 'active position defaults to wit (wit)');
 eq(parsedIni.states.default.background, 'witnessempty.webp', 'default state background takes from wit');
 eq(parsedIni.states.default.ambience, 'wsl/generic_room_day.opus', 'default state ambience takes from wit');
-eq(Object.keys(parsedIni.states.default.positions.Witness.time_variants).length, 0, 'INI positions have no time variants (taken as-is)');
-eq(mapIniPositionName('wit'), 'Witness', 'wit maps to Witness');
-eq(mapIniPositionName('norm'), 'Witness', 'norm maps to Witness (witness == normal)');
-eq(mapIniPositionName('normal'), 'Witness', 'normal maps to Witness');
-eq(mapIniPositionName('sea'), 'Gallery', 'sea maps to Gallery');
-eq(mapIniPositionName('gal'), 'Gallery', 'gal maps to Gallery');
-ok(mapIniPositionName('sea') !== 'Normal', 'Gallery =/= Normal');
+eq(Object.keys(parsedIni.states.default.positions.wit.time_variants).length, 0, 'INI positions have no time variants (taken as-is)');
+eq(mapIniPositionName('wit'), 'wit', 'wit maps to wit');
+eq(mapIniPositionName('norm'), 'wit', 'norm maps to wit (witness == normal)');
+eq(mapIniPositionName('normal'), 'wit', 'normal maps to wit');
+eq(mapIniPositionName('def'), 'def', 'def maps to def');
+eq(mapIniPositionName('pro'), 'pro', 'pro maps to pro');
+eq(mapIniPositionName('jud'), 'jud', 'jud maps to jud');
+eq(mapIniPositionName('hld'), 'hld', 'hld maps to hld');
+eq(mapIniPositionName('hlp'), 'hlp', 'hlp maps to hlp');
+eq(mapIniPositionName('sea'), 'sea', 'sea maps to sea');
+eq(mapIniPositionName('gal'), 'sea', 'gal maps to sea');
+ok(mapIniPositionName('sea') !== 'wit', 'Gallery =/= Normal / wit');
 
 // Single scene non-position INI test
 const singleSceneIni = `
@@ -910,11 +915,11 @@ eq(parsedSingle.states.default.foreground, 'desk.png', 'single scene foreground 
 eq(parsedSingle.states.default.ambience, 'rain.opus', 'single scene ambience parsed');
 
 // Empty foreground resolution test
-const witnessVisual = resolveActiveVisual(parsedIni, { position: 'Witness' });
-eq(witnessVisual.foreground, '', 'Witness with empty foreground resolves to empty string (no stray rain overlay)');
+const witnessVisual = resolveActiveVisual(parsedIni, { position: 'wit' });
+eq(witnessVisual.foreground, '', 'wit with empty foreground resolves to empty string (no stray rain overlay)');
 eq(parsedIni.states.default.foreground, '', 'parsedIni default state foreground remains empty when wit has no foreground');
-const defenseVisual = resolveActiveVisual(parsedIni, { position: 'Defense' });
-eq(defenseVisual.foreground, 'rain_front.webp', 'Defense position foreground resolves correctly to rain_front.webp');
+const defenseVisual = resolveActiveVisual(parsedIni, { position: 'def' });
+eq(defenseVisual.foreground, 'rain_front.webp', 'def position foreground resolves correctly to rain_front.webp');
 
 // normalizeAmbiencePath tests
 eq(normalizeAmbiencePath('base/sounds/ambience/wsl/beach.opus'), 'wsl/beach.opus', 'normalizeAmbiencePath handles sounds/ambience/');
@@ -1047,21 +1052,21 @@ eq(bgStore.get().selectedBgId, defaultReset.id, 'selectedBgId matches Default');
 const multiAmbBg = createBackground('Courtroom Ambience Test');
 multiAmbBg.states.default.usePositions = true;
 multiAmbBg.states.default.positions = {
-  Witness: createPosition('Witness', { background: 'wit.png', ambience: 'wsl/manor_3_cycle.opus' }),
-  Defense: createPosition('Defense', { background: 'def.png', ambience: 'wsl/rain_loop.opus' }),
-  Prosecution: createPosition('Prosecution', { background: 'pro.png', ambience: '' }),
-  Judge: createPosition('Judge', { background: 'jud.png', ambience: 'wsl/rain_loop.opus' }),
+  wit: createPosition('wit', { background: 'wit.png', ambience: 'wsl/manor_3_cycle.opus' }),
+  def: createPosition('def', { background: 'def.png', ambience: 'wsl/rain_loop.opus' }),
+  pro: createPosition('pro', { background: 'pro.png', ambience: '' }),
+  jud: createPosition('jud', { background: 'jud.png', ambience: 'wsl/rain_loop.opus' }),
 };
 
-const visWit = resolveActiveVisual(multiAmbBg, { state: 'default', position: 'Witness' });
-const visDef = resolveActiveVisual(multiAmbBg, { state: 'default', position: 'Defense' });
-const visPro = resolveActiveVisual(multiAmbBg, { state: 'default', position: 'Prosecution' });
-const visJud = resolveActiveVisual(multiAmbBg, { state: 'default', position: 'Judge' });
+const visWit = resolveActiveVisual(multiAmbBg, { state: 'default', position: 'wit' });
+const visDef = resolveActiveVisual(multiAmbBg, { state: 'default', position: 'def' });
+const visPro = resolveActiveVisual(multiAmbBg, { state: 'default', position: 'pro' });
+const visJud = resolveActiveVisual(multiAmbBg, { state: 'default', position: 'jud' });
 
-eq(visWit.ambience, 'wsl/manor_3_cycle.opus', 'Witness position resolves manor ambience');
-eq(visDef.ambience, 'wsl/rain_loop.opus', 'Defense position resolves rain ambience');
-eq(visPro.ambience, '', 'Prosecution position resolves empty ambience');
-eq(visJud.ambience, 'wsl/rain_loop.opus', 'Judge position resolves rain ambience');
+eq(visWit.ambience, 'wsl/manor_3_cycle.opus', 'wit position resolves manor ambience');
+eq(visDef.ambience, 'wsl/rain_loop.opus', 'def position resolves rain ambience');
+eq(visPro.ambience, '', 'pro position resolves empty ambience');
+eq(visJud.ambience, 'wsl/rain_loop.opus', 'jud position resolves rain ambience');
 
 // Ambience transition simulator mirroring syncAmbienceOnVisualChange()
 function createAmbienceManager(initialVolume = 0.30) {
@@ -1123,41 +1128,41 @@ eq(ambMgr.volume, 0.0, 'volume clamped to 0.0 minimum');
 ambMgr.setVolume(0.30);
 eq(ambMgr.volume, 0.30, 'volume set back to 0.30');
 
-// User clicks Play Ambience on Witness
+// User clicks Play Ambience on wit
 ambMgr.play(visWit.ambience);
 eq(ambMgr.isPlaying, true, 'ambience is playing after user clicks play');
 eq(ambMgr.previewActive, true, 'ambience preview mode is active');
-eq(ambMgr.currentTrack, 'wsl/manor_3_cycle.opus', 'current track is witness manor ambience');
+eq(ambMgr.currentTrack, 'wsl/manor_3_cycle.opus', 'current track is wit manor ambience');
 
-// Switch to Defense (different ambience: rain)
+// Switch to def (different ambience: rain)
 const switchDefRes = ambMgr.sync(visDef.ambience);
-eq(switchDefRes, 'switched_and_playing', 'switching to Defense changes ambience and continues playing');
+eq(switchDefRes, 'switched_and_playing', 'switching to def changes ambience and continues playing');
 eq(ambMgr.isPlaying, true, 'stays playing without pausing when ambience changes');
 eq(ambMgr.currentTrack, 'wsl/rain_loop.opus', 'current track switched to rain');
 
-// Switch to Judge (same ambience: rain)
+// Switch to jud (same ambience: rain)
 const switchJudRes = ambMgr.sync(visJud.ambience);
-eq(switchJudRes, 'unchanged', 'switching to Judge detects identical ambience and does not interrupt');
+eq(switchJudRes, 'unchanged', 'switching to jud detects identical ambience and does not interrupt');
 eq(ambMgr.isPlaying, true, 'audio remains playing without stutter');
 
-// Switch to Prosecution (empty ambience)
+// Switch to pro (empty ambience)
 const switchProRes = ambMgr.sync(visPro.ambience);
 eq(switchProRes, 'paused_empty', 'switching to position with empty ambience pauses playback');
 eq(ambMgr.isPlaying, false, 'playback is paused when ambience is empty');
 eq(ambMgr.previewActive, true, 'preview intent remains active while paused on empty');
 
-// Switch back to Witness (non-empty ambience) -> should UNPAUSE and play!
+// Switch back to wit (non-empty ambience) -> should UNPAUSE and play!
 const switchWitRes = ambMgr.sync(visWit.ambience);
 eq(switchWitRes, 'switched_and_playing', 'switching back to non-empty ambience unpauses and plays seamlessly');
 eq(ambMgr.isPlaying, true, 'playback unpaused and playing automatically');
-eq(ambMgr.currentTrack, 'wsl/manor_3_cycle.opus', 'current track is witness manor');
+eq(ambMgr.currentTrack, 'wsl/manor_3_cycle.opus', 'current track is wit manor');
 
 // User explicitly pauses
 ambMgr.pause();
 eq(ambMgr.isPlaying, false, 'audio paused by user');
 eq(ambMgr.previewActive, false, 'preview mode deactivated by user');
 
-// Switch to Defense while explicitly paused -> should NOT unpause
+// Switch to def while explicitly paused -> should NOT unpause
 const switchPausedRes = ambMgr.sync(visDef.ambience);
 eq(switchPausedRes, 'switched_idle', 'switching position while explicitly paused updates track but does not play');
 eq(ambMgr.isPlaying, false, 'audio remains paused');
@@ -1166,7 +1171,7 @@ eq(ambMgr.isPlaying, false, 'audio remains paused');
 const testRefBg = createBackground('WS Lambda/Blackout');
 testRefBg.states.default.usePositions = true;
 testRefBg.states.default.positions = {
-  Witness: createPosition('Witness', { foreground: 'stand.webp' }),
+  wit: createPosition('wit', { foreground: 'stand.webp' }),
 };
 testRefBg.assetSources = {
   'stand.webp': 'stand_1.webp'

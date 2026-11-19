@@ -9,6 +9,7 @@
     serializeBackgroundJson,
     parseBackgroundJson,
     resolveActiveVisual,
+    mapIniPositionName,
     normalizeBgPath,
     normalizeAmbiencePath,
   } from '../../lib/bgSchema.js';
@@ -57,7 +58,7 @@
   let stateCopySource = 'default';
 
   let showAddPositionModal = false;
-  let newPosName = 'Witness';
+  let newPosName = 'wit';
   let posCopySource = '__active__';
   let posCopyTod = true;
   let selectedTplIdForPositions = '';
@@ -904,7 +905,11 @@
   $: usePositions = Boolean(activeState?.usePositions);
   $: activePosKey = (activeBg?.activePosition && activeState?.positions?.[activeBg.activePosition])
     ? activeBg.activePosition
-    : (activeState?.positions?.Witness ? 'Witness' : Object.keys(activeState?.positions || {})[0] || 'Witness');
+    : (activeState?.positions?.wit
+      ? 'wit'
+      : (activeState?.positions?.Witness
+        ? 'Witness'
+        : (Object.keys(activeState?.positions || {})[0] || 'wit')));
   $: activePos = activeState?.positions?.[activePosKey] || Object.values(activeState?.positions || {})[0] || null;
 
   // Test stage state
@@ -1140,16 +1145,16 @@
 
   // Known camera positions gathered across templates, presets & library
   const stdCourtroomPositions = [
-    'Witness',
-    'Defense',
-    'Prosecution',
-    'Judge',
-    'Counsel',
-    'Counsel Prosecution',
-    'Gallery',
-    'Jury',
-    'Bench',
-    'Wide',
+    'wit',
+    'def',
+    'pro',
+    'jud',
+    'hld',
+    'hlp',
+    'jur',
+    'sea',
+    'bench',
+    'wide',
   ];
 
   $: allTemplatePositions = (() => {
@@ -1246,13 +1251,13 @@
       st.usePositions = enable;
       if (enable && (!st.positions || Object.keys(st.positions).length === 0)) {
         st.positions = {
-          Witness: createPosition('Witness', {
+          wit: createPosition('wit', {
             background: st.background || '',
             foreground: st.foreground || '',
             ambience: st.ambience || '',
           }),
         };
-        bg.activePosition = 'Witness';
+        bg.activePosition = 'wit';
       }
     });
   }
@@ -1262,7 +1267,7 @@
     const nextPreset =
       stdCourtroomPositions.find((p) => !existing.has(p)) ||
       otherKnownPositionKeys.find((p) => !existing.has(p)) ||
-      'Custom';
+      'custom';
     newPosName = nextPreset;
     posCopySource = activePosKey || '__active__';
     posCopyTod = true;
@@ -1273,8 +1278,9 @@
   }
 
   function confirmAddPosition() {
-    const clean = newPosName.trim();
-    if (!clean) return;
+    const raw = newPosName.trim();
+    if (!raw) return;
+    const clean = mapIniPositionName(raw);
 
     updateBg((bg) => {
       const st = bg.states[bg.activeState || 'default'];
@@ -1360,7 +1366,7 @@
       title: '🎥 Rename Camera Position',
       label: 'Position Name:',
       hint: `Change camera angle label from "${posKey}".`,
-      placeholder: 'e.g. Witness, Prosecution, Judge',
+      placeholder: 'e.g. wit, def, pro, jud',
       value: posKey,
       onConfirm: (newName) => {
         const clean = newName.trim();
@@ -2487,7 +2493,7 @@
           <!-- Camera / Court Positions Mode -->
           <div class="section-card">
             <div class="card-bar">
-              <label class="toggle-label" title="Enable courtroom/camera positions (Normal, Witness, Prosecution, etc.)">
+              <label class="toggle-label" title="Enable courtroom/camera positions (wit, def, pro, jud, etc.)">
                 <input
                   type="checkbox"
                   checked={usePositions}
@@ -3400,7 +3406,7 @@
     <div class="modal submodal-card" on:mousedown|stopPropagation on:click|stopPropagation>
       <button class="modal-x" title="Close (Esc)" on:click={() => (showAddPositionModal = false)}>✕</button>
       <h3>🎥 Add Camera Position</h3>
-      <div class="hint">Configure a courtroom or scene camera angle (e.g. Witness, Prosecution, Defense, Judge).</div>
+      <div class="hint">Configure a courtroom or scene camera angle (e.g. wit, def, pro, jud, hld).</div>
 
       <div class="submodal-field">
         <span class="submodal-label">Pick preset or template position:</span>
@@ -3429,7 +3435,7 @@
         <span class="submodal-label">Position name:</span>
         <input
           type="text"
-          placeholder="e.g. Witness, Prosecution, Defense"
+          placeholder="e.g. wit, def, pro, jud"
           class="submodal-input"
           bind:value={newPosName}
           on:keydown={(e) => e.key === 'Enter' && confirmAddPosition()}
@@ -3909,7 +3915,7 @@
       <div class="lightbox-head">
         <div class="lightbox-head-left">
           <span class="lightbox-badge" style="background: #10b981; color: #fff;">LIVE STAGE MONITOR</span>
-          <span class="stage-fs-title font-mono">{activeBg?.folder || 'Scene'} — {usePositions ? (activePosKey || 'Witness') : activeStateKey} [{stageTod}]</span>
+          <span class="stage-fs-title font-mono">{activeBg?.folder || 'Scene'} — {usePositions ? (activePosKey || 'wit') : activeStateKey} [{stageTod}]</span>
         </div>
         <button class="modal-x" title="Close (Esc)" on:click={() => (showStageFullscreenModal = false)}>✕</button>
       </div>
