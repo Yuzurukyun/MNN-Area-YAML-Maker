@@ -439,6 +439,12 @@
 - **Slot Quick-Pickers & Mini-Slot Clear Actions (`BackgroundMakerModal.svelte`):**
     - Added quick-pick dropdowns (`▾ Pick image…`, `▾ Pick overlay…`, `▾ Pick audio…`) on empty slot card headers, allowing users to assign assets directly with a single click without requiring drag-and-drop.
     - Added clear `✕` buttons on Time of Day mini-slots (`.mslot-clear-btn`), enabling users to clear individual TOD slot overrides back to base without deleting the entire time variant.
+- **Two-Line Slot Header Typography & Subtitle Formatting (`BackgroundMakerModal.svelte`):**
+    - Replaced the single-line cluttered slot titles with a structured two-line layout:
+        - **Background Image:** Title `Background Image` with dimmed secondary descriptor `Scene backdrop`.
+        - **Foreground:** Title `Foreground` with dimmed secondary descriptor `Filter / Desk`.
+        - **Ambience:** Title `Ambience` with dimmed secondary descriptor `base/sounds/ambient`.
+    - Styled slot descriptions with smaller, dimmed monospace font tokens (`var(--dim)`, 9.5px) matching the app's inspector and toolbar design language, with `white-space: nowrap` and ellipsis preventing wrapping alongside quick-pick dropdowns.
 
 ### Verification
 

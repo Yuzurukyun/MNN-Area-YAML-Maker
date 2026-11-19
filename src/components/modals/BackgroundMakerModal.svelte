@@ -1149,7 +1149,10 @@
               on:drop={(e) => onSlotDrop(e, 'background')}
             >
               <div class="slot-head">
-                <span class="slot-title">★ Background Image</span>
+                <div class="slot-title-group">
+                  <span class="slot-title">Background Image</span>
+                  <span class="slot-desc">Scene backdrop</span>
+                </div>
                 {#if activeBgVal}
                   <button class="icon-btn" title="Clear image" on:click={() => assignSlotAsset('background', '')}>✕</button>
                 {:else if availableImages.length > 0}
@@ -1198,7 +1201,10 @@
               on:drop={(e) => onSlotDrop(e, 'foreground')}
             >
               <div class="slot-head">
-                <span class="slot-title">Foreground Overlay (Filter / Desk)</span>
+                <div class="slot-title-group">
+                  <span class="slot-title">Foreground</span>
+                  <span class="slot-desc">Filter / Desk</span>
+                </div>
                 {#if activeFgVal}
                   <button class="icon-btn" title="Clear overlay" on:click={() => assignSlotAsset('foreground', '')}>✕</button>
                 {:else if availableImages.length > 0}
@@ -1247,7 +1253,10 @@
               on:drop={(e) => onSlotDrop(e, 'ambience')}
             >
               <div class="slot-head">
-                <span class="slot-title">Ambience Audio (base/sounds/ambient/)</span>
+                <div class="slot-title-group">
+                  <span class="slot-title">Ambience</span>
+                  <span class="slot-desc">base/sounds/ambient</span>
+                </div>
                 {#if activeAmbienceVal}
                   <button class="icon-btn" title="Clear sound" on:click={() => assignSlotAsset('ambience', '')}>✕</button>
                 {:else if availableAudios.length > 0}
@@ -2625,9 +2634,9 @@
     border: 1px solid var(--line);
     border-radius: var(--radius);
     color: var(--dim);
-    font-size: 10px;
+    font-size: 9.5px;
     padding: 2px 4px;
-    max-width: 140px;
+    max-width: 105px;
     cursor: pointer;
     outline: none;
     transition: all 0.15s ease;
@@ -2656,12 +2665,39 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 8px;
+    min-height: 28px;
+  }
+
+  .slot-title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5px;
+    min-width: 0;
+    flex: 1;
   }
 
   .slot-title {
-    font-size: 11px;
+    font-size: 11.5px;
     font-weight: 700;
+    color: var(--text-strong);
+    letter-spacing: 0.01em;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .slot-desc {
+    font-size: 9.5px;
+    font-weight: 400;
     color: var(--dim);
+    letter-spacing: normal;
+    line-height: 1.2;
+    opacity: 0.85;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .slot-content {
