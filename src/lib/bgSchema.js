@@ -207,12 +207,6 @@ export function serializeBackgroundObject(bg) {
     out[stKey] = stObj;
   }
 
-  // Preserve sanitized source folder origin in exported project/background JSON if available
-  if (bg.fromFolder) {
-    const cleanFrom = sanitizeToRootFolder(bg.fromFolder);
-    if (cleanFrom) out.from_folder = cleanFrom;
-  }
-
   return out;
 }
 
@@ -252,6 +246,7 @@ export function parseBackgroundJson(raw, folder = 'ImportedBackground') {
   bg.states = {};
 
   for (const [stName, stData] of Object.entries(parsed)) {
+    if (stName === 'from_folder' || stName === 'fromFolder' || stName === '_from_folder') continue;
     if (!stData || typeof stData !== 'object') continue;
 
     const hasPositions = Boolean(stData.positions && typeof stData.positions === 'object');

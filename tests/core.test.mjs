@@ -1268,14 +1268,13 @@ const ambAsset = regFromFolder.addedAssets.find((a) => a.name.startsWith('ambien
 ok(Boolean(ambAsset), 'ambience asset imported into pool');
 eq(ambAsset.fromFolder, 'MySource/Sub', 'fromFolder extracted correctly for relative nested audio path');
 
-// Test that serializeBackgroundJson includes sanitized from_folder at root without full path
+// Test that serializeBackgroundJson does NOT include from_folder (keeping background.json pure game schema)
 const testBgWithFromFolder = createBackground('PrivacyTest');
 testBgWithFromFolder.fromFolder = 'C:/Users/user/Desktop/CourtPack/courtroom';
 testBgWithFromFolder.states.default.background = courtAsset.name;
 const exportedJsonString = serializeBackgroundJson(testBgWithFromFolder);
 const parsedExport = JSON.parse(exportedJsonString);
-eq(parsedExport.from_folder, 'CourtPack/courtroom', 'serializeBackgroundJson exports from_folder starting at root folder');
-ok(!parsedExport.from_folder.includes('C:/Users'), 'serializeBackgroundJson does NOT contain full personal PC path');
+ok(!('from_folder' in parsedExport), 'serializeBackgroundJson does NOT export from_folder to background.json');
 ok(!('from_folder' in parsedExport.default), 'from_folder is NOT placed inside default state variant');
 
 // Test that backgrounds-library.json includes asset fromFolder metadata
