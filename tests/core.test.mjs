@@ -13,7 +13,8 @@ import {
   resolveActiveVisual,
   hasTimeVariants,
 } from '../src/lib/bgSchema.js';
-import { resolveNodeImageUrl, bgStore } from '../src/lib/bgStore.js';
+import { resolveNodeImageUrl, bgStore, ensureUniqueBgFolder } from '../src/lib/bgStore.js';
+import { dbSaveAssets, dbLoadAllAssets, dbDeleteAssets, dbClearAssets } from '../src/lib/assetDb.js';
 import { buildZip, readZip } from '../src/lib/zip.js';
 
 let pass = 0;
@@ -663,6 +664,55 @@ M.ensureProject(reimportedProject);
 eq(reimportedProject.backgrounds.length, 3, 'reimported project preserves backgrounds');
 bgStore.loadBackgrounds(reimportedProject.backgrounds, { replace: true });
 eq(bgStore.get().backgrounds.length, 3, 'reimported backgrounds restore cleanly into bgStore');
+
+/* ---- Duplicate Path Disambiguation (ensureUniqueBgFolder) ---- */
+// Existing folders in bgStore: 'Umamusume/School/Library', 'Umamusume/School/Courtyard', 'Umamusume/Dorm/Room101'
+eq(ensureUniqueBgFolder('NewSeries/NewRoom'), 'NewSeries/NewRoom', 'unique folder returns unchanged');
+eq(ensureUniqueBgFolder('Umamusume/School/Library'), 'Umamusume/School/Library 2', 'colliding folder gets " 2" suffix');
+
+// Add 'Umamusume/School/Library 2' and verify next collision becomes 'Umamusume/School/Library 3'
+bgStore.addBackground('Umamusume/School/Library 2');
+eq(ensureUniqueBgFolder('Umamusume/School/Library'), 'Umamusume/School/Library 3', 'colliding folder with existing " 2" increments to " 3"');
+
+// Excluding self ID should permit preserving current folder
+const currentLib = bgStore.get().backgrounds.find((b) => b.folder === 'Umamusume/School/Library');
+ok(Boolean(currentLib), 'found current library background');
+eq(ensureUniqueBgFolder('Umamusume/School/Library', currentLib.id), 'Umamusume/School/Library', 'excluding self ID allows keeping same folder name');
+
+/* ---- Asset Referenced vs Unused and Purge ---- */
+// Library background has states.default.background = 'library_v2.png'
+const initialRefs = bgStore.getReferencedAssetNames();
+ok(initialRefs.has('library_v2.png'), 'referenced asset names contains library_v2.png from library');
+ok(!initialRefs.has('orphan_graphic.png'), 'orphan_graphic is not referenced');
+
+const testAssetUsed = {
+  id: 'asset-1',
+  name: 'library_v2.png',
+  relPath: 'library_v2.png',
+  fullRelPath: 'library_v2.png',
+  type: 'image',
+  size: 1024,
+  url: 'blob:test-used',
+};
+const testAssetUnused = {
+  id: 'asset-2',
+  name: 'orphan_graphic.png',
+  relPath: 'orphan_graphic.png',
+  fullRelPath: 'orphan_graphic.png',
+  type: 'image',
+  size: 2048,
+  url: 'blob:test-unused',
+};
+
+/* ---- IndexedDB fallback in Node environment ---- */
+const savedResult = await dbSaveAssets([testAssetUsed]);
+eq(savedResult, false, 'dbSaveAssets safely returns false without window.indexedDB');
+const loadedAssets = await dbLoadAllAssets();
+eq(loadedAssets, [], 'dbLoadAllAssets returns empty array in Node');
+const deleteResult = await dbDeleteAssets(['asset-1']);
+eq(deleteResult, false, 'dbDeleteAssets safely returns false in Node');
+const clearResult = await dbClearAssets();
+eq(clearResult, false, 'dbClearAssets safely returns false in Node');
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

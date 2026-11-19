@@ -216,9 +216,10 @@
       <button title="Import an existing areas.yaml or JSON project backup" on:click|stopPropagation={() => { importMenu = !importMenu; newMenu = false; exportMenu = false; }}>Import ▾</button>
       {#if importMenu}
         <div class="drop-menu">
-          <button title="Import a TsuMNN areas.yaml file and auto-arrange nodes" on:click={() => { importMenu = false; fileYaml.click(); }}>YAML — an areas.yaml file…</button>
-          <button title="Load a saved areas-project.json backup" on:click={() => { importMenu = false; fileJson.click(); }}>JSON — a saved project file…</button>
-          <div class="drop-hint">Import replaces everything. YAML automatically arranges nodes on the map; JSON restores positions, groups and templates.</div>
+          <button title="Import a TsuMNN areas.yaml file and auto-arrange nodes" on:click={() => { importMenu = false; fileYaml.click(); }}>YAML — import server config (areas.yaml)…</button>
+          <button title="Load a saved areas-project.json backup (restores areas, groups, backgrounds)" on:click={() => { importMenu = false; fileJson.click(); }}>JSON — import project backup (areas-project.json)…</button>
+          <button title="Open Background Maker to import background packages or libraries" on:click={() => { importMenu = false; bgStore.openMaker(); }}>ZIP / JSON — import backgrounds & assets…</button>
+          <div class="drop-hint">Import replaces everything. YAML auto-arranges nodes on the map; JSON restores positions, groups, and backgrounds.</div>
         </div>
       {/if}
     </span>
@@ -226,11 +227,11 @@
       <button class="primary" title="Export finished areas.yaml or save a JSON project backup" on:click|stopPropagation={() => { exportMenu = !exportMenu; newMenu = false; importMenu = false; }}>Export ▾</button>
       {#if exportMenu}
         <div class="drop-menu">
-          <button title="Preview, validate, copy, or download areas.yaml" on:click={() => { exportMenu = false; yamlOpen = true; }}>YAML — the finished areas.yaml…</button>
-          <button title="Download full project backup including positions and templates" on:click={exportJson}>JSON — save project backup</button>
-          <button title="Export high-resolution PNG image of the visible network map" on:click={() => { exportMenu = false; window.dispatchEvent(new CustomEvent('export-graph-screenshot')); }}>Map image — high-res PNG visual…</button>
-          <button title="Build, manage, and export background.json and asset packages (.zip)" on:click={() => { exportMenu = false; bgStore.openMaker(); }}>Backgrounds — visual package & JSON…</button>
-          <div class="drop-hint">JSON is your project save file (positions, groups, templates). YAML is the finished server config.</div>
+          <button title="Preview, validate, copy, or download areas.yaml" on:click={() => { exportMenu = false; yamlOpen = true; }}>YAML — server config (areas.yaml)…</button>
+          <button title="Download full project backup including positions, templates and backgrounds" on:click={exportJson}>JSON — project backup (areas-project.json)</button>
+          <button title="Build, manage, and export background.json and asset packages (.zip)" on:click={() => { exportMenu = false; bgStore.openMaker(); }}>ZIP — background packages & assets (.zip)…</button>
+          <button title="Export high-resolution PNG image of the visible network map" on:click={() => { exportMenu = false; window.dispatchEvent(new CustomEvent('export-graph-screenshot')); }}>PNG — high-res map canvas image…</button>
+          <div class="drop-hint">JSON saves full project data (nodes, positions, backgrounds). YAML is the server config. ZIP packages visual/audio assets.</div>
         </div>
       {/if}
     </span>

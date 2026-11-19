@@ -12,7 +12,7 @@
     normalizeBgPath,
     normalizeAmbiencePath,
   } from '../../lib/bgSchema.js';
-  import { bgStore } from '../../lib/bgStore.js';
+  import { bgStore, ensureUniqueBgFolder } from '../../lib/bgStore.js';
 
   const dispatch = createEventDispatcher();
 
@@ -151,6 +151,10 @@
   $: activeSubfolder = currentFolderParts.subfolder;
   $: activeBgName = currentFolderParts.name;
 
+  $: isDuplicatePath = backgrounds.some(
+    (b) => b.id !== activeBg?.id && normalizeBgPath(b.folder).toLowerCase() === normalizeBgPath(activeBg?.folder || '').toLowerCase()
+  );
+
   function onSubfolderChange(newSub) {
     let s = (newSub || '').trim().replace(/\\/g, '/').replace(/^(\.\/)?(base\/)?background\//i, '').replace(/^\/+/, '');
     s = s.replace(/\/+$/, '');
@@ -162,6 +166,16 @@
     let s = (newName || '').trim().replace(/\\/g, '/').replace(/^\/+/, '');
     const newFull = activeSubfolder ? `${activeSubfolder}/${s}` : s;
     updateBg((bg) => (bg.folder = newFull));
+  }
+
+  function onPathBlur() {
+    if (activeBg) {
+      const unique = ensureUniqueBgFolder(activeBg.folder, activeBg.id);
+      if (unique !== activeBg.folder) {
+        updateBg((bg) => (bg.folder = unique));
+        notify(`Duplicate path collision avoided — renamed to "${unique}".`, 'warn');
+      }
+    }
   }
 
   function createNewBackgroundInCurrentFolder() {
@@ -372,10 +386,19 @@
     }
   }
 
-  // Drag asset onto slot
+  // Drag asset onto slot or canvas node
   function onAssetDragStart(e, asset) {
     draggedAsset = asset;
     e.dataTransfer.setData('text/plain', asset.relPath);
+    try {
+      e.dataTransfer.setData('application/x-area-maker-asset', JSON.stringify({
+        id: asset.id,
+        name: asset.name,
+        relPath: asset.relPath,
+        type: asset.type,
+        url: asset.url
+      }));
+    } catch {}
   }
 
   function onSlotDrop(e, slotType, tod = null) {
@@ -419,10 +442,22 @@
     notify(`Applied "${cleanFolder}" to Area #${$state.project.areas.indexOf(selectedArea)}`);
   }
 
+  // Referenced and unused asset counts
+  $: referencedAssetNames = bgStore.getReferencedAssetNames();
+  $: usedAssetsCount = assetPool.filter((a) => referencedAssetNames.has(a.name) || referencedAssetNames.has(a.relPath) || referencedAssetNames.has(a.fullRelPath)).length;
+  $: unusedAssetCount = Math.max(0, assetPool.length - usedAssetsCount);
+
   // Filtered assets in pool
   $: filteredAssets = assetPool.filter((a) => {
-    if (assetFilter !== 'all' && a.type !== assetFilter) return false;
-    if (assetSearch && !a.name.toLowerCase().includes(assetSearch.toLowerCase())) return false;
+    const isUsed = referencedAssetNames.has(a.name) || referencedAssetNames.has(a.relPath) || referencedAssetNames.has(a.fullRelPath);
+    if (assetFilter === 'used' && !isUsed) return false;
+    if (assetFilter === 'unused' && isUsed) return false;
+    if (assetFilter === 'image' && a.type !== 'image') return false;
+    if (assetFilter === 'audio' && a.type !== 'audio') return false;
+    if (assetSearch) {
+      const q = assetSearch.toLowerCase();
+      if (!a.name.toLowerCase().includes(q) && !a.relPath?.toLowerCase().includes(q)) return false;
+    }
     return true;
   });
 </script>
@@ -464,7 +499,7 @@
           title="Import background definitions, library backups, or asset ZIPs (.json, .zip)"
           on:click={() => fileInputLibrary && fileInputLibrary.click()}
         >
-          📥 Import
+          📥 Import…
         </button>
         <button
           class="mini-btn"
@@ -475,7 +510,7 @@
         </button>
         <button
           class="mini-btn"
-          title="Download background.json file"
+          title="Export background.json file"
           on:click={() => {
             const blob = new Blob([bgJsonString], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
@@ -486,14 +521,14 @@
             URL.revokeObjectURL(url);
           }}
         >
-          💾 Download JSON
+          💾 Export JSON
         </button>
         <button
           class="mini-btn"
           title="Export complete package ZIP containing background.json, images and sounds"
           on:click={() => bgStore.exportZip(activeBg.id)}
         >
-          📦 Export Folder ZIP
+          📦 Export Package (.zip)
         </button>
         <span class="drop-wrap">
           <button
@@ -509,20 +544,37 @@
                 title="Download backgrounds-library.json backup containing all background definitions"
                 on:click={() => { libraryMenuOpen = false; bgStore.downloadLibraryJson(); }}
               >
-                💾 Export Library (JSON)
+                💾 Export Library Backup (.json)
               </button>
               <button
                 title="Download comprehensive ZIP package with all background.json files and assets"
                 on:click={() => { libraryMenuOpen = false; bgStore.exportAllZip(); }}
               >
-                📦 Export All (ZIP)
+                📦 Export All Backgrounds & Assets (.zip)
               </button>
+              <div class="menu-divider"></div>
               <button
                 title="Import single background.json, backgrounds-library.json, or package ZIP"
                 on:click={() => { libraryMenuOpen = false; fileInputLibrary && fileInputLibrary.click(); }}
               >
-                📥 Import JSON / ZIP…
+                📥 Import Package or JSON (.json, .zip)…
               </button>
+              {#if unusedAssetCount > 0}
+                <div class="menu-divider"></div>
+                <button
+                  class="danger-item"
+                  title="Remove {unusedAssetCount} unreferenced assets from memory and cache"
+                  on:click={async () => {
+                    libraryMenuOpen = false;
+                    if (confirm(`Purge ${unusedAssetCount} unused assets from memory and IndexedDB?`)) {
+                      const count = await bgStore.purgeUnusedAssets();
+                      notify(`Purged ${count} unused asset(s)`, 'ok');
+                    }
+                  }}
+                >
+                  🧹 Purge Unused Assets ({unusedAssetCount})
+                </button>
+              {/if}
             </div>
           {/if}
         </span>
@@ -542,18 +594,22 @@
         <div class="path-part-dir" title="Directory path / series subfolders (e.g. WS Lambda/Montreal)">
           <input
             type="text"
-            class="dir-input"
+            class="dir-input {isDuplicatePath ? 'input-dup-warning' : ''}"
             placeholder="Directory / Series Subfolder (e.g. WS Lambda/Montreal)"
             value={activeSubfolder}
             list="known-bg-maker-folders"
             on:input={(e) => onSubfolderChange(e.target.value)}
+            on:blur={onPathBlur}
           />
           {#if knownSubfolders.length > 0}
             <select
               class="subfolder-dropdown"
               title="Shortcut: Pick an existing directory path"
               on:change={(e) => {
-                if (e.target.value !== '') onSubfolderChange(e.target.value);
+                if (e.target.value !== '') {
+                  onSubfolderChange(e.target.value);
+                  onPathBlur();
+                }
                 e.target.value = '';
               }}
             >
@@ -572,12 +628,19 @@
         <div class="path-part-file" title="Background scene folder / file name">
           <input
             type="text"
-            class="file-input"
+            class="file-input {isDuplicatePath ? 'input-dup-warning' : ''}"
             placeholder="RoomName"
             value={activeBgName}
             on:input={(e) => onBgNameChange(e.target.value)}
+            on:blur={onPathBlur}
           />
         </div>
+
+        {#if isDuplicatePath}
+          <span class="path-dup-badge" title="Duplicate folder path! Another background shares this path. Renamed automatically on blur/export.">
+            ⚠️ Duplicate Path
+          </span>
+        {/if}
 
         <!-- Copy button -->
         <button
@@ -593,6 +656,9 @@
       <div class="path-strip-full" title="Computed full server asset path">
         <span class="full-path-tag">FULL PATH:</span>
         <code class="full-path-text">base/background/{normalizeBgPath(activeBg?.folder) || 'Untitled'}/background.json</code>
+        {#if isDuplicatePath}
+          <span class="full-path-dup-alert">⚠ Will be disambiguated on blur or export</span>
+        {/if}
       </div>
 
       <datalist id="known-bg-maker-folders">
@@ -1126,6 +1192,8 @@
             <button class="filter-pill {assetFilter === 'all' ? 'active' : ''}" on:click={() => (assetFilter = 'all')}>All ({assetPool.length})</button>
             <button class="filter-pill {assetFilter === 'image' ? 'active' : ''}" on:click={() => (assetFilter = 'image')}>Images ({assetPool.filter((a) => a.type === 'image').length})</button>
             <button class="filter-pill {assetFilter === 'audio' ? 'active' : ''}" on:click={() => (assetFilter = 'audio')}>Audio ({assetPool.filter((a) => a.type === 'audio').length})</button>
+            <button class="filter-pill {assetFilter === 'used' ? 'active' : ''}" on:click={() => (assetFilter = 'used')}>Used ({usedAssetsCount})</button>
+            <button class="filter-pill {assetFilter === 'unused' ? 'active' : ''}" on:click={() => (assetFilter = 'unused')}>Unused ({unusedAssetCount})</button>
           </div>
           <input
             type="search"
@@ -1136,6 +1204,20 @@
         </div>
 
         <div class="dock-actions">
+          {#if unusedAssetCount > 0}
+            <button
+              class="mini-btn purge-btn"
+              title="Remove {unusedAssetCount} unreferenced assets from memory and cache"
+              on:click={async () => {
+                if (confirm(`Purge ${unusedAssetCount} unused assets from memory and IndexedDB?`)) {
+                  const n = await bgStore.purgeUnusedAssets();
+                  notify(`Purged ${n} unused asset(s)`, 'ok');
+                }
+              }}
+            >
+              🧹 Purge Unused ({unusedAssetCount})
+            </button>
+          {/if}
           <button class="mini-btn" on:click={() => fileInputGeneral.click()}>+ Upload Files</button>
           <button class="mini-btn" on:click={() => fileInputFolder.click()}>+ Upload Folder</button>
           <input type="file" accept="image/*,audio/*,.json,.zip" multiple hidden bind:this={fileInputGeneral} on:change={(e) => handleFiles(e.target.files)} />
@@ -1335,6 +1417,52 @@
   .subfolder-dropdown:hover {
     border-color: var(--accent);
     color: var(--accent);
+  }
+
+  .input-dup-warning {
+    color: #f97316 !important;
+  }
+
+  .path-dup-badge {
+    background: rgba(249, 115, 22, 0.2);
+    border: 1px solid #f97316;
+    color: #f97316;
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 3px;
+    white-space: nowrap;
+    animation: pulse 1.5s infinite;
+  }
+
+  .full-path-dup-alert {
+    color: #f97316;
+    font-weight: 700;
+    margin-left: 8px;
+    font-size: 9.5px;
+  }
+
+  .menu-divider {
+    height: 1px;
+    background: var(--line);
+    margin: 4px 0;
+  }
+
+  .danger-item {
+    color: #ef4444 !important;
+  }
+  .danger-item:hover {
+    background: rgba(239, 68, 68, 0.15) !important;
+    color: #f87171 !important;
+  }
+
+  .purge-btn {
+    border-color: rgba(239, 68, 68, 0.5) !important;
+    color: #ef4444 !important;
+  }
+  .purge-btn:hover {
+    background: rgba(239, 68, 68, 0.15) !important;
+    border-color: #ef4444 !important;
   }
 
   .path-divider {

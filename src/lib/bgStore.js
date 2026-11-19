@@ -12,6 +12,14 @@ import {
   resolveActiveVisual,
 } from './bgSchema.js';
 import { buildZip, readZip, downloadZipBlob } from './zip.js';
+import {
+  dbSaveAsset,
+  dbSaveAssets,
+  dbLoadAllAssets,
+  dbDeleteAsset,
+  dbDeleteAssets,
+  dbClearAssets,
+} from './assetDb.js';
 
 function getMimeType(filename) {
   const ext = (filename || '').split('.').pop()?.toLowerCase();
@@ -97,6 +105,75 @@ let backgrounds = loadInitialBackgrounds();
 let selectedBgId = backgrounds[0]?.id || null;
 let isMakerOpen = false;
 
+/**
+ * Ensures background folder path is unique, preventing duplicate path collisions.
+ * Disambiguates with numeric suffix e.g. "subfolder/name 2".
+ */
+export function ensureUniqueBgFolder(folder, excludeId = null) {
+  const norm = normalizeBgPath(folder) || 'NewBackground';
+  const existingFolders = new Set(
+    backgrounds
+      .filter((b) => !excludeId || b.id !== excludeId)
+      .map((b) => normalizeBgPath(b.folder).toLowerCase())
+  );
+  if (!existingFolders.has(norm.toLowerCase())) {
+    return norm;
+  }
+  let base = norm;
+  let counter = 2;
+  const match = norm.match(/^(.*?)(?:[\s_]+copy)?(?:[\s_]+(\d+))?$/i);
+  if (match) {
+    base = (match[1] + (norm.includes('copy') ? ' copy' : '')).trim();
+    if (match[2]) {
+      counter = parseInt(match[2], 10) + 1;
+    }
+  }
+  let candidate = `${base} ${counter}`;
+  while (existingFolders.has(candidate.toLowerCase())) {
+    counter++;
+    candidate = `${base} ${counter}`;
+  }
+  return candidate;
+}
+
+// Load cached assets from IndexedDB in browser on startup
+async function initAssetPoolFromDb() {
+  if (typeof window === 'undefined') return;
+  try {
+    const records = await dbLoadAllAssets();
+    if (records && records.length > 0) {
+      let addedCount = 0;
+      for (const rec of records) {
+        if (!assetPool.some((a) => a.id === rec.id || (a.name === rec.name && a.size === rec.size))) {
+          const blob = rec.data instanceof Blob ? rec.data : new Blob([rec.data], { type: getMimeType(rec.name) });
+          const url = URL.createObjectURL(blob);
+          assetPool.push({
+            id: rec.id,
+            name: rec.name,
+            relPath: rec.relPath,
+            fullRelPath: rec.fullRelPath || rec.relPath,
+            type: rec.type,
+            size: rec.size,
+            lastModified: rec.lastModified,
+            url,
+            file: blob,
+          });
+          addedCount++;
+        }
+      }
+      if (addedCount > 0) {
+        notify();
+      }
+    }
+  } catch (err) {
+    console.warn('Error loading cached assets from IndexedDB:', err);
+  }
+}
+
+if (typeof window !== 'undefined') {
+  initAssetPoolFromDb();
+}
+
 function getStoreState() {
   return {
     assetPool,
@@ -124,8 +201,9 @@ export const bgStore = {
       if (match) {
         selectedBgId = match.id;
       } else {
-        // Create new with this folder name
-        const newBg = createBackground(norm);
+        // Create new with this folder name, ensuring uniqueness
+        const uniqueFolder = ensureUniqueBgFolder(norm);
+        const newBg = createBackground(uniqueFolder);
         backgrounds.push(newBg);
         selectedBgId = newBg.id;
       }
@@ -141,7 +219,8 @@ export const bgStore = {
     notify();
   },
   addBackground(folder = 'NewBackground') {
-    const bg = createBackground(folder);
+    const uniqueFolder = ensureUniqueBgFolder(folder);
+    const bg = createBackground(uniqueFolder);
     backgrounds.push(bg);
     selectedBgId = bg.id;
     notify();
@@ -151,7 +230,8 @@ export const bgStore = {
     const orig = backgrounds.find((b) => b.id === id);
     if (!orig) return;
     const jsonStr = serializeBackgroundJson(orig);
-    const copy = parseBackgroundJson(jsonStr, orig.folder + '_copy');
+    const uniqueFolder = ensureUniqueBgFolder(orig.folder + ' copy');
+    const copy = parseBackgroundJson(jsonStr, uniqueFolder);
     backgrounds.push(copy);
     selectedBgId = copy.id;
     notify();
@@ -366,6 +446,10 @@ export const bgStore = {
       }
     }
 
+    if (addedAssets.length > 0) {
+      dbSaveAssets(addedAssets);
+    }
+
     for (const jf of jsonEntries) {
       try {
         const text = decoder.decode(jf.data);
@@ -472,8 +556,86 @@ export const bgStore = {
     }
 
     if (added.length > 0) {
+      dbSaveAssets(added);
       notify();
     }
+  },
+
+  /**
+   * Scans all backgrounds in the library and collects all referenced filenames.
+   */
+  getReferencedAssetNames() {
+    const referenced = new Set();
+    function collect(obj) {
+      if (!obj) return;
+      if (obj.background) referenced.add(obj.background.trim());
+      if (obj.foreground) referenced.add(obj.foreground.trim());
+      if (obj.ambience) {
+        referenced.add(obj.ambience.trim());
+        referenced.add(normalizeAmbiencePath(obj.ambience).trim());
+        const soundFile = obj.ambience.split('/').pop()?.trim();
+        if (soundFile) referenced.add(soundFile);
+      }
+    }
+    for (const bg of backgrounds) {
+      for (const st of Object.values(bg.states || {})) {
+        collect(st);
+        if (st.time_variants) {
+          for (const tv of Object.values(st.time_variants)) collect(tv);
+        }
+        if (st.positions) {
+          for (const pos of Object.values(st.positions)) {
+            collect(pos);
+            if (pos.time_variants) {
+              for (const tv of Object.values(pos.time_variants)) collect(tv);
+            }
+          }
+        }
+      }
+    }
+    return referenced;
+  },
+
+  /**
+   * Purges unreferenced media files from asset pool and IndexedDB cache.
+   */
+  async purgeUnusedAssets() {
+    const referenced = this.getReferencedAssetNames();
+    const toDeleteIds = [];
+    const kept = [];
+
+    for (const a of assetPool) {
+      const isRef = referenced.has(a.name) || referenced.has(a.relPath) || referenced.has(a.fullRelPath);
+      if (isRef) {
+        kept.push(a);
+      } else {
+        toDeleteIds.push(a.id);
+        if (a.url && typeof URL !== 'undefined' && URL.revokeObjectURL) {
+          try { URL.revokeObjectURL(a.url); } catch {}
+        }
+      }
+    }
+
+    if (toDeleteIds.length > 0) {
+      assetPool = kept;
+      await dbDeleteAssets(toDeleteIds);
+      notify();
+    }
+    return toDeleteIds.length;
+  },
+
+  /**
+   * Clears all assets from pool and IndexedDB.
+   */
+  async clearAllAssets() {
+    for (const a of assetPool) {
+      if (a.url && typeof URL !== 'undefined' && URL.revokeObjectURL) {
+        try { URL.revokeObjectURL(a.url); } catch {}
+      }
+    }
+    assetPool = [];
+    await dbClearAssets();
+    notify();
   },
 
   // Export Background Folder ZIP (includes background.json + used assets)

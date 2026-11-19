@@ -348,12 +348,42 @@
 - **Node hover summaries (`src/components/graph/NodeHoverCard.svelte`):**
     - Displays background scene asset previews when hovering nodes on the canvas that don't have custom node icons, and respects `imageMode: 'scene'`.
 
+### Asset Cache, Audit Rework, Export Consistency & Collision Safety
+
+- **IndexedDB Media Asset Cache (`src/lib/assetDb.js`, `src/lib/bgStore.js`):**
+    - Implemented a zero-dependency native IndexedDB storage engine (`area_maker_assets_db`, object store `assets`) storing raw binary Blobs directly without Base64 memory inflation.
+    - Imported images and ambience audio files are automatically cached in IndexedDB upon registration and re-hydrated into the `assetPool` on page load, persisting user assets across reloads without hitting the browser's ~5MB `localStorage` limit.
+    - Graceful fallback in non-browser or disabled environments.
+- **Consistent Export & Import Terminology (`src/components/Header.svelte`, `BackgroundMakerModal.svelte`, `ExportModal.svelte`):**
+    - Standardized naming across the top navigation bar and modal menus to clearly distinguish server configs, project saves, and asset packages:
+        - Header Export: `YAML — server config (areas.yaml)…`, `JSON — project backup (areas-project.json)`, `ZIP — background packages & assets (.zip)…`, `PNG — high-res map canvas image…`.
+        - Header Import: `YAML — import server config (areas.yaml)…`, `JSON — import project backup (areas-project.json)…`, `ZIP / JSON — import backgrounds & assets…`.
+        - Background Maker Actions: `💾 Export JSON`, `📦 Export Package (.zip)`, and `📚 Library ▾` menu with `💾 Export Library Backup (.json)`, `📦 Export All Backgrounds & Assets (.zip)`, `📥 Import Package or JSON (.json, .zip)…`, and `🧹 Purge Unused Assets`.
+- **Map Network Audit Rework (`src/components/modals/AuditModal.svelte`):**
+    - Expanded modal width to `min(840px, 96vw)` for a spacious, comfortable inspection view.
+    - Replaced truncated tabs with clear, untruncated pill tabs displaying dedicated count badges: `All [N]`, `🛑 Dead Ends [N]`, `🚪 One-Way Trips [N]`, `🏝️ Disconnected [N]`, `🚶 No Way In [N]`.
+    - Added an inline search filter (`audit-search-input`) allowing quick filtering of issue notices by room name or `#ID`.
+    - Added a `⌖ View Node` button on every notice row to center the camera on the affected node directly.
+- **Strict Duplicate Path Collision Prevention (`src/lib/bgStore.js`, `BackgroundMakerModal.svelte`):**
+    - Added `ensureUniqueBgFolder(folder, excludeId)` to prevent duplicate background folder collisions.
+    - Live reactive warning (`isDuplicatePath`) highlights duplicate inputs and renders an animated badge (`⚠️ Duplicate Path`) plus hint alert if two backgrounds share the same path.
+    - Automatic disambiguation on blur, creation, duplication, or export (e.g. `subfolder/name` → `subfolder/name 2`).
+- **Used vs Unused Asset Filter & Purge (`src/lib/bgStore.js`, `BackgroundMakerModal.svelte`):**
+    - Added `Used` and `Unused` filter pills in the Asset Repository Pool dock with real-time reference tracking (`getReferencedAssetNames`).
+    - Added 1-click `🧹 Purge Unused Assets` action in both the dock bar and the Library menu to delete unreferenced media from memory and IndexedDB.
+- **Direct Asset Drag-and-Drop to Canvas Nodes (`src/components/graph/NodeLayer.svelte`, `src/styles/graph.css`):**
+    - Enabled HTML5 drag-and-drop on map canvas nodes: dragging an image card from the Asset Pool dock directly onto a node sets its custom node icon (`ar.image`) and switches mode to `node`.
+    - Supports dropping OS image files directly from the desktop onto any canvas node with automatic client-side thumbnail scaling.
+    - Added visual drag-over feedback with dashed glowing accent outline (`.node.drag-over`).
+
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **158 passed, 0 failed** (13 new assertions testing `readZip`, `buildZip` roundtrip, `bgStore.loadBackgrounds` replace & merge, `exportLibraryJson`, and project roundtrip with backgrounds).
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **169 passed, 0 failed** (11 new assertions verifying `ensureUniqueBgFolder` collision suffixing, self-ID exclusion, `getReferencedAssetNames`, and safe IndexedDB Node fallback).
 - `npm run build:both`: rebuilt `export/yuzu_area_maker.html`, `export/yuzu_area_maker_nomusic.html`, and `docs/index.html` with 0 warnings.
 - Live browser CDP tests verified:
-  - Modal header action bar displays `📥 Import`, `📋 Copy JSON`, `💾 Download JSON`, `📦 Export Folder ZIP`, and `📚 Library ▾`.
-  - Navigator sidebar header displays `📥 Import` and `+ New`.
-  - `📚 Library ▾` menu cleanly renders `💾 Export Library (JSON)`, `📦 Export All (ZIP)`, and `📥 Import JSON / ZIP…`.
-  - Background creation and progress automatically persist in `localStorage` across page reloads.
+  - Header Export and Import menus display unified format labels.
+  - Network Audit modal displays untruncated pill tabs, count badges, notice search, and `⌖ View Node` navigation.
+  - Background Maker 3-part strip displays live duplicate warning (`⚠️ Duplicate Path`) and disambiguates on blur.
+  - Asset Repository Pool dock supports `Used` / `Unused` filtering and `🧹 Purge Unused Assets`.
+  - Dragging asset card onto canvas node assigns node icon with instant preview and toast notification.
+  - IndexedDB database `area_maker_assets_db` initializes and persists binary media across reloads.

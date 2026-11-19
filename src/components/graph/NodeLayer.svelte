@@ -3,6 +3,7 @@
   import { titleText, bgText, tagText } from '../../lib/nodeLabels.js';
   import { onMount } from 'svelte';
   import { bgStore, resolveNodeImageUrl } from '../../lib/bgStore.js';
+  import { update, notify } from '../../lib/state.js';
 
   const NW = M.NODE_W;
   const NH = M.NODE_H;
@@ -32,6 +33,103 @@
       bgStoreState = s;
     });
   });
+
+  let dragOverNodeId = null;
+
+  function onNodeDragOver(e, a) {
+    e.preventDefault();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
+    if (dragOverNodeId !== a.id) {
+      dragOverNodeId = a.id;
+    }
+  }
+
+  function onNodeDragLeave(e, a) {
+    if (dragOverNodeId === a.id) {
+      dragOverNodeId = null;
+    }
+  }
+
+  async function onNodeDrop(e, a) {
+    e.preventDefault();
+    dragOverNodeId = null;
+
+    // 1. From Asset Pool JSON
+    const assetJson = e.dataTransfer?.getData('application/x-area-maker-asset');
+    if (assetJson) {
+      try {
+        const asset = JSON.parse(assetJson);
+        if (asset && asset.type === 'image') {
+          update((s) => {
+            const target = s.project.areas.find((ar) => ar.id === a.id);
+            if (target) {
+              target.image = asset.url;
+              target.imageMode = 'node';
+            }
+          });
+          notify(`Assigned icon "${asset.name}" to ${a.area || 'node'}`);
+          return;
+        }
+      } catch (err) {
+        console.warn('Failed to parse dropped asset JSON:', err);
+      }
+    }
+
+    // 2. From plain text (asset path or background name)
+    const textData = e.dataTransfer?.getData('text/plain');
+    if (textData) {
+      const imgUrl = bgStore.getAssetUrl(textData, 'image');
+      if (imgUrl) {
+        update((s) => {
+          const target = s.project.areas.find((ar) => ar.id === a.id);
+          if (target) {
+            target.image = imgUrl;
+            target.imageMode = 'node';
+          }
+        });
+        notify(`Assigned icon to ${a.area || 'node'}`);
+        return;
+      }
+    }
+
+    // 3. From OS image file drag-and-drop
+    if (e.dataTransfer?.files?.length) {
+      const f = e.dataTransfer.files[0];
+      if (f.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            const max = 512;
+            let w = img.naturalWidth;
+            let h = img.naturalHeight;
+            if (w > max || h > max) {
+              if (w > h) { h = Math.round((h * max) / w); w = max; }
+              else { h = Math.round((w * max) / h); h = max; }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            const dataUrl = canvas.toDataURL(f.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.88);
+            update((s) => {
+              const target = s.project.areas.find((ar) => ar.id === a.id);
+              if (target) {
+                target.image = dataUrl;
+                target.imageMode = 'node';
+              }
+            });
+            notify(`Set custom icon for "${a.area || 'node'}"`);
+          };
+          img.src = reader.result;
+        };
+        reader.readAsDataURL(f);
+      }
+    }
+  }
 </script>
 
 <g>
@@ -71,10 +169,13 @@
         on:pointerleave={(e) => onNodeLeave(e, a)}
         on:contextmenu={(e) => onNodeMenu(e, a)}
         on:dblclick={(e) => onNodeDblClick(e, a)}
+        on:dragover={(e) => onNodeDragOver(e, a)}
+        on:dragleave={(e) => onNodeDragLeave(e, a)}
+        on:drop={(e) => onNodeDrop(e, a)}
       >
         <rect class="mask" x="-4" y="-4" width={NW + 8} height={NH + 8} rx="6" />
         <g
-          class="node {idx === 0 ? 'hub' : ''} {isSel ? 'sel' : ''} {isMulti ? 'multi' : ''} {dups.has(M.strip(a.area)) ? 'dup' : ''}"
+          class="node {idx === 0 ? 'hub' : ''} {isSel ? 'sel' : ''} {isMulti ? 'multi' : ''} {dups.has(M.strip(a.area)) ? 'dup' : ''} {dragOverNodeId === a.id ? 'drag-over' : ''}"
           opacity={focusOn && !neighbours.has(a.id) ? 0.17 : 1}
         >
           <rect

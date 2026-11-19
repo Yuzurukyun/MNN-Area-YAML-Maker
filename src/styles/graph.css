@@ -126,6 +126,13 @@ rect.mask {
   filter: drop-shadow(0 0 12px var(--glow));
 }
 
+.node.drag-over rect.body {
+  stroke: var(--accent) !important;
+  stroke-width: 2.5px !important;
+  stroke-dasharray: 4 2 !important;
+  filter: drop-shadow(0 0 14px var(--glow)) !important;
+}
+
 .node.dup rect.body {
   stroke: var(--danger);
 }
