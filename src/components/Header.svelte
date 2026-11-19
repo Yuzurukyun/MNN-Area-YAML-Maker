@@ -152,6 +152,9 @@
             if (p.backgrounds && Array.isArray(p.backgrounds) && p.backgrounds.length > 0) {
               bgStore.loadBackgrounds(p.backgrounds, { replace: true });
             }
+            if (p.bgAssets && Array.isArray(p.bgAssets)) {
+              bgStore.loadAssetsMetadata(p.bgAssets);
+            }
             startProject(p);
             const bgCount = p.backgrounds?.length || 0;
             notify(
@@ -171,6 +174,16 @@
   function exportJson() {
     exportMenu = false;
     P.backgrounds = bgStore.get().backgrounds;
+    const pool = bgStore.get().assetPool || [];
+    if (pool.length > 0) {
+      P.bgAssets = pool.map((a) => ({
+        name: a.name,
+        relPath: a.relPath,
+        fromFolder: a.fromFolder || '',
+        type: a.type,
+        size: a.size,
+      }));
+    }
     download('areas-project.json', JSON.stringify(P, null, 2), 'application/json');
     const bgCount = P.backgrounds?.length || 0;
     notify(

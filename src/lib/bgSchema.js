@@ -34,6 +34,35 @@ export function normalizeAmbiencePath(input) {
 }
 
 /**
+ * Sanitizes a file or folder path so it starts at the project/root folder
+ * and never leaks personal PC paths (e.g. C:/Users/name/... or /home/name/...).
+ */
+export function sanitizeToRootFolder(input) {
+  if (!input || typeof input !== 'string') return '';
+  let p = input.trim().replace(/\\/g, '/');
+
+  // If input points to a file, strip filename
+  if (/\.(png|webp|jpe?g|gif|svg|avif|opus|mp3|ogg|wav|json|ini)$/i.test(p)) {
+    const slash = p.lastIndexOf('/');
+    p = slash !== -1 ? p.slice(0, slash) : '';
+  }
+
+  // Strip Windows drive letters (C:/, D:/, etc.)
+  p = p.replace(/^[a-zA-Z]:\/+/i, '');
+
+  // Strip user directories and common root folders (Users/user/Desktop/..., home/user/...)
+  p = p.replace(/^(?:users|home|root)\/[^/]+\/(?:desktop|downloads|documents|music|pictures|videos|onedrive|dropbox)?\/?/i, '');
+
+  // Strip VPS / web server roots if present (e.g. var/www/..., srv/...)
+  p = p.replace(/^(?:var\/www|srv|opt)\/[^/]+\/?/i, '');
+
+  // Clean redundant slashes and trim edges
+  p = p.replace(/\/+/g, '/').replace(/^\/+|\/+$/g, '');
+
+  return p;
+}
+
+/**
  * Creates a clean time_variant entry
  */
 export function createTimeVariant(opts = {}) {
@@ -96,11 +125,13 @@ export function createBackground(folder = 'NewBackground', opts = {}) {
   return {
     id: opts.id || 'bg_' + Math.random().toString(36).slice(2, 9),
     folder: normFolder,
+    fromFolder: opts.fromFolder ? sanitizeToRootFolder(opts.fromFolder) : '',
     description: opts.description || '',
     states,
     activeState: 'default',
     activePosition: opts.activePosition || 'wit',
     activeTod: 'day',
+    assetSources: opts.assetSources || {},
   };
 }
 
@@ -176,6 +207,12 @@ export function serializeBackgroundObject(bg) {
     out[stKey] = stObj;
   }
 
+  // Preserve sanitized source folder origin in exported project/background JSON if available
+  if (bg.fromFolder) {
+    const cleanFrom = sanitizeToRootFolder(bg.fromFolder);
+    if (cleanFrom) out.from_folder = cleanFrom;
+  }
+
   return out;
 }
 
@@ -209,6 +246,9 @@ export function parseBackgroundJson(raw, folder = 'ImportedBackground') {
   }
 
   const bg = createBackground(folder);
+  if (parsed.from_folder || parsed.fromFolder || parsed._from_folder) {
+    bg.fromFolder = sanitizeToRootFolder(parsed.from_folder || parsed.fromFolder || parsed._from_folder);
+  }
   bg.states = {};
 
   for (const [stName, stData] of Object.entries(parsed)) {

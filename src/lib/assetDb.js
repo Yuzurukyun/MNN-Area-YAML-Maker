@@ -1,5 +1,6 @@
 // Native zero-dependency IndexedDB wrapper for caching media assets (images & audio).
 // Persists large binary files across browser sessions without localStorage quota limits.
+import { sanitizeToRootFolder } from './bgSchema.js';
 
 const DB_NAME = 'area_maker_assets_db';
 const DB_VERSION = 1;
@@ -50,7 +51,7 @@ export async function dbSaveAsset(asset) {
         name: asset.name,
         relPath: asset.relPath,
         fullRelPath: asset.fullRelPath || asset.relPath,
-        fromFolder: asset.fromFolder || (asset.fullRelPath && asset.fullRelPath.includes('/') ? asset.fullRelPath.slice(0, asset.fullRelPath.lastIndexOf('/')) : ''),
+        fromFolder: asset.fromFolder ? sanitizeToRootFolder(asset.fromFolder) : (asset.fullRelPath && asset.fullRelPath.includes('/') ? sanitizeToRootFolder(asset.fullRelPath.slice(0, asset.fullRelPath.lastIndexOf('/'))) : ''),
         type: asset.type,
         size: asset.size,
         lastModified: asset.lastModified || Date.now(),
@@ -81,7 +82,7 @@ export async function dbSaveAssets(assets) {
           name: asset.name,
           relPath: asset.relPath,
           fullRelPath: asset.fullRelPath || asset.relPath,
-          fromFolder: asset.fromFolder || (asset.fullRelPath && asset.fullRelPath.includes('/') ? asset.fullRelPath.slice(0, asset.fullRelPath.lastIndexOf('/')) : ''),
+          fromFolder: asset.fromFolder ? sanitizeToRootFolder(asset.fromFolder) : (asset.fullRelPath && asset.fullRelPath.includes('/') ? sanitizeToRootFolder(asset.fullRelPath.slice(0, asset.fullRelPath.lastIndexOf('/'))) : ''),
           type: asset.type,
           size: asset.size,
           lastModified: asset.lastModified || Date.now(),

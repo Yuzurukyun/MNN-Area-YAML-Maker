@@ -7,6 +7,7 @@ import { findShortestPath, auditMap } from '../src/lib/pathAudit.js';
 import {
   normalizeBgPath,
   normalizeAmbiencePath,
+  sanitizeToRootFolder,
   createBackground,
   createPosition,
   serializeBackgroundJson,
@@ -1244,7 +1245,11 @@ const multiPosZip = await buildZip(Array.from(testZipMap.values()));
 const extractedMultiPos = await readZip(multiPosZip);
 eq(extractedMultiPos.length, 3, 'extractedMultiPos has exactly 3 files, 0 corrupted duplicate entries');
 
-/* ---- From Folder Metadata Tracking & Privacy Tests ---- */
+/* ---- From Folder Metadata Tracking & Sanitization Tests ---- */
+eq(sanitizeToRootFolder('C:/Users/yuzuru/Downloads/Ante Infinitum/background/court'), 'Ante Infinitum/background/court', 'sanitizeToRootFolder strips drive and User directory down to root folder');
+eq(sanitizeToRootFolder('D:\\Projects\\MNN\\room\\wit.webp'), 'Projects/MNN/room', 'sanitizeToRootFolder strips drive, normalizes slashes, and removes filename');
+eq(sanitizeToRootFolder('Ante Infinitum/background/WS Lambda/Manor Room 1'), 'Ante Infinitum/background/WS Lambda/Manor Room 1', 'sanitizeToRootFolder preserves already-relative folder paths untouched');
+
 const fromFolderTestFiles = [
   { path: 'C:/Users/user/Downloads/CourtPack/court.webp', name: 'court.webp', data: new Uint8Array([1, 2, 3]), size: 3 },
   { path: 'court_alone.png', name: 'court_alone.png', data: new Uint8Array([4, 5]), size: 2 },
@@ -1253,7 +1258,7 @@ const fromFolderTestFiles = [
 const regFromFolder = await bgStore.registerFiles(fromFolderTestFiles);
 const courtAsset = regFromFolder.addedAssets.find((a) => a.name.startsWith('court'));
 ok(Boolean(courtAsset), 'court asset imported into pool');
-eq(courtAsset.fromFolder, 'C:/Users/user/Downloads/CourtPack', 'fromFolder extracted correctly from nested path');
+eq(courtAsset.fromFolder, 'CourtPack', 'fromFolder sanitized to start at root folder (stripping C:/Users/user/Downloads)');
 
 const aloneAsset = regFromFolder.addedAssets.find((a) => a.name.startsWith('court_alone'));
 ok(Boolean(aloneAsset), 'alone asset imported into pool');
@@ -1263,13 +1268,23 @@ const ambAsset = regFromFolder.addedAssets.find((a) => a.name.startsWith('ambien
 ok(Boolean(ambAsset), 'ambience asset imported into pool');
 eq(ambAsset.fromFolder, 'MySource/Sub', 'fromFolder extracted correctly for relative nested audio path');
 
-// Test that serializeBackgroundJson does not leak fromFolder or other internal metadata
+// Test that serializeBackgroundJson includes sanitized from_folder at root without full path
 const testBgWithFromFolder = createBackground('PrivacyTest');
+testBgWithFromFolder.fromFolder = 'C:/Users/user/Desktop/CourtPack/courtroom';
 testBgWithFromFolder.states.default.background = courtAsset.name;
 const exportedJsonString = serializeBackgroundJson(testBgWithFromFolder);
 const parsedExport = JSON.parse(exportedJsonString);
-ok(!('fromFolder' in parsedExport), 'serializeBackgroundJson does NOT contain fromFolder root property');
-ok(!('fromFolder' in parsedExport.default), 'serializeBackgroundJson does NOT contain fromFolder in state definition');
+eq(parsedExport.from_folder, 'CourtPack/courtroom', 'serializeBackgroundJson exports from_folder starting at root folder');
+ok(!parsedExport.from_folder.includes('C:/Users'), 'serializeBackgroundJson does NOT contain full personal PC path');
+ok(!('from_folder' in parsedExport.default), 'from_folder is NOT placed inside default state variant');
+
+// Test that backgrounds-library.json includes asset fromFolder metadata
+const exportedLibraryJson = bgStore.exportLibraryJson();
+const parsedLibrary = JSON.parse(exportedLibraryJson);
+ok(Array.isArray(parsedLibrary.assets), 'library export includes assets array');
+const libCourtAsset = parsedLibrary.assets.find((a) => a.name === courtAsset.name);
+ok(Boolean(libCourtAsset), 'library export contains court asset');
+eq(libCourtAsset.fromFolder, 'CourtPack', 'library asset retains sanitized fromFolder starting at root folder');
 
 /* ---- Field Header Emdash Formatting Verification ---- */
 const fieldKey = 'area';

@@ -126,7 +126,7 @@ MNN uses exact lowercase identifiers for courtroom camera angles. The editor sta
 - **Repository Asset Inspector:** Click any asset card to open the horizontal split inspector:
   - **Left Side:** Letterboxed high-res preview canvas, file path, source folder origin, dimensions, and total usage count.
   - **Right Side:** Global asset rename input (propagates across all background nodes simultaneously) and comprehensive **Usages Table** showing background name, camera position, slot badge, export alias, and a **Go to ↗** jump button.
-  - **Source Folder Tracking:** For unused assets or assets imported from PC folder trees, the inspector displays where the asset originated from. This metadata is strictly for your local convenience and is never exported.
+  - **Source Folder Tracking:** For unused assets or assets imported from PC folder trees, the inspector displays where the asset originated from. Paths are sanitized to start at the root project folder (never exposing private PC directories) and are preserved in JSON project backups.
 
 ### Live Stage Monitor & Ambience Audio Player
 - **Interactive Composite Monitor:** Real-time preview of combined background backdrop and foreground desk overlay.

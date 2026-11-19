@@ -9,6 +9,7 @@ import {
   parseBackgroundIni,
   normalizeBgPath,
   normalizeAmbiencePath,
+  sanitizeToRootFolder,
   hasTimeVariants,
   resolveActiveVisual,
   BUILTIN_BG_TEMPLATES,
@@ -186,7 +187,7 @@ async function initAssetPoolFromDb() {
             name: rec.name,
             relPath: rec.relPath,
             fullRelPath: rec.fullRelPath || rec.relPath,
-            fromFolder: rec.fromFolder || (rec.fullRelPath && rec.fullRelPath.includes('/') ? rec.fullRelPath.slice(0, rec.fullRelPath.lastIndexOf('/')) : ''),
+            fromFolder: rec.fromFolder ? sanitizeToRootFolder(rec.fromFolder) : (rec.fullRelPath && rec.fullRelPath.includes('/') ? sanitizeToRootFolder(rec.fullRelPath.slice(0, rec.fullRelPath.lastIndexOf('/'))) : ''),
             type: rec.type,
             size: rec.size,
             lastModified: rec.lastModified,
@@ -342,6 +343,12 @@ export const bgStore = {
   // Backgrounds Library Management
   loadBackgrounds(bgList, { replace = false, notifyListeners = true } = {}) {
     if (!bgList) return [];
+    if (typeof bgList === 'object' && !Array.isArray(bgList) && Array.isArray(bgList.backgrounds)) {
+      if (Array.isArray(bgList.assets)) {
+        this.loadAssetsMetadata(bgList.assets);
+      }
+      bgList = bgList.backgrounds;
+    }
     const list = Array.isArray(bgList) ? bgList : [bgList];
     if (list.length === 0) return [];
 
@@ -391,11 +398,33 @@ export const bgStore = {
     return processed;
   },
 
+  loadAssetsMetadata(assetMetaList) {
+    if (!Array.isArray(assetMetaList)) return;
+    for (const meta of assetMetaList) {
+      if (!meta || !meta.name) continue;
+      const cleanName = meta.name.toLowerCase();
+      const matched = assetPool.find(
+        (a) => a.name.toLowerCase() === cleanName || (meta.size && a.size === meta.size)
+      );
+      if (matched && meta.fromFolder) {
+        matched.fromFolder = sanitizeToRootFolder(meta.fromFolder);
+      }
+    }
+    notify();
+  },
+
   exportLibraryJson() {
     return JSON.stringify({
       version: 1,
       type: 'mnn-backgrounds-library',
       backgrounds,
+      assets: assetPool.map((a) => ({
+        name: a.name,
+        relPath: a.relPath,
+        fromFolder: a.fromFolder ? sanitizeToRootFolder(a.fromFolder) : '',
+        type: a.type,
+        size: a.size,
+      })),
     }, null, 4);
   },
 
@@ -767,7 +796,7 @@ export const bgStore = {
       const rawP = item.path || '';
       let fromFolder = '';
       if (rawP.includes('/')) {
-        fromFolder = rawP.slice(0, rawP.lastIndexOf('/'));
+        fromFolder = sanitizeToRootFolder(rawP.slice(0, rawP.lastIndexOf('/')));
       }
 
       const entry = {
@@ -868,6 +897,9 @@ export const bgStore = {
       }
 
       if (bgCreated) {
+        if (dir) {
+          bgCreated.fromFolder = sanitizeToRootFolder(dir);
+        }
         // Map pool aliases into assetSources so slots keep clean original names
         if (!bgCreated.assetSources) bgCreated.assetSources = {};
         for (const [origName, poolName] of assetMap.entries()) {

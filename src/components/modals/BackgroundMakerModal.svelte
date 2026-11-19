@@ -12,6 +12,7 @@
     mapIniPositionName,
     normalizeBgPath,
     normalizeAmbiencePath,
+    sanitizeToRootFolder,
   } from '../../lib/bgSchema.js';
   import { bgStore, ensureUniqueBgFolder } from '../../lib/bgStore.js';
   import { autoscroll } from '../../lib/autoscroll.js';
@@ -2039,12 +2040,8 @@
   // Helper to extract source folder path if an asset originated from a folder/PC structure
   function getFromFolderPath(asset) {
     if (!asset) return '';
-    if (asset.fromFolder) return asset.fromFolder;
-    const raw = asset.fullRelPath || asset.relPath || '';
-    if (raw && raw.includes('/')) {
-      return raw.slice(0, raw.lastIndexOf('/'));
-    }
-    return '';
+    const raw = asset.fromFolder || asset.fullRelPath || asset.relPath || '';
+    return sanitizeToRootFolder(raw);
   }
 
   // Referenced and unused asset counts (re-evaluated whenever storeState or assetPool updates)
@@ -3868,9 +3865,9 @@
         {/if}
       </div>
       <div class="lightbox-meta">
-        <span>Path: <code>{inspectModalAsset.relPath || inspectModalAsset.name}</code></span>
+        <span>Path: <code title={inspectModalAsset.relPath || inspectModalAsset.name} use:autoscroll>{inspectModalAsset.relPath || inspectModalAsset.name}</code></span>
         {#if getFromFolderPath(inspectModalAsset)}
-          <span>From folder: <code>{getFromFolderPath(inspectModalAsset)}</code></span>
+          <span>From folder: <code title={getFromFolderPath(inspectModalAsset)} use:autoscroll>{getFromFolderPath(inspectModalAsset)}</code></span>
         {/if}
         {#if inspectModalAsset.size}
           <span>Size: <code>{Math.round(inspectModalAsset.size / 1024)} KB</code></span>
@@ -3933,12 +3930,12 @@
           <div class="repo-media-meta">
             <div class="meta-row">
               <span class="m-label">PATH:</span>
-              <code class="m-val text-truncate" title={repoInspectAsset.relPath || repoInspectAsset.name}>{repoInspectAsset.relPath || repoInspectAsset.name}</code>
+              <code class="m-val" title={repoInspectAsset.relPath || repoInspectAsset.name} use:autoscroll>{repoInspectAsset.relPath || repoInspectAsset.name}</code>
             </div>
             {#if getFromFolderPath(repoInspectAsset)}
               <div class="meta-row">
                 <span class="m-label">FROM FOLDER:</span>
-                <code class="m-val text-truncate" title={getFromFolderPath(repoInspectAsset)}>{getFromFolderPath(repoInspectAsset)}</code>
+                <code class="m-val" title={getFromFolderPath(repoInspectAsset)} use:autoscroll>{getFromFolderPath(repoInspectAsset)}</code>
               </div>
             {/if}
             <div class="meta-row">
@@ -3963,7 +3960,7 @@
               {#if getFromFolderPath(repoInspectAsset)}
                 <div class="repo-unused-source-hint">
                   <span class="hint-label">Source folder on import:</span>
-                  <code class="font-mono">{getFromFolderPath(repoInspectAsset)}</code>
+                  <code class="font-mono" title={getFromFolderPath(repoInspectAsset)} use:autoscroll>{getFromFolderPath(repoInspectAsset)}</code>
                 </div>
               {/if}
             </div>
@@ -6274,12 +6271,16 @@
     border-radius: var(--radius);
     font-size: 11px;
     font-family: var(--font-mono);
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .repo-media-meta .meta-row {
     display: flex;
     align-items: center;
     gap: 8px;
+    width: 100%;
+    min-width: 0;
   }
 
   .repo-media-meta .m-label {
@@ -6287,14 +6288,26 @@
     font-size: 10px;
     color: var(--dim);
     letter-spacing: 0.05em;
-    min-width: 58px;
+    min-width: 82px;
+    flex-shrink: 0;
+    user-select: none;
   }
 
   .repo-media-meta .m-val {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
     color: var(--text-strong);
     overflow: hidden;
-    text-overflow: ellipsis;
     white-space: nowrap;
+    text-overflow: ellipsis;
+    display: block;
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 2px 6px;
+    box-sizing: border-box;
+    cursor: default;
   }
 
   .repo-media-meta .m-val-highlight {
@@ -6355,6 +6368,9 @@
     align-items: center;
     gap: 8px;
     font-style: normal;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .repo-unused-source-hint .hint-label {
@@ -6363,12 +6379,24 @@
     font-family: inherit;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    flex-shrink: 0;
+    white-space: nowrap;
   }
 
   .repo-unused-source-hint code {
     font-size: 11px;
     color: var(--accent);
-    word-break: break-all;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    display: block;
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 2px 6px;
+    box-sizing: border-box;
   }
 
   .repo-usages-table-wrap {
