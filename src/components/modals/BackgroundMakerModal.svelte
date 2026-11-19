@@ -45,6 +45,12 @@
   let newStateName = '';
   let stateCopySource = 'default';
 
+  let showAddPositionModal = false;
+  let newPosName = 'Witness';
+  let posCopySource = '__active__';
+  let posCopyTod = true;
+  let selectedTplIdForPositions = '';
+
   let showManageTemplatesModal = false;
   let tplMenuOpen = false;
   let newTplName = '';
@@ -879,6 +885,57 @@
   const stdStates = new Set(['crowded', 'festive', 'rainy', 'damaged', 'ruined', 'empty', 'dim', 'night', 'clean']);
   $: otherKnownStates = allKnownStates.filter((s) => !stdStates.has(s));
 
+  // Known camera positions gathered across templates, presets & library
+  const stdCourtroomPositions = [
+    'Normal',
+    'Witness',
+    'Prosecution',
+    'Defense',
+    'Judge',
+    'Counsel',
+    'Gallery',
+    'Jury',
+    'Bench',
+    'Wide',
+  ];
+
+  $: allTemplatePositions = (() => {
+    const set = new Set();
+    for (const tpl of storeState.templates || []) {
+      if (tpl.structure?.positions && typeof tpl.structure.positions === 'object') {
+        for (const k of Object.keys(tpl.structure.positions)) {
+          if (k) set.add(k);
+        }
+      }
+    }
+    return Array.from(set).sort();
+  })();
+
+  $: allLibraryPositions = (() => {
+    const set = new Set();
+    for (const b of backgrounds) {
+      for (const st of Object.values(b.states || {})) {
+        if (st.positions && typeof st.positions === 'object') {
+          for (const k of Object.keys(st.positions)) {
+            if (k) set.add(k);
+          }
+        }
+      }
+    }
+    return Array.from(set).sort();
+  })();
+
+  $: otherKnownPositionKeys = (() => {
+    const stdSet = new Set(stdCourtroomPositions);
+    const combined = new Set([...allTemplatePositions, ...allLibraryPositions]);
+    for (const s of stdSet) combined.delete(s);
+    return Array.from(combined).sort();
+  })();
+
+  $: positionTemplates = (storeState.templates || []).filter(
+    (t) => t.structure?.positions && Object.keys(t.structure.positions).length > 0
+  );
+
   function updateBg(mutator) {
     bgStore.updateActiveBg((bg) => {
       mutator(bg);
@@ -943,33 +1000,199 @@
     });
   }
 
-  function addPosition(name) {
-    const posName = name || prompt('Enter position name (e.g. Witness, Prosecution, Defense):');
-    if (!posName) return;
-    const clean = posName.trim();
+  function openAddPositionModal() {
+    const existing = new Set(Object.keys(activeState?.positions || {}));
+    const nextPreset =
+      stdCourtroomPositions.find((p) => !existing.has(p)) ||
+      otherKnownPositionKeys.find((p) => !existing.has(p)) ||
+      'Custom';
+    newPosName = nextPreset;
+    posCopySource = activePosKey || '__active__';
+    posCopyTod = true;
+    if (positionTemplates.length > 0 && !selectedTplIdForPositions) {
+      selectedTplIdForPositions = positionTemplates[0].id;
+    }
+    showAddPositionModal = true;
+  }
+
+  function confirmAddPosition() {
+    const clean = newPosName.trim();
     if (!clean) return;
+
     updateBg((bg) => {
       const st = bg.states[bg.activeState || 'default'];
       if (!st) return;
       if (!st.positions) st.positions = {};
-      st.positions[clean] = createPosition(clean, { background: st.background || '' });
+
+      let initialBg = '';
+      let initialFg = '';
+      let initialAmb = '';
+      let initialTods = {};
+
+      const effectiveSource = posCopySource === '__active__' ? activePosKey : posCopySource;
+
+      if (effectiveSource === '__base__') {
+        initialBg = st.background || '';
+        initialFg = st.foreground || '';
+        initialAmb = st.ambience || '';
+        if (posCopyTod && st.time_variants) {
+          initialTods = JSON.parse(JSON.stringify(st.time_variants));
+        }
+      } else if (effectiveSource !== 'blank' && st.positions[effectiveSource]) {
+        const srcPos = st.positions[effectiveSource];
+        initialBg = srcPos.background || '';
+        initialFg = srcPos.foreground || '';
+        initialAmb = srcPos.ambience || '';
+        if (posCopyTod && srcPos.time_variants) {
+          initialTods = JSON.parse(JSON.stringify(srcPos.time_variants));
+        }
+      }
+
+      st.positions[clean] = createPosition(clean, {
+        background: initialBg,
+        foreground: initialFg,
+        ambience: initialAmb,
+        time_variants: initialTods,
+      });
+      st.usePositions = true;
       bg.activePosition = clean;
+    });
+
+    showAddPositionModal = false;
+    notify(`Added camera position "${clean}".`, 'ok');
+  }
+
+  function importPositionsFromTemplate(tpl) {
+    if (!tpl || !tpl.structure || !tpl.structure.positions) return;
+    const posEntries = Object.entries(tpl.structure.positions);
+    if (posEntries.length === 0) return;
+
+    updateBg((bg) => {
+      const st = bg.states[bg.activeState || 'default'];
+      if (!st) return;
+      if (!st.positions) st.positions = {};
+      for (const [posKey, posData] of posEntries) {
+        if (!st.positions[posKey]) {
+          st.positions[posKey] = createPosition(posKey, {
+            background: posData.background || '',
+            foreground: posData.foreground || '',
+            ambience: posData.ambience || '',
+            time_variants: posData.time_variants ? JSON.parse(JSON.stringify(posData.time_variants)) : {},
+          });
+        }
+      }
+      st.usePositions = true;
+      if (!st.positions[bg.activePosition]) {
+        bg.activePosition = posEntries[0][0];
+      }
+    });
+
+    showAddPositionModal = false;
+    notify(`Imported ${posEntries.length} camera position(s) from template "${tpl.name}".`, 'ok');
+  }
+
+  function duplicatePosition(posKey) {
+    const dupKey = bgStore.duplicatePosition(activeBg.id, activeStateKey, posKey);
+    if (dupKey) {
+      notify(`Duplicated camera position "${posKey}" to "${dupKey}".`, 'ok');
+    }
+  }
+
+  function triggerRenamePosition(posKey) {
+    openRenameDialog({
+      title: '🎥 Rename Camera Position',
+      label: 'Position Name:',
+      hint: `Change camera angle label from "${posKey}".`,
+      placeholder: 'e.g. Witness, Prosecution, Judge',
+      value: posKey,
+      onConfirm: (newName) => {
+        const clean = newName.trim();
+        if (!clean) return { error: 'Position name cannot be empty.' };
+        if (clean === posKey) return { success: true };
+        const positions = activeState?.positions || {};
+        if (positions[clean]) {
+          return { error: `Position "${clean}" already exists.` };
+        }
+        updateBg((bg) => {
+          const st = bg.states[bg.activeState || 'default'];
+          if (!st || !st.positions || !st.positions[posKey]) return;
+          const posData = st.positions[posKey];
+          posData.name = clean;
+          delete st.positions[posKey];
+          st.positions[clean] = posData;
+          if (bg.activePosition === posKey) {
+            bg.activePosition = clean;
+          }
+        });
+        notify(`Renamed camera position "${posKey}" to "${clean}".`, 'ok');
+        return { success: true };
+      },
     });
   }
 
+  function clearPositionSlots(posKey) {
+    updateBg((bg) => {
+      const st = bg.states[bg.activeState || 'default'];
+      if (!st || !st.positions || !st.positions[posKey]) return;
+      st.positions[posKey].background = '';
+      st.positions[posKey].foreground = '';
+      st.positions[posKey].ambience = '';
+    });
+    notify(`Cleared slot assignments for "${posKey}".`, 'info');
+  }
+
   function removePosition(posKey) {
-    if (!confirm(`Delete position "${posKey}"?`)) return;
+    const totalPos = Object.keys(activeState?.positions || {}).length;
+    if (totalPos <= 1) {
+      notify(`Cannot delete the only camera position. Disable "Courtroom / Camera Positions" instead.`, 'warn');
+      return;
+    }
     updateBg((bg) => {
       const st = bg.states[bg.activeState || 'default'];
       if (!st || !st.positions) return;
       delete st.positions[posKey];
       const remaining = Object.keys(st.positions);
       if (remaining.length > 0) {
-        bg.activePosition = remaining[0];
+        if (bg.activePosition === posKey) {
+          bg.activePosition = remaining[0];
+        }
       } else {
         st.usePositions = false;
       }
     });
+    notify(`Deleted camera position "${posKey}".`, 'info');
+  }
+
+  function openPosContextMenu(e, posKey) {
+    const totalPos = Object.keys(activeState?.positions || {}).length;
+    const canDelete = totalPos > 1;
+
+    openContextMenu(e, [
+      {
+        label: 'Duplicate Position',
+        icon: '📋',
+        run: () => duplicatePosition(posKey),
+      },
+      {
+        label: 'Rename Position…',
+        icon: '✏️',
+        run: () => triggerRenamePosition(posKey),
+      },
+      {
+        label: 'Clear Slot Overrides',
+        icon: '🧹',
+        run: () => clearPositionSlots(posKey),
+      },
+      { separator: true },
+      {
+        label: 'Delete Position',
+        icon: '🗑️',
+        danger: true,
+        disabled: !canDelete,
+        title: !canDelete ? 'Cannot delete the only camera position.' : '',
+        run: () => removePosition(posKey),
+      },
+    ], `POSITION: ${posKey}`);
   }
 
   // Time variant actions
@@ -1362,6 +1585,7 @@
       else if (showPurgeConfirmModal) { showPurgeConfirmModal = false; e.stopPropagation(); }
       else if (showAddTodModal) { showAddTodModal = false; e.stopPropagation(); }
       else if (showAddStateModal) { showAddStateModal = false; e.stopPropagation(); }
+      else if (showAddPositionModal) { showAddPositionModal = false; e.stopPropagation(); }
       else if (showManageTemplatesModal) { showManageTemplatesModal = false; e.stopPropagation(); }
       else if (purgeMenuOpen) { purgeMenuOpen = false; e.stopPropagation(); }
     }
@@ -1737,26 +1961,23 @@
                   {#each Object.keys(activeState?.positions || {}) as posKey}
                     <button
                       class="pos-tab {activePosKey === posKey ? 'active' : ''}"
+                      title="Click to switch position; right-click for options"
                       on:click={() => updateBg((bg) => (bg.activePosition = posKey))}
+                      on:contextmenu|preventDefault|stopPropagation={(e) => openPosContextMenu(e, posKey)}
                     >
                       {posKey}
                     </button>
                   {/each}
-                  <button class="mini-btn add-btn" title="Add camera position" on:click={() => addPosition()}>+ Pos</button>
+                  <button class="mini-btn add-btn" title="Add camera position" on:click={openAddPositionModal}>+ Position</button>
                 </div>
               {/if}
             </div>
 
-            {#if usePositions}
-              <div class="pos-preset-strip">
-                <span class="hint">Quick add:</span>
-                <button class="preset-pill" on:click={() => addPosition('Normal')}>Normal</button>
-                <button class="preset-pill" on:click={() => addPosition('Witness')}>Witness</button>
-                <button class="preset-pill" on:click={() => addPosition('Prosecution')}>Prosecution</button>
-                <button class="preset-pill" on:click={() => addPosition('Defense')}>Defense</button>
-                <button class="preset-pill" on:click={() => addPosition('Judge')}>Judge</button>
-                {#if activePosKey && activePosKey !== 'Normal'}
-                  <button class="mini-btn danger" style="margin-left:auto" on:click={() => removePosition(activePosKey)}>Delete position</button>
+            {#if usePositions && activePosKey}
+              <div class="pos-manage-strip">
+                <span class="hint">Camera position: <code>{activePosKey}</code> <span class="tip-sub">(Right-click tab for options)</span></span>
+                {#if Object.keys(activeState?.positions || {}).length > 1}
+                  <button class="mini-btn danger" on:click={() => removePosition(activePosKey)}>Delete position</button>
                 {/if}
               </div>
             {/if}
@@ -2576,6 +2797,111 @@
           Add State
         </button>
       </div>
+    </div>
+  </div>
+{/if}
+
+{#if showAddPositionModal}
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+  <div class="modal-bg submodal-scrim" on:mousedown={onScrimMouseDown} on:click={(e) => handleScrimClose(e, () => (showAddPositionModal = false))}>
+    <div class="modal submodal-card" on:mousedown|stopPropagation on:click|stopPropagation>
+      <button class="modal-x" title="Close (Esc)" on:click={() => (showAddPositionModal = false)}>✕</button>
+      <h3>🎥 Add Camera Position</h3>
+      <div class="hint">Configure a courtroom or scene camera angle (e.g. Witness, Prosecution, Defense, Judge).</div>
+
+      <div class="submodal-field">
+        <span class="submodal-label">Pick preset or template position:</span>
+        <select
+          class="submodal-select"
+          value={newPosName}
+          on:change={(e) => { if (e.target.value) newPosName = e.target.value; }}
+        >
+          <option value="">— Select preset or template position —</option>
+          <optgroup label="Standard Courtroom Presets">
+            {#each stdCourtroomPositions as pos}
+              <option value={pos}>{pos}</option>
+            {/each}
+          </optgroup>
+          {#if otherKnownPositionKeys.length > 0}
+            <optgroup label="From Templates & Library">
+              {#each otherKnownPositionKeys as pos}
+                <option value={pos}>{pos}</option>
+              {/each}
+            </optgroup>
+          {/if}
+        </select>
+      </div>
+
+      <div class="submodal-field">
+        <span class="submodal-label">Position name:</span>
+        <input
+          type="text"
+          placeholder="e.g. Witness, Prosecution, Defense"
+          class="submodal-input"
+          bind:value={newPosName}
+          on:keydown={(e) => e.key === 'Enter' && confirmAddPosition()}
+        />
+        {#if activeState?.positions?.[newPosName.trim()]}
+          <div class="submodal-warn">
+            ⚠ Camera position "{newPosName}" already exists on this state.
+          </div>
+        {/if}
+      </div>
+
+      <div class="submodal-field">
+        <span class="submodal-label">Initial slots:</span>
+        <select
+          class="submodal-select"
+          bind:value={posCopySource}
+        >
+          {#each Object.keys(activeState?.positions || {}) as posK}
+            <option value={posK}>Copy from "{posK}" {posK === activePosKey ? '(active)' : ''}</option>
+          {/each}
+          <option value="__base__">Copy base state slots</option>
+          <option value="blank">Blank (empty slots)</option>
+        </select>
+      </div>
+
+      <label class="submodal-check-row">
+        <input type="checkbox" bind:checked={posCopyTod} />
+        <span>Copy Time of Day variants from source position</span>
+      </label>
+
+      <div class="submodal-actions">
+        <button on:click={() => (showAddPositionModal = false)}>Cancel</button>
+        <button
+          class="primary"
+          on:click={confirmAddPosition}
+          disabled={!newPosName.trim() || Boolean(activeState?.positions?.[newPosName.trim()])}
+        >
+          Add Position
+        </button>
+      </div>
+
+      {#if positionTemplates.length > 0}
+        <div class="submodal-divider-row">
+          <span>OR IMPORT FROM TEMPLATE</span>
+        </div>
+        <div class="submodal-field">
+          <span class="submodal-label">Load all positions from background template:</span>
+          <div class="template-import-row">
+            <select class="submodal-select" bind:value={selectedTplIdForPositions}>
+              {#each positionTemplates as tpl}
+                <option value={tpl.id}>{tpl.name} ({Object.keys(tpl.structure?.positions || {}).length} positions)</option>
+              {/each}
+            </select>
+            <button
+              class="mini-btn primary"
+              on:click={() => {
+                const tpl = positionTemplates.find((t) => t.id === selectedTplIdForPositions);
+                if (tpl) importPositionsFromTemplate(tpl);
+              }}
+            >
+              Import All
+            </button>
+          </div>
+        </div>
+      {/if}
     </div>
   </div>
 {/if}
@@ -3479,27 +3805,46 @@
     cursor: pointer;
   }
 
-  .pos-preset-strip {
+  .pos-manage-strip {
     display: flex;
     align-items: center;
-    gap: 5px;
+    justify-content: space-between;
+    gap: 8px;
     padding-top: 4px;
     border-top: 1px dashed var(--line);
+    font-size: 11px;
   }
 
-  .preset-pill {
-    background: var(--input-bg);
-    border: 1px solid var(--line);
-    font-size: 10px;
-    font-weight: 600;
-    padding: 2px 6px;
-    border-radius: 3px;
+  .tip-sub {
     color: var(--dim);
-    cursor: pointer;
+    font-size: 10px;
+    margin-left: 4px;
   }
-  .preset-pill:hover {
-    color: var(--text-strong);
-    border-color: var(--line2);
+
+  .submodal-divider-row {
+    position: relative;
+    text-align: center;
+    margin: 14px 0 10px;
+    border-top: 1px dashed var(--line);
+  }
+  .submodal-divider-row span {
+    position: relative;
+    top: -8px;
+    background: var(--bg2);
+    padding: 0 8px;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--dim);
+    letter-spacing: 0.5px;
+  }
+
+  .template-import-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .template-import-row select {
+    flex: 1;
   }
 
   /* Slots Grid */

@@ -1010,6 +1010,27 @@ export const bgStore = {
     notify();
     return candidate;
   },
+
+  /**
+   * Duplicates a camera position within a state.
+   */
+  duplicatePosition(bgId, stKey, posKey) {
+    const bg = backgrounds.find((b) => b.id === bgId);
+    if (!bg) return null;
+    const st = bg.states?.[stKey];
+    if (!st || !st.positions || !st.positions[posKey]) return null;
+    let candidate = `${posKey}_copy`;
+    let counter = 2;
+    while (st.positions[candidate]) {
+      candidate = `${posKey}_copy${counter++}`;
+    }
+    const cloned = JSON.parse(JSON.stringify(st.positions[posKey]));
+    cloned.name = candidate;
+    st.positions[candidate] = cloned;
+    bg.activePosition = candidate;
+    notify();
+    return candidate;
+  },
 };
 
 /**

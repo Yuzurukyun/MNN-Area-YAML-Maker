@@ -517,16 +517,45 @@
         - **Row 1 (`.nav-head-title-row`):** Full-width title `BACKGROUNDS ({count})` with bold uppercase styling, completely eliminating awkward wrapping of the title or count onto multiple lines.
         - **Row 2 (`.nav-head-actions`):** Dedicated button row below the title structured as a 2-column grid (`1fr 1fr`) hosting `[ ＋ New ]` and `[ 📥 Import ]` side-by-side with balanced padding.
 
+### Courtroom Camera Positions Modal, Template Presets & Context Menu
+
+- **Add Camera Position Modal (`BackgroundMakerModal.svelte`):**
+    - Replaced the legacy browser `prompt()` dialog and redundant quick-add preset pill strip (`Normal Witness Prosecution Defense Judge`) with a dedicated **🎥 Add Camera Position** modal (`showAddPositionModal`).
+    - Position preset dropdown populated dynamically with:
+        - **Standard Courtroom Presets:** `Normal`, `Witness`, `Prosecution`, `Defense`, `Judge`, `Counsel`, `Gallery`, `Jury`, `Bench`, `Wide`.
+        - **Template Positions:** Positions extracted directly from built-in templates (`builtin-courtroom-5`, `builtin-courtroom-day-night`) and custom background templates saved in the library (`tpl.structure.positions`).
+        - **Existing in Library:** Any camera positions defined across other backgrounds and states in the project.
+    - Automatically pre-selects the first available preset that does not already exist on the active state (e.g. defaulting to `Witness` when `Normal` is active).
+    - Custom text input with live duplicate detection warning (`⚠ Camera position "{name}" already exists on this state.`).
+    - **Initial slots copy options:** Allows copying from the active position, another existing position, base state slots, or starting with blank slots.
+    - Checkbox option to copy Time of Day variants from the source position into the new camera position.
+    - Equipped with universal scrim drag-out protection (`onScrimMouseDown` / `handleScrimClose`) and Escape key dismissal.
+- **Import Positions from Background Template:**
+    - Integrated a direct **"OR IMPORT FROM TEMPLATE"** section in the Add Camera Position modal (`importPositionsFromTemplate(tpl)`).
+    - Allows one-click bulk import of all camera angles configured in a template (e.g. importing all 5 positions from `Courtroom (5 Positions)`) without wiping existing positions or overwriting configured assets.
+- **Position Tabs Context Menu & Duplicate/Rename/Clear/Delete Actions (`BackgroundMakerModal.svelte`, `src/lib/bgStore.js`):**
+    - Added right-click context menu (`.bg-ctx-menu`) on position tabs with full feature-parity to State and Time of Day variants:
+        - **Duplicate Position (`bgStore.duplicatePosition`):** Clones the camera position, its slot assets, and all nested time variants with auto-incrementing `_copy` naming.
+        - **Rename Position…:** Opens the modal rename dialog with validation against duplicate position keys.
+        - **Clear Slot Overrides:** Resets background, foreground, and ambience slots on the position back to empty.
+        - **Delete Position:** Removes the camera angle and automatically shifts the active position to the first remaining angle; protected with warning when only one position remains.
+- **Clean Position Bar & Manage Strip (`BackgroundMakerModal.svelte`):**
+    - Replaced the redundant preset pills with a dedicated `+ Position` button in `.pos-tabs`.
+    - Added `.pos-manage-strip` displaying active camera position feedback (`Camera position: Normal (Right-click tab for options)`) and an inline Delete position button when multiple positions exist.
+
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **204 passed, 0 failed** (all assertions covering slot clearing on purge, global asset renaming propagation, slot export alias tracking, duplicate background, folder rename, state duplication, and time variant duplication).
-- `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5183 KB), `export/yuzu_area_maker_nomusic.html` (529 KB), and `docs/index.html` (529 KB) with 0 warnings.
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **204 passed, 0 failed** (all assertions covering slot clearing on purge, global asset renaming propagation, slot export alias tracking, duplicate background, folder rename, state duplication, time variant duplication, and camera position handling).
+- `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5191 KB), `export/yuzu_area_maker_nomusic.html` (537 KB), and `docs/index.html` (537 KB) with 0 warnings and 0 errors.
 - Live browser CDP tests verified:
     - **Backgrounds Sidebar Header Layout:** `BACKGROUNDS ({count})` title renders cleanly on top row while `[ ＋ New ]` and `[ 📥 Import ]` form a balanced 2-column grid below it ([verified_sidebar_header_two_row.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_sidebar_header_two_row.png)).
-    - **Universal Scrim Drag-Out Protection:** Selecting text inside rename input and dragging mouse completely outside dialog card onto backdrop before releasing mouseup does NOT dismiss the dialog; direct backdrop clicks still close cleanly (`verified_single_click_rename_dialog.png`).
-    - **Single-Click Slot Label to Rename:** Single-clicking slot filename labels on Background, Foreground, Ambience, and TOD mini-slots immediately opens the Rename Export Filename dialog with value pre-filled (`verified_single_click_rename_dialog.png`).
-    - **Single-Click Lightbox Preview:** Single-clicking slot thumbnails or pool asset cards opens the Lightbox asset inspector smoothly while preserving asset drag-to-slot capability (`verified_lightbox_dual_inline_rename.png`).
-    - **Strictly In-Line Dual Renaming Header:** Lightbox header displays `[IMAGE]` badge and `GLOBAL:` / `EXPORT:` input boxes vertically centered with 0.00px offset (`verified_lightbox_dual_inline_rename.png`).
-    - **Dual Renaming Propagation:** Editing `GLOBAL:` renames asset globally across pool and library; editing `EXPORT:` creates/updates background slot alias and displays `alias of [original_name]` tag on slot (`verified_slots_reflecting_renames.png`).
+    - **Universal Scrim Drag-Out Protection:** Selecting text inside rename input and dragging mouse completely outside dialog card onto backdrop before releasing mouseup does NOT dismiss the dialog; direct backdrop clicks still close cleanly ([verified_single_click_rename_dialog.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_single_click_rename_dialog.png), [verified_rename_position_modal.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_rename_position_modal.png)).
+    - **Single-Click Slot Label to Rename:** Single-clicking slot filename labels on Background, Foreground, Ambience, and TOD mini-slots immediately opens the Rename Export Filename dialog with value pre-filled ([verified_single_click_rename_dialog.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_single_click_rename_dialog.png)).
+    - **Single-Click Lightbox Preview:** Single-clicking slot thumbnails or pool asset cards opens the Lightbox asset inspector smoothly while preserving asset drag-to-slot capability ([verified_lightbox_dual_inline_rename.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_lightbox_dual_inline_rename.png)).
+    - **Strictly In-Line Dual Renaming Header:** Lightbox header displays `[IMAGE]` badge and `GLOBAL:` / `EXPORT:` input boxes vertically centered with 0.00px offset ([verified_lightbox_dual_inline_rename.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_lightbox_dual_inline_rename.png)).
+    - **Dual Renaming Propagation:** Editing `GLOBAL:` renames asset globally across pool and library; editing `EXPORT:` creates/updates background slot alias and displays `alias of [original_name]` tag on slot ([verified_slots_reflecting_renames.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_slots_reflecting_renames.png)).
+    - **Add Camera Position Modal:** Clicking `+ Position` opens the dedicated `🎥 Add Camera Position` modal with presets from standard courtroom angles, templates, and library, slot copy controls, TOD variant copy checkbox, and template bulk import ([verified_add_position_modal.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_add_position_modal.png)).
+    - **Camera Position Context Menu & Actions:** Right-clicking any position tab surfaces `Duplicate Position`, `Rename Position…`, `Clear Slot Overrides`, and `Delete Position` with single-position deletion protection ([verified_position_context_menu.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_position_context_menu.png), [verified_rename_position_modal.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_rename_position_modal.png)).
+    - **Clean Position Bar & Bulk Template Import:** Position tab strip renders cleanly with `+ Position`, and bulk template import successfully populated all 5 courtroom camera angles ([verified_courtroom_positions_tabs.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_courtroom_positions_tabs.png)).
     - Music player left completely untouched.
     - Verified strictly on branch `v2.1.0-dev`.
