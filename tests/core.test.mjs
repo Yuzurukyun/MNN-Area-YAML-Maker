@@ -12,6 +12,9 @@ import {
   parseBackgroundJson,
   resolveActiveVisual,
   hasTimeVariants,
+  BUILTIN_BG_TEMPLATES,
+  extractBgTemplateStructure,
+  applyBgTemplate,
 } from '../src/lib/bgSchema.js';
 import { resolveNodeImageUrl, bgStore, ensureUniqueBgFolder } from '../src/lib/bgStore.js';
 import { dbSaveAssets, dbLoadAllAssets, dbDeleteAssets, dbClearAssets } from '../src/lib/assetDb.js';
@@ -713,6 +716,33 @@ const deleteResult = await dbDeleteAssets(['asset-1']);
 eq(deleteResult, false, 'dbDeleteAssets safely returns false in Node');
 const clearResult = await dbClearAssets();
 eq(clearResult, false, 'dbClearAssets safely returns false in Node');
+
+/* ---- Background Templates System ---- */
+ok(Array.isArray(BUILTIN_BG_TEMPLATES) && BUILTIN_BG_TEMPLATES.length >= 6, 'BUILTIN_BG_TEMPLATES has 6 presets');
+const tplDayNight = BUILTIN_BG_TEMPLATES.find((t) => t.id === 'builtin-day-night');
+ok(Boolean(tplDayNight && tplDayNight.structure.time_variants.day), 'day-night template defines day variant');
+const tplCourtroom = BUILTIN_BG_TEMPLATES.find((t) => t.id === 'builtin-courtroom-5');
+ok(Boolean(tplCourtroom && tplCourtroom.structure.positions.Judge), 'courtroom-5 template defines Judge position');
+
+// Test apply template
+const freshBg = createBackground('Trial/TestRoom');
+applyBgTemplate(freshBg, tplCourtroom);
+ok(freshBg.states.default.usePositions, 'applying courtroom template enables usePositions');
+eq(Object.keys(freshBg.states.default.positions).length, 5, 'applying courtroom template creates 5 positions');
+ok(Boolean(freshBg.states.default.positions.Prosecution), 'Prosecution position exists');
+
+// Test template extraction
+const extracted = extractBgTemplateStructure(freshBg);
+ok(extracted.usePositions, 'extracted structure has usePositions true');
+eq(Object.keys(extracted.positions).length, 5, 'extracted structure has 5 positions');
+
+// Test bgStore template methods
+const savedTpl = bgStore.saveTemplate('Custom Courtroom', 'My custom 5-pos courtroom');
+ok(Boolean(savedTpl && savedTpl.id), 'bgStore saves custom template');
+const allTpls = bgStore.getAllTemplates();
+ok(allTpls.some((t) => t.name === 'Custom Courtroom'), 'getAllTemplates includes custom template');
+bgStore.deleteTemplate(savedTpl.id);
+ok(!bgStore.getAllTemplates().some((t) => t.id === savedTpl.id), 'deleteTemplate removes custom template');
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

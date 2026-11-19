@@ -398,12 +398,25 @@
     - Added a `▼` / `▲` collapse toggle button on the bottom Asset Repository Pool dock in Background Maker, collapsing the strip to expand vertical builder workspace.
     - Added tactile `:active { transform: scale(0.975) translateY(0.5px); }` button micro-animations across all UI buttons.
     - Smooth chevron rotation on preview collapse toggles and dragover slot highlights.
+- **Background Templates & Dedicated Variant Modals (`src/lib/bgSchema.js`, `src/lib/bgStore.js`, `BackgroundMakerModal.svelte`):**
+    - **Safe Row Delete Action:** Moved the variant delete `✕` button to the far right end of `.tod-row-card` separated from the variant badge, completely eliminating accidental deletions when selecting rows.
+    - **Add Time of Day Variant Modal:** Replaced hardcoded `+ Day`, `+ Evening`, `+ Night`, `+ Custom` buttons with a single `+ Time Variant` action that opens a modal with a dropdown populated with standard presets (`day`, `evening`, `night`, `morning`, `dawn`, `dusk`, `midnight`) plus any existing keys across the library/server.
+    - **Add State Variant Modal:** Replaced browser `prompt()` with a dedicated `+ State` modal featuring suggested state presets (`crowded`, `festive`, `rainy`, `damaged`, `ruined`, `empty`, `dim`, `night`, `clean`) plus library states, with an initial slot clone source picker.
+    - **Full Background Templates System:** Implemented reusable background structural templates mirroring area templates (`BUILTIN_BG_TEMPLATES`, `applyBgTemplate`, `extractBgTemplateStructure`):
+        - 6 Built-in Presets: *Simple Single Scene*, *Day / Night Cycle* (2 variants), *Full Day Cycle* (Day / Evening / Night), *Courtroom (5 Positions)*, *Courtroom + Day / Night Cycle* (5 positions × 2 time variants), and *Class Trial Debate* (4 states).
+        - Added `📋 Templates ▾` dropdown in the builder bar for 1-click application of any template.
+        - Added **Manage & Save Templates** dialog to inspect presets, save the active background structure as a custom reusable template, and manage custom templates.
 
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **169 passed, 0 failed**.
-- `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5119 KB), `export/yuzu_area_maker_nomusic.html` (466 KB), and `docs/index.html` (466 KB) with 0 warnings.
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **180 passed, 0 failed** (11 new assertions verifying `BUILTIN_BG_TEMPLATES`, `extractBgTemplateStructure`, `applyBgTemplate`, and `bgStore` template persistence).
+- `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5139 KB), `export/yuzu_area_maker_nomusic.html` (486 KB), and `docs/index.html` (486 KB) with 0 warnings.
 - Live browser CDP tests verified:
+    - Variant delete `✕` button renders on far right end of `.tod-row-card` (child 5 of 5) isolated from the badge.
+    - `+ Time Variant` button opens modal with preset and library time-of-day dropdown.
+    - `+ State` button opens modal with suggested and library state dropdown.
+    - `📋 Templates ▾` menu applies templates cleanly to active background in 1 click.
+    - Manage & Save Templates dialog lists all 6 presets and enables saving active background structures.
     - Standalone `📷` snapshot button in Header dispatches canvas screenshot export.
     - `Export ▾` dropdown menu contains only YAML, JSON, and ZIP (no duplicate PNG).
     - Link mode dropdown `[ 🔗 Reachable ▾ ]` switches layers and displays checkmarks.

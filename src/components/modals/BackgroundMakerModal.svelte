@@ -36,6 +36,20 @@
   let assetSearch = '';
   let poolCollapsed = false;
 
+  // Variant & Template Modals
+  let showAddTodModal = false;
+  let newTodKey = 'day';
+  let todCopyFromBase = true;
+
+  let showAddStateModal = false;
+  let newStateName = '';
+  let stateCopySource = 'default';
+
+  let showManageTemplatesModal = false;
+  let tplMenuOpen = false;
+  let newTplName = '';
+  let newTplDesc = '';
+
   // Local drag-over indicator
   let isDraggingOverPool = false;
 
@@ -207,6 +221,41 @@
     return Array.from(set).sort();
   })();
 
+  // Known time-of-day keys and states gathered across library, project areas & presets
+  $: allKnownTodKeys = (() => {
+    const set = new Set();
+    for (const b of backgrounds) {
+      for (const st of Object.values(b.states || {})) {
+        for (const k of Object.keys(st.time_variants || {})) set.add(k.toLowerCase());
+        for (const pos of Object.values(st.positions || {})) {
+          for (const k of Object.keys(pos.time_variants || {})) set.add(k.toLowerCase());
+        }
+      }
+    }
+    for (const ar of $state.project.areas) {
+      for (const [k] of ar.tod || []) {
+        if (k) set.add(k.toLowerCase());
+      }
+    }
+    return Array.from(set).sort();
+  })();
+
+  const stdPresets = new Set(['day', 'evening', 'night', 'morning', 'dawn', 'dusk', 'midnight']);
+  $: otherKnownTodKeys = allKnownTodKeys.filter((k) => !stdPresets.has(k));
+
+  $: allKnownStates = (() => {
+    const set = new Set();
+    for (const b of backgrounds) {
+      for (const k of Object.keys(b.states || {})) {
+        if (k !== 'default') set.add(k);
+      }
+    }
+    return Array.from(set).sort();
+  })();
+
+  const stdStates = new Set(['crowded', 'festive', 'rainy', 'damaged', 'ruined', 'empty', 'dim', 'night', 'clean']);
+  $: otherKnownStates = allKnownStates.filter((s) => !stdStates.has(s));
+
   function updateBg(mutator) {
     bgStore.updateActiveBg((bg) => {
       mutator(bg);
@@ -215,19 +264,36 @@
   }
 
   // State variant actions
-  function addStateVariant() {
-    const name = prompt('Enter state variant name (e.g. crowded, festive, rainy):');
-    if (!name) return;
-    const clean = name.trim();
-    if (!clean || clean === 'default') return;
+  function openAddStateModal() {
+    const existing = new Set(Object.keys(activeBg?.states || {}).map((k) => k.toLowerCase()));
+    const common = ['crowded', 'festive', 'rainy', 'damaged', 'ruined', 'empty', 'dim', 'night', 'clean'];
+    newStateName = common.find((c) => !existing.has(c)) || '';
+    stateCopySource = activeStateKey || 'default';
+    showAddStateModal = true;
+  }
+
+  function confirmAddState() {
+    const clean = newStateName.trim();
+    if (!clean || clean.toLowerCase() === 'default') return;
+
     updateBg((bg) => {
       if (!bg.states) bg.states = {};
-      bg.states[clean] = createStateVariant(clean, {
-        background: activeState.background || '',
-        usePositions: activeState.usePositions,
-      });
+      const srcState = bg.states[stateCopySource];
+      if (srcState && stateCopySource !== 'blank') {
+        const cloned = JSON.parse(JSON.stringify(srcState));
+        cloned.name = clean;
+        bg.states[clean] = cloned;
+      } else {
+        bg.states[clean] = createStateVariant(clean, {
+          background: '',
+          usePositions: false,
+        });
+      }
       bg.activeState = clean;
     });
+
+    showAddStateModal = false;
+    notify(`Created state "${clean}".`, 'ok');
   }
 
   function removeStateVariant(stKey) {
@@ -284,25 +350,46 @@
   }
 
   // Time variant actions
-  function addTimeVariant(todName) {
-    const name = todName || prompt('Enter time of day name (e.g. day, evening, night):');
-    if (!name) return;
-    const clean = name.trim().toLowerCase();
+  function openAddTodModal() {
+    const existing = new Set(Object.keys(activeTimeVariants).map((k) => k.toLowerCase()));
+    const presets = ['day', 'evening', 'night', 'morning', 'dawn', 'dusk', 'midnight'];
+    newTodKey = presets.find((p) => !existing.has(p)) || 'custom';
+    todCopyFromBase = true;
+    showAddTodModal = true;
+  }
+
+  function confirmAddTod() {
+    const clean = newTodKey.trim().toLowerCase();
     if (!clean) return;
 
     updateBg((bg) => {
       const st = bg.states[bg.activeState || 'default'];
       if (!st) return;
 
+      const baseBg = todCopyFromBase ? (activeBgVal || '') : '';
+      const baseFg = todCopyFromBase ? (activeFgVal || '') : '';
+      const baseAudio = todCopyFromBase ? (activeAmbienceVal || '') : '';
+
       if (st.usePositions && bg.activePosition && st.positions?.[bg.activePosition]) {
         const pos = st.positions[bg.activePosition];
         if (!pos.time_variants) pos.time_variants = {};
-        pos.time_variants[clean] = createTimeVariant({ background: pos.background || st.background || '' });
+        pos.time_variants[clean] = createTimeVariant({
+          background: baseBg,
+          foreground: baseFg,
+          ambience: baseAudio,
+        });
       } else {
         if (!st.time_variants) st.time_variants = {};
-        st.time_variants[clean] = createTimeVariant({ background: st.background || '' });
+        st.time_variants[clean] = createTimeVariant({
+          background: baseBg,
+          foreground: baseFg,
+          ambience: baseAudio,
+        });
       }
     });
+
+    showAddTodModal = false;
+    notify(`Added time variant "${clean}".`, 'ok');
   }
 
   function removeTimeVariant(todKey) {
@@ -315,6 +402,29 @@
         delete st.time_variants[todKey];
       }
     });
+  }
+
+  // Template actions
+  function applyTemplateToBg(tpl) {
+    if (!activeBg || !tpl) return;
+    bgStore.applyTemplate(activeBg.id, tpl);
+    tplMenuOpen = false;
+    showManageTemplatesModal = false;
+    notify(`Applied background template "${tpl.name}" to ${activeBg.folder}.`, 'ok');
+  }
+
+  function saveBgAsTemplate() {
+    if (!activeBg) return;
+    const name = newTplName.trim() || `${activeBg.folder} Template`;
+    bgStore.saveTemplate(name, newTplDesc);
+    newTplName = '';
+    newTplDesc = '';
+    notify(`Saved background template "${name}".`, 'ok');
+  }
+
+  function deleteBgTemplate(tplId) {
+    bgStore.deleteTemplate(tplId);
+    notify('Deleted background template.', 'info');
   }
 
   // Slot asset assignments
@@ -464,7 +574,16 @@
   });
 </script>
 
-<svelte:window on:click={() => { libraryMenuOpen = false; }} />
+<svelte:window
+  on:click={() => { libraryMenuOpen = false; tplMenuOpen = false; }}
+  on:keydown={(e) => {
+    if (e.key === 'Escape') {
+      if (showAddTodModal) { showAddTodModal = false; e.stopPropagation(); }
+      else if (showAddStateModal) { showAddStateModal = false; e.stopPropagation(); }
+      else if (showManageTemplatesModal) { showManageTemplatesModal = false; e.stopPropagation(); }
+    }
+  }}
+/>
 
 <div class="modal-bg" role="presentation" on:click|self={() => dispatch('close')}>
   <div
@@ -577,6 +696,38 @@
                   🧹 Purge Unused Assets ({unusedAssetCount})
                 </button>
               {/if}
+            </div>
+          {/if}
+        </span>
+        <span class="drop-wrap">
+          <button
+            class="mini-btn"
+            title="Apply or manage background templates (courtroom positions, time-of-day cycles, trial states)"
+            on:click|stopPropagation={() => (tplMenuOpen = !tplMenuOpen)}
+          >
+            📋 Templates ▾
+          </button>
+          {#if tplMenuOpen}
+            <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+            <div class="drop-menu templates-drop-menu" on:pointerdown|stopPropagation on:click|stopPropagation>
+              <div class="menu-header-tag">APPLY BACKGROUND TEMPLATE</div>
+              {#each storeState.templates as tpl}
+                <button
+                  class="tpl-drop-item"
+                  title={tpl.description}
+                  on:click={() => applyTemplateToBg(tpl)}
+                >
+                  <span class="tpl-item-name">{tpl.name}</span>
+                  {#if tpl.builtin}<span class="tpl-item-tag">preset</span>{/if}
+                </button>
+              {/each}
+              <div class="menu-divider"></div>
+              <button
+                title="Manage templates or save current background as a reusable template"
+                on:click={() => { tplMenuOpen = false; showManageTemplatesModal = true; }}
+              >
+                ⚙ Manage & Save Templates…
+              </button>
             </div>
           {/if}
         </span>
@@ -757,7 +908,7 @@
                     {stKey}{stKey === 'default' ? ' ★' : ''}
                   </button>
                 {/each}
-                <button class="mini-btn add-btn" title="Add alternative state variant (e.g. crowded, festive)" on:click={addStateVariant}>+ State</button>
+                <button class="mini-btn add-btn" title="Add alternative state variant (e.g. crowded, festive)" on:click={openAddStateModal}>+ State</button>
               </div>
             </div>
 
@@ -910,12 +1061,9 @@
           <div class="section-card">
             <div class="card-bar">
               <span class="bar-title">TIME OF DAY VARIANTS (time_variants)</span>
-              <div class="tod-btn-row">
-                <button class="mini-btn" on:click={() => addTimeVariant('day')}>+ Day</button>
-                <button class="mini-btn" on:click={() => addTimeVariant('evening')}>+ Evening</button>
-                <button class="mini-btn" on:click={() => addTimeVariant('night')}>+ Night</button>
-                <button class="mini-btn" on:click={() => addTimeVariant()}>+ Custom</button>
-              </div>
+              <button class="mini-btn add-btn" title="Add time of day variant (opens preset & existing key modal)" on:click={openAddTodModal}>
+                + Time Variant
+              </button>
             </div>
 
             {#if Object.keys(activeTimeVariants).length === 0}
@@ -928,7 +1076,6 @@
                   <div class="tod-row-card">
                     <div class="tod-badge-col">
                       <span class="tod-badge">{todKey}</span>
-                      <button class="icon-btn danger" title="Remove {todKey} variant" on:click={() => removeTimeVariant(todKey)}>✕</button>
                     </div>
 
                     <!-- Mini slots -->
@@ -967,6 +1114,12 @@
                       <span class="mslot-lbl">Audio:</span>
                       <span class="mslot-val">{tv.ambience || 'Same as base'}</span>
                     </div>
+
+                    <button
+                      class="icon-btn danger tod-delete-btn"
+                      title="Remove {todKey} variant"
+                      on:click={() => removeTimeVariant(todKey)}
+                    >✕</button>
                   </div>
                 {/each}
               </div>
@@ -1270,6 +1423,221 @@
     </section>
   </div>
 </div>
+
+{#if showAddTodModal}
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+  <div class="modal-bg submodal-scrim" on:click={() => (showAddTodModal = false)}>
+    <div class="modal submodal-card" on:click|stopPropagation>
+      <button class="modal-x" title="Close (Esc)" on:click={() => (showAddTodModal = false)}>✕</button>
+      <h3>🕒 Add Time of Day Variant</h3>
+      <div class="hint">Configure a time-of-day visual variant for this {usePositions ? 'position' : 'state'}.</div>
+
+      <div class="submodal-field">
+        <span class="submodal-label">Pick preset or existing time of day:</span>
+        <select
+          class="submodal-select"
+          value={newTodKey}
+          on:change={(e) => { if (e.target.value) newTodKey = e.target.value; }}
+        >
+          <option value="">— Select a time of day preset —</option>
+          <optgroup label="Standard Presets">
+            <option value="day">day (Daytime)</option>
+            <option value="evening">evening (Sunset / Twilight)</option>
+            <option value="night">night (Nighttime)</option>
+            <option value="morning">morning (Dawn / Morning)</option>
+            <option value="dawn">dawn (Early Dawn)</option>
+            <option value="dusk">dusk (Dusk)</option>
+            <option value="midnight">midnight (Late Night)</option>
+          </optgroup>
+          {#if otherKnownTodKeys.length > 0}
+            <optgroup label="Existing in Project / Library">
+              {#each otherKnownTodKeys as k}
+                <option value={k}>{k}</option>
+              {/each}
+            </optgroup>
+          {/if}
+        </select>
+      </div>
+
+      <div class="submodal-field">
+        <span class="submodal-label">Time of day key:</span>
+        <input
+          type="text"
+          placeholder="e.g. day, evening, night"
+          class="submodal-input"
+          bind:value={newTodKey}
+          on:keydown={(e) => e.key === 'Enter' && confirmAddTod()}
+        />
+        {#if activeTimeVariants[newTodKey.trim().toLowerCase()]}
+          <div class="submodal-warn">
+            ⚠ A variant named "{newTodKey}" already exists on this {usePositions ? 'position' : 'state'}.
+          </div>
+        {/if}
+      </div>
+
+      <label class="submodal-check-row">
+        <input type="checkbox" bind:checked={todCopyFromBase} />
+        <span>Copy current base slot assets (image/audio) into new variant</span>
+      </label>
+
+      <div class="submodal-actions">
+        <button on:click={() => (showAddTodModal = false)}>Cancel</button>
+        <button class="primary" on:click={confirmAddTod} disabled={!newTodKey.trim()}>
+          Add Variant
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+{#if showAddStateModal}
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+  <div class="modal-bg submodal-scrim" on:click={() => (showAddStateModal = false)}>
+    <div class="modal submodal-card" on:click|stopPropagation>
+      <button class="modal-x" title="Close (Esc)" on:click={() => (showAddStateModal = false)}>✕</button>
+      <h3>✨ Add State Variant</h3>
+      <div class="hint">Create an alternative scene state (e.g. crowded, festive, damaged, rainy).</div>
+
+      <div class="submodal-field">
+        <span class="submodal-label">Pick suggested or existing state:</span>
+        <select
+          class="submodal-select"
+          value={newStateName}
+          on:change={(e) => { if (e.target.value) newStateName = e.target.value; }}
+        >
+          <option value="">— Select suggested state —</option>
+          <optgroup label="Common States">
+            <option value="crowded">crowded</option>
+            <option value="festive">festive</option>
+            <option value="rainy">rainy</option>
+            <option value="damaged">damaged</option>
+            <option value="ruined">ruined</option>
+            <option value="empty">empty</option>
+            <option value="dim">dim</option>
+            <option value="night">night</option>
+            <option value="clean">clean</option>
+          </optgroup>
+          {#if otherKnownStates.length > 0}
+            <optgroup label="Existing in Library">
+              {#each otherKnownStates as s}
+                <option value={s}>{s}</option>
+              {/each}
+            </optgroup>
+          {/if}
+        </select>
+      </div>
+
+      <div class="submodal-field">
+        <span class="submodal-label">State variant name:</span>
+        <input
+          type="text"
+          placeholder="e.g. crowded, festive, rainy"
+          class="submodal-input"
+          bind:value={newStateName}
+          on:keydown={(e) => e.key === 'Enter' && confirmAddState()}
+        />
+        {#if activeBg?.states?.[newStateName.trim()]}
+          <div class="submodal-warn">
+            ⚠ State "{newStateName}" already exists on this background.
+          </div>
+        {/if}
+      </div>
+
+      <div class="submodal-field">
+        <span class="submodal-label">Initial slots:</span>
+        <select
+          class="submodal-select"
+          bind:value={stateCopySource}
+        >
+          {#each Object.keys(activeBg?.states || {}) as stKey}
+            <option value={stKey}>Copy from "{stKey}" {stKey === activeStateKey ? '(active)' : ''}</option>
+          {/each}
+          <option value="blank">Blank (empty slots)</option>
+        </select>
+      </div>
+
+      <div class="submodal-actions">
+        <button on:click={() => (showAddStateModal = false)}>Cancel</button>
+        <button class="primary" on:click={confirmAddState} disabled={!newStateName.trim() || newStateName.trim() === 'default'}>
+          Add State
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+{#if showManageTemplatesModal}
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+  <div class="modal-bg submodal-scrim" on:click={() => (showManageTemplatesModal = false)}>
+    <div class="modal submodal-card bg-templates-dialog" on:click|stopPropagation>
+      <button class="modal-x" title="Close (Esc)" on:click={() => (showManageTemplatesModal = false)}>✕</button>
+      <h3>📋 Background Templates</h3>
+      <div class="hint">Apply structural presets (courtroom positions, day/night cycles, trial states) or save custom templates.</div>
+
+      <div class="tpl-list-scroll">
+        {#each storeState.templates as tpl}
+          <div class="tpl-card-row">
+            <div class="tpl-info-col">
+              <div class="tpl-title-line">
+                <b class="tpl-name-text">{tpl.name}</b>
+                {#if tpl.builtin}
+                  <span class="default-tag">preset</span>
+                {:else}
+                  <span class="default-tag custom-tag">custom</span>
+                {/if}
+              </div>
+              <div class="tpl-desc-text">{tpl.description}</div>
+              <div class="tpl-spec-meta">
+                {#if tpl.structure.usePositions}
+                  Positions: {Object.keys(tpl.structure.positions || {}).join(', ')}
+                {:else if Object.keys(tpl.structure.time_variants || {}).length > 0}
+                  Time variants: {Object.keys(tpl.structure.time_variants || {}).join(', ')}
+                {:else}
+                  Single scene
+                {/if}
+                {#if tpl.structure.states && tpl.structure.states.length > 1}
+                  · States: {tpl.structure.states.join(', ')}
+                {/if}
+              </div>
+            </div>
+            <div class="tpl-action-col">
+              <button class="mini-btn primary" title="Apply this template structure to active background" on:click={() => applyTemplateToBg(tpl)}>
+                Apply
+              </button>
+              {#if !tpl.builtin}
+                <button class="icon-btn danger" title="Delete custom template" on:click={() => deleteBgTemplate(tpl.id)}>
+                  ✕
+                </button>
+              {/if}
+            </div>
+          </div>
+        {/each}
+      </div>
+
+      <!-- Save Current BG as Template -->
+      <div class="save-tpl-section">
+        <b class="save-tpl-title">Save Active Background as Reusable Template:</b>
+        <div class="save-tpl-inputs">
+          <input
+            type="text"
+            placeholder="Template name (e.g. My Courtroom)"
+            class="submodal-input flex-1"
+            bind:value={newTplName}
+          />
+          <input
+            type="text"
+            placeholder="Short description (optional)"
+            class="submodal-input flex-15"
+            bind:value={newTplDesc}
+          />
+          <button class="mini-btn" on:click={saveBgAsTemplate}>
+            💾 Save Template
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <style>
   .bg-maker-modal {
@@ -1944,11 +2312,6 @@
   }
 
   /* Time variants */
-  .tod-btn-row {
-    display: flex;
-    gap: 4px;
-  }
-
   .tod-list {
     display: flex;
     flex-direction: column;
@@ -1969,8 +2332,199 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    min-width: 80px;
+    min-width: 75px;
   }
+
+  .tod-delete-btn {
+    flex-shrink: 0;
+    margin-left: 2px;
+  }
+
+  .templates-drop-menu {
+    right: 0;
+    left: auto;
+    width: 280px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .menu-header-tag {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--dim);
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 3px;
+  }
+  .tpl-drop-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 5px 8px;
+    text-align: left;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 11.5px;
+    transition: background 0.1s ease;
+  }
+  .tpl-drop-item:hover {
+    background: var(--hover);
+  }
+  .tpl-item-name {
+    color: var(--text-strong);
+    font-weight: 500;
+  }
+  .tpl-item-tag {
+    font-size: 9px;
+    color: var(--dim);
+    background: var(--line);
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+
+  .submodal-scrim {
+    z-index: 100 !important;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(5px);
+  }
+  .submodal-card {
+    width: min(520px, 94vw);
+    max-height: 84vh;
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: var(--panel);
+    border: 1px solid var(--line2);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 24px 64px -12px rgba(0, 0, 0, 0.7);
+  }
+  .bg-templates-dialog {
+    width: min(780px, 94vw);
+    max-height: 86vh;
+  }
+  .submodal-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .submodal-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--dim);
+  }
+  .submodal-select,
+  .submodal-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 6px 9px;
+    background: var(--input-bg);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    font-size: 12px;
+  }
+  .submodal-select {
+    cursor: pointer;
+  }
+  .submodal-warn {
+    font-size: 11px;
+    color: var(--warn);
+    margin-top: 2px;
+  }
+  .submodal-check-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text);
+    margin: 4px 0 8px;
+  }
+  .submodal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 8px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+  }
+  .tpl-list-scroll {
+    margin-top: 6px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 48vh;
+    padding-right: 4px;
+  }
+  .tpl-card-row {
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .tpl-info-col {
+    flex: 1;
+    min-width: 0;
+  }
+  .tpl-title-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tpl-name-text {
+    font-size: 13px;
+    color: var(--text-strong);
+  }
+  .custom-tag {
+    background: var(--accent) !important;
+    color: #fff !important;
+  }
+  .tpl-desc-text {
+    font-size: 11.5px;
+    color: var(--dim);
+    margin-top: 2px;
+  }
+  .tpl-spec-meta {
+    font-size: 10.5px;
+    color: var(--dim);
+    margin-top: 4px;
+    opacity: 0.85;
+  }
+  .tpl-action-col {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .save-tpl-section {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+  }
+  .save-tpl-title {
+    font-size: 12px;
+    color: var(--text-strong);
+    display: block;
+    margin-bottom: 6px;
+  }
+  .save-tpl-inputs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .flex-1 { flex: 1; min-width: 180px; }
+  .flex-15 { flex: 1.5; min-width: 200px; }
 
   .tod-badge {
     background: var(--sel);

@@ -336,3 +336,203 @@ export function hasTimeVariants(bg) {
   }
   return false;
 }
+
+/**
+ * Built-in Background Templates (presets for courtroom positions, time-of-day cycles, and trial states)
+ */
+export const BUILTIN_BG_TEMPLATES = [
+  {
+    id: 'builtin-simple',
+    name: 'Simple Single Scene',
+    description: 'Clean single image with no states or time variants',
+    builtin: true,
+    structure: {
+      usePositions: false,
+      positions: {},
+      time_variants: {},
+      states: ['default'],
+    },
+  },
+  {
+    id: 'builtin-day-night',
+    name: 'Day / Night Cycle',
+    description: 'Standard 2-phase time-of-day variants (day, night)',
+    builtin: true,
+    structure: {
+      usePositions: false,
+      positions: {},
+      time_variants: {
+        day: { background: '', foreground: '', ambience: '' },
+        night: { background: '', foreground: '', ambience: '' },
+      },
+      states: ['default'],
+    },
+  },
+  {
+    id: 'builtin-day-eve-night',
+    name: 'Full Day Cycle (Day / Evening / Night)',
+    description: 'Complete 3-phase time variants (day, evening, night)',
+    builtin: true,
+    structure: {
+      usePositions: false,
+      positions: {},
+      time_variants: {
+        day: { background: '', foreground: '', ambience: '' },
+        evening: { background: '', foreground: '', ambience: '' },
+        night: { background: '', foreground: '', ambience: '' },
+      },
+      states: ['default'],
+    },
+  },
+  {
+    id: 'builtin-courtroom-5',
+    name: 'Courtroom (5 Positions)',
+    description: 'Courtroom setup: Normal, Witness, Prosecution, Defense, Judge',
+    builtin: true,
+    structure: {
+      usePositions: true,
+      positions: {
+        Normal: { background: '', foreground: '', ambience: '', time_variants: {} },
+        Witness: { background: '', foreground: '', ambience: '', time_variants: {} },
+        Prosecution: { background: '', foreground: '', ambience: '', time_variants: {} },
+        Defense: { background: '', foreground: '', ambience: '', time_variants: {} },
+        Judge: { background: '', foreground: '', ambience: '', time_variants: {} },
+      },
+      time_variants: {},
+      states: ['default'],
+    },
+  },
+  {
+    id: 'builtin-courtroom-day-night',
+    name: 'Courtroom + Day / Night Cycle',
+    description: '5 courtroom positions, each configured with Day & Night time variants',
+    builtin: true,
+    structure: {
+      usePositions: true,
+      positions: {
+        Normal: { background: '', foreground: '', ambience: '', time_variants: { day: {}, night: {} } },
+        Witness: { background: '', foreground: '', ambience: '', time_variants: { day: {}, night: {} } },
+        Prosecution: { background: '', foreground: '', ambience: '', time_variants: { day: {}, night: {} } },
+        Defense: { background: '', foreground: '', ambience: '', time_variants: { day: {}, night: {} } },
+        Judge: { background: '', foreground: '', ambience: '', time_variants: { day: {}, night: {} } },
+      },
+      time_variants: {},
+      states: ['default'],
+    },
+  },
+  {
+    id: 'builtin-trial-states',
+    name: 'Class Trial Debate (4 States)',
+    description: '4 state variants: default, debate, intermission, guilty',
+    builtin: true,
+    structure: {
+      usePositions: false,
+      positions: {},
+      time_variants: {},
+      states: ['default', 'debate', 'intermission', 'guilty'],
+    },
+  },
+];
+
+/**
+ * Extracts a reusable template structure from an existing background.
+ */
+export function extractBgTemplateStructure(bg) {
+  if (!bg) return { usePositions: false, positions: {}, time_variants: {}, states: ['default'] };
+
+  const states = Object.keys(bg.states || {});
+  if (!states.includes('default')) states.unshift('default');
+
+  const activeSt = bg.states?.[bg.activeState] || bg.states?.default || {};
+  const usePositions = Boolean(activeSt.usePositions);
+
+  const positions = {};
+  if (usePositions && activeSt.positions) {
+    for (const [posKey, pos] of Object.entries(activeSt.positions)) {
+      const tvKeys = Object.keys(pos.time_variants || {});
+      const tvMap = {};
+      tvKeys.forEach((k) => (tvMap[k] = {}));
+      positions[posKey] = {
+        background: '',
+        foreground: '',
+        ambience: '',
+        time_variants: tvMap,
+      };
+    }
+  }
+
+  const time_variants = {};
+  if (!usePositions && activeSt.time_variants) {
+    for (const tvKey of Object.keys(activeSt.time_variants)) {
+      time_variants[tvKey] = { background: '', foreground: '', ambience: '' };
+    }
+  }
+
+  return {
+    usePositions,
+    positions,
+    time_variants,
+    states,
+  };
+}
+
+/**
+ * Applies a background template structure to a background object.
+ * Preserves existing asset paths where slots/keys match.
+ */
+export function applyBgTemplate(bg, template) {
+  if (!bg || !template) return bg;
+  const struct = template.structure || template;
+
+  // 1. Ensure states exist
+  if (Array.isArray(struct.states)) {
+    for (const stName of struct.states) {
+      if (!bg.states[stName]) {
+        bg.states[stName] = createStateVariant(stName);
+      }
+    }
+  }
+
+  // 2. Apply to each state (or active state)
+  const targetStates = Object.keys(bg.states);
+  for (const stKey of targetStates) {
+    const st = bg.states[stKey];
+    st.usePositions = Boolean(struct.usePositions);
+
+    if (struct.usePositions) {
+      if (!st.positions) st.positions = {};
+      const tplPositions = struct.positions || {};
+      for (const [posKey, posData] of Object.entries(tplPositions)) {
+        if (!st.positions[posKey]) {
+          st.positions[posKey] = createPosition(posKey);
+        }
+        if (posData.time_variants) {
+          if (!st.positions[posKey].time_variants) st.positions[posKey].time_variants = {};
+          for (const tvKey of Object.keys(posData.time_variants)) {
+            if (!st.positions[posKey].time_variants[tvKey]) {
+              st.positions[posKey].time_variants[tvKey] = createTimeVariant();
+            }
+          }
+        }
+      }
+      if (!st.positions[bg.activePosition]) {
+        bg.activePosition = Object.keys(st.positions)[0] || 'Normal';
+      }
+    } else {
+      if (!st.time_variants) st.time_variants = {};
+      const tplTv = struct.time_variants || {};
+      for (const tvKey of Object.keys(tplTv)) {
+        if (!st.time_variants[tvKey]) {
+          st.time_variants[tvKey] = createTimeVariant();
+        }
+      }
+      if (Object.keys(st.time_variants).length > 0) {
+        if (!st.time_variants[bg.activeTod]) {
+          bg.activeTod = Object.keys(st.time_variants)[0] || 'day';
+        }
+      }
+    }
+  }
+
+  return bg;
+}

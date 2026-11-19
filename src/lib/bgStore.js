@@ -10,6 +10,9 @@ import {
   normalizeAmbiencePath,
   hasTimeVariants,
   resolveActiveVisual,
+  BUILTIN_BG_TEMPLATES,
+  extractBgTemplateStructure,
+  applyBgTemplate,
 } from './bgSchema.js';
 import { buildZip, readZip, downloadZipBlob } from './zip.js';
 import {
@@ -43,6 +46,27 @@ function getMimeType(filename) {
 }
 
 const LS_KEY = 'areaMakerDemo';
+const LS_TPL_KEY = 'areaMakerDemo.bgTemplates';
+
+function loadInitialBgTemplates() {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const rawTpl = localStorage.getItem(LS_TPL_KEY);
+      if (rawTpl) {
+        const arr = JSON.parse(rawTpl);
+        if (Array.isArray(arr)) return arr;
+      }
+      const raw = localStorage.getItem(LS_KEY);
+      if (raw) {
+        const p = JSON.parse(raw);
+        if (Array.isArray(p.bgTemplates)) return p.bgTemplates;
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return [];
+}
 
 function loadInitialBackgrounds() {
   try {
@@ -82,8 +106,10 @@ function saveToStorage() {
       if (raw) {
         const p = JSON.parse(raw);
         p.backgrounds = backgrounds;
+        p.bgTemplates = bgTemplates;
         localStorage.setItem(LS_KEY, JSON.stringify(p));
       }
+      localStorage.setItem(LS_TPL_KEY, JSON.stringify(bgTemplates));
     }
   } catch {
     /* ignore */
@@ -102,6 +128,7 @@ function notify() {
 // Initial state
 let assetPool = []; // Array<{ id, name, relPath, type: 'image'|'audio', url, file, size }>
 let backgrounds = loadInitialBackgrounds();
+let bgTemplates = loadInitialBgTemplates();
 let selectedBgId = backgrounds[0]?.id || null;
 let isMakerOpen = false;
 
@@ -181,6 +208,8 @@ function getStoreState() {
     selectedBgId,
     isMakerOpen,
     activeBg: backgrounds.find((b) => b.id === selectedBgId) || backgrounds[0] || null,
+    templates: [...BUILTIN_BG_TEMPLATES, ...bgTemplates],
+    customTemplates: bgTemplates,
   };
 }
 
@@ -192,6 +221,34 @@ export const bgStore = {
   },
   get() {
     return getStoreState();
+  },
+  getAllTemplates() {
+    return [...BUILTIN_BG_TEMPLATES, ...bgTemplates];
+  },
+  saveTemplate(name, description = '') {
+    const active = backgrounds.find((b) => b.id === selectedBgId);
+    if (!active) return null;
+    const tpl = {
+      id: 'bgtpl_' + Math.random().toString(36).slice(2, 9),
+      name: name.trim() || 'Template ' + (bgTemplates.length + 1),
+      description: description.trim(),
+      builtin: false,
+      structure: extractBgTemplateStructure(active),
+    };
+    bgTemplates.push(tpl);
+    notify();
+    return tpl;
+  },
+  deleteTemplate(templateId) {
+    bgTemplates = bgTemplates.filter((t) => t.id !== templateId);
+    notify();
+  },
+  applyTemplate(bgId, template) {
+    const bg = backgrounds.find((b) => b.id === bgId);
+    if (!bg) return false;
+    applyBgTemplate(bg, template);
+    notify();
+    return true;
   },
   openMaker(bgFolder = null) {
     isMakerOpen = true;
