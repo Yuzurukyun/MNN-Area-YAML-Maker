@@ -1,4 +1,4 @@
-# MNN Area List YAML Maker
+# MNN Area List YAML & Background.json Maker
 
 > Visual node-graph editor and asset compiler for **TsuMNN / Attorney Online `areas.yaml`** and **`background.json`** configurations.
 
@@ -21,13 +21,13 @@ Besides installing or building the project, this tool serves as a complete visua
 - **Spatial Zones & Groups:** Draw color-coded zone rectangles on the map to group areas (e.g. *District Courthouse*, *Manor Grounds*), move entire complexes together, and reorder IDs for `/zone_area` scripting.
 
 ### 2. Built-in Background.json Maker & INI Converter
-- **Visual Scene Builder:** Open **🖼 Backgrounds** to design, edit, and package TsuMNN/MNN `background.json` files directly within the workspace.
-- **Courtroom & Camera Positions:** Full support for multi-angle courtroom setups (**Witness**, **Defense**, **Prosecution**, **Judge**, **Counsel**, **Counsel Prosecution**, **Gallery**) with Witness as the authoritative default.
+- **Visual Scene Builder:** Open **🖼 Backgrounds** (from the header, export menu, or inspector) to design, edit, and package TsuMNN/MNN `background.json` files directly within the workspace.
+- **Courtroom & Camera Positions:** Full support for multi-angle courtroom setups using exact lowercase identifiers (**`wit`** [Witness - strict default], **`def`** [Defense], **`pro`** [Prosecution], **`jud`** [Judge], **`hld`** [Counsel / Co-Counsel Defense], **`hlp`** [Counsel Prosecution], **`jur`** [Jury], **`sea`** [Gallery / Seating]) with right-click tab options and position cloning.
 - **Time of Day & State Variants:** Configure `day`, `evening`, and `night` visual variations, plus state overlays (`default`, `crowded`, `festive`, `blackout`) with seamless preview switching.
 - **Legacy INI Import & Auto-Conversion:** Drag-and-drop legacy `positions.ini` folders; the engine automatically maps sections, positions, backdrops, desk overlays, and ambient SFX, converting them directly into modern `background.json` files.
-- **Asset Repository Dock & Usage Tracker:** Bottom dock provides instant drag-and-drop asset assignment, deduplication with clean alias retention, global asset renaming, and a dedicated **Usage Inspector** showing exactly which background nodes and slots use any image or audio loop.
-- **Live Stage Monitor & Ambience Player:** Real-time preview with custom aspect ratios (`16:9`, `4:3`, custom) and an integrated audio player to audition ambient audio loops (`.opus`, `.mp3`, `.ogg`) before exporting.
-- **One-Click Package Export:** Export a complete, server-ready ZIP package structured with `base/background/<Subfolder>/<Room>/background.json`, backdrops, desk overlays, and `base/sounds/ambient/` sound files.
+- **Asset Repository Dock & Usage Tracker:** Bottom dock provides instant drag-and-drop asset assignment, deduplication with clean alias retention, global asset renaming, and a dedicated **Repository Asset Inspector** (horizontal split view) showing exactly which background nodes and slots use any image or audio loop.
+- **Live Stage Monitor & Ambience Player:** Real-time preview with custom aspect ratios (`16:9`, `4:3`, custom), click-to-expand fullscreen modal, and an integrated audio player with volume slider (`0.0`–`1.0`, default `0.30`) that auto-switches ambience tracks without stopping.
+- **One-Click Package Export:** Export a complete, server-ready ZIP package structured with `base/background/<Subfolder>/<Room>/background.json`, backdrops, desk overlays, and `base/sounds/ambient/` sound files, complete with live progress overlay and automatic archive deduplication.
 
 ### 3. Server Schema Validation & Live Testing
 - **40+ Server Fields:** Categorized by importance (Common, Uncommon, Rarely) with field-level descriptions from the official TsuMNN server specification.
@@ -86,7 +86,7 @@ Requires **Node.js 20+**.
 # Install dependencies
 npm install
 
-# Run comprehensive test suite (302 unit tests covering YAML, INI, geometry, and store)
+# Run comprehensive test suite (317 unit tests covering YAML, INI, geometry, and store)
 npm test
 
 # Start local Vite development server with hot-module reload
@@ -95,7 +95,7 @@ npm run dev
 # Build standard single-file distribution (includes optional local soundtrack if present)
 npm run build
 
-# Build lightweight no-music single-file distribution (~565 KB)
+# Build lightweight no-music single-file distribution (~580 KB)
 npm run build:nomusic
 
 # Build both distributions and synchronize to export/ and docs/
@@ -110,7 +110,7 @@ npm run build:both
 ├── docs/                        # GitHub Pages distribution (index.html, og-image.png)
 ├── export/                      # Self-contained single-file HTML builds (nomusic & full)
 ├── scripts/                     # Build collectors, OG image generator, and utilities
-├── tests/                       # Unit tests (tests/core.test.mjs — 265 assertions)
+├── tests/                       # Unit tests (tests/core.test.mjs — 317 tests)
 ├── src/
 │   ├── App.svelte               # Main 3-pane shell, resize dividers, global shortcuts
 │   ├── main.js                  # Application entry point
@@ -127,6 +127,7 @@ npm run build:both
 │   │   ├── arrange.js           # Deterministic cluster and radial graph auto-arrange layout
 │   │   ├── graphGeom.js         # SVG perimeter edge clipping & popover clamping
 │   │   ├── fields.js            # TsuMNN server schema definitions and templates
+│   │   ├── autoscroll.js        # Lazy text autoscroll action with zero mount reflow
 │   │   └── state.js             # Project store, undo/redo history, themes, and notifications
 │   └── components/
 │       ├── Header.svelte        # Navigation, new/import/export dropdowns, theme picker

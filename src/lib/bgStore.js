@@ -133,6 +133,12 @@ let bgTemplates = loadInitialBgTemplates();
 let selectedBgId = backgrounds[0]?.id || null;
 let isMakerOpen = false;
 
+// Cached referenced asset information to eliminate expensive repeated scans on every state change
+let _cachedReferencedAssetInfo = null;
+function invalidateRefCache() {
+  _cachedReferencedAssetInfo = null;
+}
+
 /**
  * Ensures background folder path is unique, preventing duplicate path collisions.
  * Disambiguates with numeric suffix e.g. "subfolder/name 2".
@@ -190,6 +196,7 @@ async function initAssetPoolFromDb() {
         }
       }
       if (addedCount > 0) {
+        invalidateRefCache();
         notify();
       }
     }
@@ -248,6 +255,7 @@ export const bgStore = {
     const bg = backgrounds.find((b) => b.id === bgId);
     if (!bg) return false;
     applyBgTemplate(bg, template);
+    invalidateRefCache();
     notify();
     return true;
   },
@@ -264,6 +272,7 @@ export const bgStore = {
         const newBg = createBackground(uniqueFolder);
         backgrounds.push(newBg);
         selectedBgId = newBg.id;
+        invalidateRefCache();
       }
     }
     notify();
@@ -281,6 +290,7 @@ export const bgStore = {
     const bg = createBackground(uniqueFolder);
     backgrounds.push(bg);
     selectedBgId = bg.id;
+    invalidateRefCache();
     notify();
     return bg;
   },
@@ -292,6 +302,7 @@ export const bgStore = {
     const copy = parseBackgroundJson(jsonStr, uniqueFolder);
     backgrounds.push(copy);
     selectedBgId = copy.id;
+    invalidateRefCache();
     notify();
   },
   removeBackground(id) {
@@ -305,6 +316,7 @@ export const bgStore = {
         selectedBgId = backgrounds[0].id;
       }
     }
+    invalidateRefCache();
     notify();
   },
   clearAllBackgrounds() {
@@ -314,6 +326,7 @@ export const bgStore = {
     try {
       localStorage.removeItem(LS_KEY);
     } catch {}
+    invalidateRefCache();
     notify();
     return defaultBg;
   },
@@ -321,6 +334,7 @@ export const bgStore = {
     const idx = backgrounds.findIndex((b) => b.id === selectedBgId);
     if (idx === -1) return;
     backgrounds[idx] = updater({ ...backgrounds[idx] });
+    invalidateRefCache();
     notify();
   },
 
@@ -370,6 +384,7 @@ export const bgStore = {
     }
 
     if (notifyListeners) {
+      invalidateRefCache();
       notify();
     }
     return processed;
@@ -632,9 +647,6 @@ export const bgStore = {
       }
 
       rawFileItems = filtered;
-      if (skippedCount > 0) {
-        console.log(`[bgStore] Filtered out ${skippedCount} non-background / non-ambient files from root asset folder.`);
-      }
     }
 
     // Separate library JSONs, directory configs (.json / .ini), and assets
@@ -886,6 +898,10 @@ export const bgStore = {
       this.selectBg(newlyImportedBgs[0].id);
     }
 
+    if (newlyAddedAssets.length > 0 || newlyImportedBgs.length > 0) {
+      invalidateRefCache();
+    }
+
     notify();
 
     return {
@@ -900,8 +916,13 @@ export const bgStore = {
   /**
    * Resolves comprehensive reference information (keys, filenames, alias mappings and blob URLs)
    * across all background states, camera positions and time variants.
+   * Utilizes internal cache to eliminate repeated O(N) calculations on state changes.
    */
   getReferencedAssetInfo(bgs = null) {
+    if (!bgs && _cachedReferencedAssetInfo) {
+      return _cachedReferencedAssetInfo;
+    }
+
     const targetBgs = Array.isArray(bgs) ? bgs : backgrounds;
     const referencedKeys = new Set();
     const referencedUrls = new Set();
@@ -929,13 +950,19 @@ export const bgStore = {
         referencedKeys.add(mapped.split('/').pop().toLowerCase());
       }
 
-      // Check resolved asset URL from pool
-      try {
-        const url = bgStore.getAssetUrl(cleanVal, slotType, bg);
-        if (url && (url.startsWith('blob:') || url.startsWith('data:'))) {
-          referencedUrls.add(url);
+      // Check folder composite keys
+      if (bg?.folder) {
+        const normFolder = normalizeBgPath(bg.folder).toLowerCase();
+        referencedKeys.add(`${normFolder}/${lowerVal}`);
+        referencedKeys.add(`${normFolder}/${filename}`);
+        if (mapped) {
+          referencedKeys.add(`${normFolder}/${mapped.toLowerCase()}`);
         }
-      } catch {}
+      }
+
+      if (cleanVal.startsWith('blob:') || cleanVal.startsWith('data:')) {
+        referencedUrls.add(cleanVal);
+      }
     }
 
     for (const bg of targetBgs) {
@@ -986,7 +1013,7 @@ export const bgStore = {
       }
     }
 
-    return {
+    const result = {
       keys: referencedKeys,
       urls: referencedUrls,
       isReferenced(asset) {
@@ -994,15 +1021,30 @@ export const bgStore = {
         const name = asset.name?.toLowerCase();
         const rel = asset.relPath?.toLowerCase();
         const full = asset.fullRelPath?.toLowerCase();
-        return (
-          referencedKeys.has(asset.name) ||
-          (name && referencedKeys.has(name)) ||
-          (rel && referencedKeys.has(rel)) ||
-          (full && referencedKeys.has(full)) ||
-          (asset.url && referencedUrls.has(asset.url))
-        );
+        if (referencedKeys.has(asset.name)) return true;
+        if (name && referencedKeys.has(name)) return true;
+        if (rel && referencedKeys.has(rel)) return true;
+        if (full && referencedKeys.has(full)) return true;
+        if (asset.url && referencedUrls.has(asset.url)) return true;
+
+        if (asset.relPath) {
+          const normRel = normalizeBgPath(asset.relPath).toLowerCase();
+          if (referencedKeys.has(normRel)) return true;
+        }
+        if (asset.fullRelPath) {
+          const normFull = normalizeBgPath(asset.fullRelPath).toLowerCase();
+          if (referencedKeys.has(normFull)) return true;
+          const stripBase = normFull.replace(/^(base\/background\/|base\/sounds\/ambient\/)/, '');
+          if (referencedKeys.has(stripBase)) return true;
+        }
+        return false;
       }
     };
+
+    if (!bgs) {
+      _cachedReferencedAssetInfo = result;
+    }
+    return result;
   },
 
   getReferencedAssetNames(bgs = null) {
@@ -1031,6 +1073,7 @@ export const bgStore = {
     if (toDeleteIds.length > 0) {
       assetPool = kept;
       await dbDeleteAssets(toDeleteIds);
+      invalidateRefCache();
       notify();
     }
     return toDeleteIds.length;
@@ -1086,6 +1129,7 @@ export const bgStore = {
       }
     }
 
+    invalidateRefCache();
     notify();
   },
 
@@ -1331,6 +1375,7 @@ export const bgStore = {
       console.warn('Failed to update renamed asset in IndexedDB:', e);
     }
 
+    invalidateRefCache();
     notify();
 
     if (typeof window !== 'undefined') {
@@ -1351,6 +1396,7 @@ export const bgStore = {
     }
     assetPool = assetPool.filter((a) => a.id !== assetId);
     await dbDeleteAssets([assetId]);
+    invalidateRefCache();
     notify();
     return true;
   },

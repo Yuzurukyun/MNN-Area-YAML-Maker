@@ -1012,9 +1012,9 @@
     } catch {}
   }
 
-  // JSON string & Indent configuration
+  // JSON string & Indent configuration (computed lazily only when JSON tab is active)
   let jsonIndent = 4;
-  $: bgJsonString = activeBg ? serializeBackgroundJson(activeBg, jsonIndent) : '{}';
+  $: bgJsonString = (activeTab === 'json' && activeBg) ? serializeBackgroundJson(activeBg, jsonIndent) : '';
 
   // Resolved visuals for Stage preview
   $: resolvedVisual = activeBg
@@ -1091,29 +1091,36 @@
     bgStore.addBackground(`${prefix}NewBackground`);
   }
 
-  // Known subfolder prefixes gathered across library & project areas (excludes background folders containing config)
-  $: knownSubfolders = (() => {
-    const set = new Set();
-    const bgFolderSet = new Set(backgrounds.map((b) => normalizeBgPath(b.folder).toLowerCase()));
-    for (const b of backgrounds) {
-      const p = splitFolderPath(b.folder);
-      if (p.subfolder && !bgFolderSet.has(p.subfolder.toLowerCase())) {
-        set.add(p.subfolder);
-      }
-    }
-    for (const a of $state.project.areas) {
-      if (a.background) {
-        const p = splitFolderPath(a.background);
+  // Known subfolder prefixes gathered across library & project areas (memoized to prevent redundant scans)
+  let memoKnownSubfolders = [];
+  let lastKnownSubfoldersKey = '';
+  $: {
+    const key = `${backgrounds.length}:${$state.project.areas.length}`;
+    if (key !== lastKnownSubfoldersKey) {
+      lastKnownSubfoldersKey = key;
+      const set = new Set();
+      const bgFolderSet = new Set(backgrounds.map((b) => normalizeBgPath(b.folder).toLowerCase()));
+      for (const b of backgrounds) {
+        const p = splitFolderPath(b.folder);
         if (p.subfolder && !bgFolderSet.has(p.subfolder.toLowerCase())) {
           set.add(p.subfolder);
         }
       }
+      for (const a of $state.project.areas) {
+        if (a.background) {
+          const p = splitFolderPath(a.background);
+          if (p.subfolder && !bgFolderSet.has(p.subfolder.toLowerCase())) {
+            set.add(p.subfolder);
+          }
+        }
+      }
+      memoKnownSubfolders = Array.from(set).sort();
     }
-    return Array.from(set).sort();
-  })();
+  }
+  $: knownSubfolders = memoKnownSubfolders;
 
-  // Known time-of-day keys and states gathered across library, project areas & presets
-  $: allKnownTodKeys = (() => {
+  // Known time-of-day keys and states (computed lazily only when Add TOD modal is open)
+  $: allKnownTodKeys = showAddTodModal ? (() => {
     const set = new Set();
     for (const b of backgrounds) {
       for (const st of Object.values(b.states || {})) {
@@ -1129,12 +1136,13 @@
       }
     }
     return Array.from(set).sort();
-  })();
+  })() : [];
 
   const stdPresets = new Set(['day', 'evening', 'night', 'morning', 'dawn', 'dusk', 'midnight']);
-  $: otherKnownTodKeys = allKnownTodKeys.filter((k) => !stdPresets.has(k));
+  $: otherKnownTodKeys = showAddTodModal ? allKnownTodKeys.filter((k) => !stdPresets.has(k)) : [];
 
-  $: allKnownStates = (() => {
+  // Known states (computed lazily only when Add State modal is open)
+  $: allKnownStates = showAddStateModal ? (() => {
     const set = new Set();
     for (const b of backgrounds) {
       for (const k of Object.keys(b.states || {})) {
@@ -1142,12 +1150,12 @@
       }
     }
     return Array.from(set).sort();
-  })();
+  })() : [];
 
   const stdStates = new Set(['crowded', 'festive', 'rainy', 'damaged', 'ruined', 'empty', 'dim', 'night', 'clean']);
-  $: otherKnownStates = allKnownStates.filter((s) => !stdStates.has(s));
+  $: otherKnownStates = showAddStateModal ? allKnownStates.filter((s) => !stdStates.has(s)) : [];
 
-  // Known camera positions gathered across templates, presets & library
+  // Known camera positions gathered across templates, presets & library (computed lazily only when Add Position modal is open)
   const stdCourtroomPositions = [
     'wit',
     'def',
@@ -1161,7 +1169,7 @@
     'wide',
   ];
 
-  $: allTemplatePositions = (() => {
+  $: allTemplatePositions = showAddPositionModal ? (() => {
     const set = new Set();
     for (const tpl of storeState.templates || []) {
       if (tpl.structure?.positions && typeof tpl.structure.positions === 'object') {
@@ -1171,9 +1179,9 @@
       }
     }
     return Array.from(set).sort();
-  })();
+  })() : [];
 
-  $: allLibraryPositions = (() => {
+  $: allLibraryPositions = showAddPositionModal ? (() => {
     const set = new Set();
     for (const b of backgrounds) {
       for (const st of Object.values(b.states || {})) {
@@ -1185,14 +1193,14 @@
       }
     }
     return Array.from(set).sort();
-  })();
+  })() : [];
 
-  $: otherKnownPositionKeys = (() => {
+  $: otherKnownPositionKeys = showAddPositionModal ? (() => {
     const stdSet = new Set(stdCourtroomPositions);
     const combined = new Set([...allTemplatePositions, ...allLibraryPositions]);
     for (const s of stdSet) combined.delete(s);
     return Array.from(combined).sort();
-  })();
+  })() : [];
 
   $: positionTemplates = (storeState.templates || []).filter(
     (t) => t.structure?.positions && Object.keys(t.structure.positions).length > 0
@@ -2028,8 +2036,8 @@
     notify(`Applied "${cleanFolder}" to Area #${$state.project.areas.indexOf(selectedArea)}`);
   }
 
-  // Referenced and unused asset counts
-  $: referencedAssetInfo = bgStore.getReferencedAssetInfo(backgrounds);
+  // Referenced and unused asset counts (cached in bgStore)
+  $: referencedAssetInfo = bgStore.getReferencedAssetInfo();
   $: referencedAssetNames = referencedAssetInfo.keys;
   $: usedAssetsCount = assetPool.filter((a) => referencedAssetInfo.isReferenced(a)).length;
   $: unusedAssetCount = Math.max(0, assetPool.length - usedAssetsCount);
@@ -2185,7 +2193,11 @@
         <button
           class="mini-btn"
           title="Copy formatted background.json to clipboard"
-          on:click={() => { copyText(bgJsonString); notify('Copied background.json to clipboard'); }}
+          on:click={() => {
+            const str = bgJsonString || (activeBg ? serializeBackgroundJson(activeBg, jsonIndent) : '{}');
+            copyText(str);
+            notify('Copied background.json to clipboard');
+          }}
         >
           📋 Copy JSON
         </button>
@@ -2193,7 +2205,8 @@
           class="mini-btn"
           title="Export background.json file"
           on:click={() => {
-            const blob = new Blob([bgJsonString], { type: 'application/json' });
+            const str = bgJsonString || (activeBg ? serializeBackgroundJson(activeBg, jsonIndent) : '{}');
+            const blob = new Blob([str], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -3299,7 +3312,7 @@
               >
                 {#if asset.type === 'image'}
                   <div class="card-thumb-wrap">
-                    <img draggable="false" src={asset.url} alt={asset.name} class="asset-img" />
+                    <img draggable="false" loading="lazy" src={asset.url} alt={asset.name} class="asset-img" />
                   </div>
                 {:else}
                   <div class="card-thumb-wrap audio">
@@ -4594,6 +4607,8 @@
   }
 
   .bg-item {
+    content-visibility: auto;
+    contain-intrinsic-size: 200px 52px;
     padding: 8px 10px;
     border-radius: var(--radius);
     background: transparent;
@@ -5781,6 +5796,8 @@
   }
 
   .asset-card {
+    content-visibility: auto;
+    contain-intrinsic-size: 80px 76px;
     flex-shrink: 0;
     width: 80px;
     background: var(--input-bg);

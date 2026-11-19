@@ -97,15 +97,15 @@ export function autoscroll(node) {
   }
 
   function checkState() {
+    if (!isHovered && !autoSetting) {
+      stop();
+      return;
+    }
     if (!checkOverflow()) {
       stop();
       return;
     }
-    if (isHovered || autoSetting) {
-      start();
-    } else {
-      stop();
-    }
+    start();
   }
 
   function onMouseEnter() {
