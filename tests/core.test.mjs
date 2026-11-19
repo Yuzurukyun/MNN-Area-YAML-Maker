@@ -1345,5 +1345,75 @@ eq(resolvedWalkBg2, 'data:image/png;base64,custom-garden', 'Test Mode falls back
 const resolvedWalkBg3 = getAreaBgUrl(areaWithNone.background, bgStore.get()) || areaWithNone.image || '';
 eq(resolvedWalkBg3, '', 'Test Mode yields empty string when area has neither background maker node nor image');
 
+/* ---- Node & Hover Default Background vs TOD Consistency Tests ---- */
+const shrineBg = createBackground('WS Lambda/East Island/Shrine', {
+  states: {
+    default: {
+      background: 'default_shrine_gate.webp',
+      time_variants: {
+        day: { background: 'swirling_blue_clouds.webp' },
+        night: { background: 'shrine_night_sky.webp' },
+      },
+    },
+  },
+});
+bgStore.loadBackgrounds([shrineBg], { replace: false });
+
+// 1. resolveActiveVisual without tod must ALWAYS return the default value, NOT switch to day
+const shrineVisualDefault = resolveActiveVisual(shrineBg);
+eq(shrineVisualDefault.background, 'default_shrine_gate.webp', 'resolveActiveVisual without tod preserves default background and does not switch up to day variant');
+
+const shrineVisualDay = resolveActiveVisual(shrineBg, { tod: 'day' });
+eq(shrineVisualDay.background, 'swirling_blue_clouds.webp', 'resolveActiveVisual with explicit day tod returns day variant');
+
+const shrineVisualNight = resolveActiveVisual(shrineBg, { tod: 'night' });
+eq(shrineVisualNight.background, 'shrine_night_sky.webp', 'resolveActiveVisual with explicit night tod returns night variant');
+
+// 2. Courtroom position default preservation without tod
+const courtWithTodBg = createBackground('Courtroom/WithTod', {
+  states: {
+    default: {
+      usePositions: true,
+      positions: {
+        wit: {
+          background: 'court_bench_default.webp',
+          time_variants: {
+            day: { background: 'court_bench_bright.webp' },
+            sunset: { background: 'court_bench_orange.webp' },
+          },
+        },
+      },
+    },
+  },
+});
+const courtVisualDefault = resolveActiveVisual(courtWithTodBg, { position: 'wit' });
+eq(courtVisualDefault.background, 'court_bench_default.webp', 'courtroom position resolveActiveVisual preserves default background without switching up to day');
+
+// 3. Fallback when default background is blank: uses first available time variant
+const blankDefaultWithTv = createBackground('OnlyTimeVariants', {
+  states: {
+    default: {
+      background: '',
+      time_variants: {
+        night: { background: 'only_night.webp' },
+      },
+    },
+  },
+});
+const blankDefaultVisual = resolveActiveVisual(blankDefaultWithTv);
+eq(blankDefaultVisual.background, 'only_night.webp', 'when default background is empty, falls back to first available time variant');
+
+// 4. Area Node & Hover Card Consistency
+const shrineArea = {
+  id: 'area-shrine-24',
+  area: 'E-Shrine',
+  background: 'WS Lambda/East Island/Shrine',
+  image: '',
+  imageMode: 'scene',
+};
+const nodeResolved = resolveNodeImageUrl(shrineArea, bgStore.get());
+const hoverResolved = resolveNodeImageUrl(shrineArea, bgStore.get());
+eq(nodeResolved, hoverResolved, 'node on canvas and hover card resolve identical image');
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

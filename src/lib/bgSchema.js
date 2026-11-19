@@ -479,8 +479,9 @@ export function parseBackgroundIni(iniText, folder = 'ImportedBackground') {
 
 /**
  * Resolves the active visual assets (background, foreground, ambience) for a given state, position, and TOD.
+ * When tod is null or omitted, resolves the base/default values directly without switching up time of day.
  */
-export function resolveActiveVisual(bg, { state = 'default', position = 'wit', tod = 'day' } = {}) {
+export function resolveActiveVisual(bg, { state = 'default', position = 'wit', tod = null } = {}) {
   if (!bg || !bg.states) return { background: '', foreground: '', ambience: '' };
 
   const st = bg.states[state] || bg.states.default;
@@ -494,28 +495,84 @@ export function resolveActiveVisual(bg, { state = 'default', position = 'wit', t
       || st.positions.Normal
       || Object.values(st.positions)[0];
     if (pos) {
-      // Check if position has time variant
-      const tv = pos.time_variants?.[tod];
+      const baseBg = (pos.background !== undefined && pos.background !== '')
+        ? pos.background
+        : (st.background || '');
+      const baseFg = (pos.foreground !== undefined && pos.foreground !== '')
+        ? pos.foreground
+        : (st.foreground || '');
+      const baseAmb = (pos.ambience !== undefined && pos.ambience !== '')
+        ? pos.ambience
+        : (st.ambience || '');
+
+      // Check if a specific time of day variant was requested
+      if (tod && tod !== 'default') {
+        const tv = pos.time_variants?.[tod] || st.time_variants?.[tod];
+        if (tv) {
+          return {
+            background: (tv.background !== undefined && tv.background !== '') ? tv.background : baseBg,
+            foreground: (tv.foreground !== undefined && tv.foreground !== '') ? tv.foreground : baseFg,
+            ambience: (tv.ambience !== undefined && tv.ambience !== '') ? tv.ambience : baseAmb,
+          };
+        }
+      }
+
+      // Default value requested: use base properties, falling back to first variant only if base is empty
+      let fallbackBg = baseBg;
+      let fallbackFg = baseFg;
+      let fallbackAmb = baseAmb;
+
+      if (!fallbackBg && !fallbackFg) {
+        const firstTv = (pos.time_variants && Object.values(pos.time_variants)[0])
+          || (st.time_variants && Object.values(st.time_variants)[0]);
+        if (firstTv) {
+          fallbackBg = firstTv.background || '';
+          fallbackFg = firstTv.foreground || '';
+          fallbackAmb = firstTv.ambience || '';
+        }
+      }
+
       return {
-        background: (tv?.background !== undefined && tv.background !== '')
-          ? tv.background
-          : (pos.background !== undefined && pos.background !== '' ? pos.background : (st.background || '')),
-        foreground: (tv?.foreground !== undefined && tv.foreground !== '')
-          ? tv.foreground
-          : (pos.foreground !== undefined ? pos.foreground : (st.foreground || '')),
-        ambience: (tv?.ambience !== undefined && tv.ambience !== '')
-          ? tv.ambience
-          : (pos.ambience !== undefined && pos.ambience !== '' ? pos.ambience : (st.ambience || '')),
+        background: fallbackBg,
+        foreground: fallbackFg,
+        ambience: fallbackAmb,
       };
     }
   }
 
-  // Direct time variant
-  const tv = st.time_variants?.[tod];
+  // Direct state visual without positions
+  const baseBg = st.background || '';
+  const baseFg = st.foreground || '';
+  const baseAmb = st.ambience || '';
+
+  if (tod && tod !== 'default') {
+    const tv = st.time_variants?.[tod];
+    if (tv) {
+      return {
+        background: (tv.background !== undefined && tv.background !== '') ? tv.background : baseBg,
+        foreground: (tv.foreground !== undefined && tv.foreground !== '') ? tv.foreground : baseFg,
+        ambience: (tv.ambience !== undefined && tv.ambience !== '') ? tv.ambience : baseAmb,
+      };
+    }
+  }
+
+  let fallbackBg = baseBg;
+  let fallbackFg = baseFg;
+  let fallbackAmb = baseAmb;
+
+  if (!fallbackBg && !fallbackFg && st.time_variants) {
+    const firstTv = Object.values(st.time_variants)[0];
+    if (firstTv) {
+      fallbackBg = firstTv.background || '';
+      fallbackFg = firstTv.foreground || '';
+      fallbackAmb = firstTv.ambience || '';
+    }
+  }
+
   return {
-    background: (tv?.background !== undefined && tv.background !== '') ? tv.background : (st.background || ''),
-    foreground: (tv?.foreground !== undefined && tv.foreground !== '') ? tv.foreground : (st.foreground || ''),
-    ambience: (tv?.ambience !== undefined && tv.ambience !== '') ? tv.ambience : (st.ambience || ''),
+    background: fallbackBg,
+    foreground: fallbackFg,
+    ambience: fallbackAmb,
   };
 }
 

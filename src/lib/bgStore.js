@@ -1555,17 +1555,43 @@ export function getAreaBgUrl(bgFolder, customStoreState) {
   });
 
   if (matched) {
-    // 1a. Try active visual for default or current position/state
-    const visual = resolveActiveVisual(matched, { state: 'default', position: matched.activePosition || 'wit', tod: 'day' });
+    // 1a. Try active visual for default or current position/state without switching up time of day
+    const visual = resolveActiveVisual(matched, { state: 'default', position: matched.activePosition || 'wit', tod: null });
     const img1 = visual?.background || visual?.foreground;
     if (img1) {
       const url = bgStore.getAssetUrl(img1, 'image', matched);
       if (url) return url;
     }
 
-    // 1b. Try any state, position, or TOD variant in matched definition
-    for (const st of Object.values(matched.states || {})) {
-      if (!st) continue;
+    // 1b. Check default state first before other states
+    const defState = matched.states?.default;
+    if (defState) {
+      if (defState.background) {
+        const u = bgStore.getAssetUrl(defState.background, 'image', matched);
+        if (u) return u;
+      }
+      if (defState.foreground) {
+        const u = bgStore.getAssetUrl(defState.foreground, 'image', matched);
+        if (u) return u;
+      }
+      if (defState.positions) {
+        for (const pos of Object.values(defState.positions)) {
+          if (!pos) continue;
+          if (pos.background) {
+            const u = bgStore.getAssetUrl(pos.background, 'image', matched);
+            if (u) return u;
+          }
+          if (pos.foreground) {
+            const u = bgStore.getAssetUrl(pos.foreground, 'image', matched);
+            if (u) return u;
+          }
+        }
+      }
+    }
+
+    // 1c. Try any remaining state, position, or variant in matched definition
+    for (const [stKey, st] of Object.entries(matched.states || {})) {
+      if (!st || stKey === 'default') continue;
       if (st.background) {
         const u = bgStore.getAssetUrl(st.background, 'image', matched);
         if (u) return u;

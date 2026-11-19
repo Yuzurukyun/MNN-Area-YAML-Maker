@@ -1,21 +1,22 @@
 <script>
+  import { onMount } from 'svelte';
   import * as M from '../../lib/core.js';
-  import { bgStore } from '../../lib/bgStore.js';
-  import { resolveActiveVisual, normalizeBgPath } from '../../lib/bgSchema.js';
+  import { bgStore, resolveNodeImageUrl } from '../../lib/bgStore.js';
 
   export let area;
   export let idx;
   export let pos = { left: 0, top: 0 };
   export let dups = new Set();
 
-  $: bgState = bgStore.get();
-  $: matchedBg = bgState.backgrounds.find(
-    (b) => b.folder.toLowerCase() === normalizeBgPath(area?.background).toLowerCase()
-  );
-  $: bgVisual = matchedBg ? resolveActiveVisual(matchedBg, { state: 'default', tod: 'day' }) : null;
-  $: bgUrl = bgVisual
-    ? bgStore.getAssetUrl(bgVisual.background, 'image')
-    : (area?.background ? bgStore.getAssetUrl(area.background.split('/').pop(), 'image') : '');
+  let bgStoreState = bgStore.get();
+  onMount(() => {
+    return bgStore.subscribe((s) => {
+      bgStoreState = s;
+    });
+  });
+
+  // Always resolve the exact same visual as the canvas node card, respecting default background and imageMode
+  $: cardImg = resolveNodeImageUrl(area, bgStoreState);
 
   $: reachL = area.links?.reachable;
   $: reachTxt = reachL?.mode === 'all'
@@ -45,17 +46,9 @@
   class="node-hover-card"
   style="left: {pos.left}px; top: {pos.top}px; {area.color ? `--card-accent: ${area.color}; border-left: 3px solid ${area.color};` : ''}"
 >
-  {#if area.imageMode === 'scene' && bgUrl}
-    <div class="card-img-wrap" style="aspect-ratio: 16/9; height: auto; max-height: 120px;">
-      <img src={bgUrl} alt={area.background} style="width: 100%; height: 100%; object-fit: contain; background: #000;" />
-    </div>
-  {:else if area.image}
+  {#if cardImg}
     <div class="card-img-wrap">
-      <img src={area.image} alt={area.area} />
-    </div>
-  {:else if bgUrl}
-    <div class="card-img-wrap" style="aspect-ratio: 16/9; height: auto; max-height: 120px;">
-      <img src={bgUrl} alt={area.background} style="width: 100%; height: 100%; object-fit: contain; background: #000;" />
+      <img src={cardImg} alt={area.area || area.background} />
     </div>
   {/if}
 
@@ -135,14 +128,19 @@
     border-radius: var(--radius);
     overflow: hidden;
     margin-bottom: 8px;
-    background: var(--input-bg);
+    background: #000;
     border: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .card-img-wrap img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
     display: block;
   }
 
