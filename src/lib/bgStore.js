@@ -6,6 +6,7 @@ import {
   createTimeVariant,
   serializeBackgroundJson,
   parseBackgroundJson,
+  parseBackgroundIni,
   normalizeBgPath,
   normalizeAmbiencePath,
   hasTimeVariants,
@@ -473,164 +474,311 @@ export const bgStore = {
   },
 
   async processExtractedZipFiles(extractedFiles) {
-    if (!extractedFiles || !extractedFiles.length) return;
-    const addedAssets = [];
-    const jsonEntries = [];
-    const decoder = new TextDecoder();
-
-    for (const f of extractedFiles) {
-      const cleanPath = f.path.replace(/\\/g, '/').replace(/^\/+/, '');
-      const filename = cleanPath.split('/').pop();
-      const mime = getMimeType(filename);
-      const isImage = mime.startsWith('image/');
-      const isAudio = mime.startsWith('audio/') || /\.(opus|mp3|ogg|wav|m4a|flac)$/i.test(filename);
-      const isJson = filename.endsWith('.json');
-
-      if (isJson) {
-        jsonEntries.push({ path: cleanPath, data: f.data });
-        continue;
-      }
-
-      if (!isImage && !isAudio) continue;
-
-      let cleanRel = filename;
-      if (isAudio) {
-        cleanRel = normalizeAmbiencePath(cleanPath);
-      }
-
-      const existing = assetPool.find((a) => (a.name === filename || a.relPath === cleanRel) && a.size === f.data.length);
-      if (!existing) {
-        const blob = typeof Blob !== 'undefined' ? new Blob([f.data], { type: mime }) : null;
-        const url = blob && typeof URL !== 'undefined' ? URL.createObjectURL(blob) : '';
-        const entry = {
-          id: 'ast_' + Math.random().toString(36).slice(2, 9),
-          name: filename,
-          relPath: cleanRel,
-          fullRelPath: cleanPath,
-          type: isAudio ? 'audio' : 'image',
-          size: f.data.length,
-          lastModified: Date.now(),
-          url,
-          file: blob,
-        };
-        assetPool.push(entry);
-        addedAssets.push(entry);
-      }
-    }
-
-    if (addedAssets.length > 0) {
-      dbSaveAssets(addedAssets);
-    }
-
-    for (const jf of jsonEntries) {
-      try {
-        const text = decoder.decode(jf.data);
-        const raw = JSON.parse(text);
-
-        if (jf.path.endsWith('backgrounds-library.json') || Array.isArray(raw.backgrounds)) {
-          this.loadBackgrounds(raw.backgrounds, { replace: false, notifyListeners: false });
-        } else if (jf.path.endsWith('background.json') || raw.states) {
-          let folder = 'Imported';
-          const parts = jf.path.split('/');
-          if (parts.length > 1) {
-            folder = normalizeBgPath(parts.slice(0, -1).join('/'));
-          }
-          const importedBg = parseBackgroundJson(raw.states || raw, folder);
-          this.loadBackgrounds([importedBg], { replace: false, notifyListeners: false });
-        }
-      } catch (err) {
-        console.warn('Failed to parse json inside zip:', jf.path, err);
-      }
-    }
-
-    notify();
+    return this.registerFiles(extractedFiles);
   },
 
-  // Asset Pool Management
+  // Asset Pool & Universal Background Directory/ZIP Importer
   async registerFiles(files) {
-    if (!files || files.length === 0) return;
-    const added = [];
+    if (!files || files.length === 0) return { importedBackgrounds: [], addedAssets: [] };
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const relPath = (file.webkitRelativePath || file.name || '').replace(/\\/g, '/');
-      const isZip = file.name?.endsWith('.zip') || file.type === 'application/zip' || file.type === 'application/x-zip-compressed';
-      const isAudio = file.type?.startsWith('audio/') || /\.(opus|mp3|ogg|wav|m4a|flac)$/i.test(file.name);
-      const isImage = file.type?.startsWith('image/') || /\.(png|webp|jpg|jpeg|gif|svg|avif)$/i.test(file.name);
-      const isJson = file.name?.endsWith('.json');
+    const decoder = new TextDecoder();
+    const rawFileItems = [];
+
+    // Helper: Normalize file list from either FileList, File[], or { path, data }[]
+    const fileList = Array.from(files);
+
+    for (let i = 0; i < fileList.length; i++) {
+      const f = fileList[i];
+      const name = f.name || f.path || '';
+      const isZip = name.endsWith('.zip') || f.type === 'application/zip' || f.type === 'application/x-zip-compressed';
 
       if (isZip) {
         try {
-          const ab = await file.arrayBuffer();
-          const extractedFiles = await readZip(ab);
-          await this.processExtractedZipFiles(extractedFiles);
-        } catch (err) {
-          console.error('Failed to unpack zip file:', err);
-        }
-        continue;
-      }
+          let ab;
+          if (f.arrayBuffer) {
+            ab = await f.arrayBuffer();
+          } else if (f.data) {
+            ab = f.data.buffer || f.data;
+          } else {
+            ab = await new Response(f).arrayBuffer();
+          }
+          const extracted = await readZip(ab);
+          const zipBaseName = name.split('/').pop().replace(/\.zip$/i, '').replace(/_/g, ' ');
 
-      if (isJson) {
-        try {
-          const text = await file.text();
-          const raw = JSON.parse(text);
-          if (raw.type === 'mnn-backgrounds-library' || Array.isArray(raw.backgrounds)) {
-            this.loadBackgrounds(raw.backgrounds, { replace: false });
-          } else if (Array.isArray(raw)) {
-            this.loadBackgrounds(raw, { replace: false });
-          } else if (raw.states) {
-            let folder = 'Imported';
-            if (file.webkitRelativePath) {
-              const parts = file.webkitRelativePath.split('/');
-              if (parts.length > 1) {
-                folder = normalizeBgPath(parts.slice(0, -1).join('/'));
-              }
-            } else if (file.name && !file.name.includes('background.json')) {
-              folder = file.name.replace(/\.json$/i, '');
+          for (const ef of extracted) {
+            let cleanP = ef.path.replace(/\\/g, '/').replace(/^\/+/, '');
+            // If the files in zip were at root (no directory prefix), prefix with zip name
+            if (!cleanP.includes('/')) {
+              cleanP = `${zipBaseName}/${cleanP}`;
             }
-            const importedBg = parseBackgroundJson(raw, folder);
-            this.loadBackgrounds([importedBg], { replace: false });
+            rawFileItems.push({
+              path: cleanP,
+              name: cleanP.split('/').pop(),
+              data: ef.data,
+              size: ef.data.length,
+              type: getMimeType(cleanP.split('/').pop()),
+              file: null,
+            });
           }
         } catch (err) {
-          console.warn('Dropped JSON is not valid background definition:', err);
+          console.error('Failed to unpack zip file:', name, err);
         }
+      } else if (f.data instanceof Uint8Array || f.data instanceof ArrayBuffer) {
+        // Already extracted object { path, data }
+        const cleanP = (f.path || f.name || '').replace(/\\/g, '/').replace(/^\/+/, '');
+        const filename = cleanP.split('/').pop();
+        rawFileItems.push({
+          path: cleanP,
+          name: filename,
+          data: f.data,
+          size: f.data.length,
+          type: getMimeType(filename),
+          file: null,
+        });
+      } else {
+        const fullRel = (f.webkitRelativePath || f.customRelativePath || f.name || '').replace(/\\/g, '/').replace(/^\/+/, '');
+        const filename = f.name || fullRel.split('/').pop();
+        rawFileItems.push({
+          path: fullRel,
+          name: filename,
+          data: null,
+          size: f.size || 0,
+          type: f.type || getMimeType(filename),
+          file: f,
+        });
+      }
+    }
+
+    if (rawFileItems.length === 0) return { importedBackgrounds: [], addedAssets: [] };
+
+    // Separate library JSONs, directory configs (.json / .ini), and assets
+    const libraryJsonFiles = [];
+    const dirMap = new Map(); // folderPath -> { configs: [], assets: [] }
+
+    function getCleanDir(fullPath) {
+      let p = fullPath.replace(/^(\.\/)?(base\/)?background\//i, '').replace(/^(\.\/)?base\//i, '');
+      const slash = p.lastIndexOf('/');
+      if (slash === -1) return '';
+      return p.slice(0, slash);
+    }
+
+    for (const item of rawFileItems) {
+      const lower = item.name.toLowerCase();
+      const isJson = lower.endsWith('.json');
+      const isIni = lower.endsWith('.ini');
+      const isImage = item.type.startsWith('image/') || /\.(png|webp|jpg|jpeg|gif|svg|avif)$/i.test(lower);
+      const isAudio = item.type.startsWith('audio/') || /\.(opus|mp3|ogg|wav|m4a|flac)$/i.test(lower);
+
+      if (isJson && (lower === 'backgrounds-library.json' || lower.includes('library'))) {
+        libraryJsonFiles.push(item);
         continue;
       }
 
-      if (!isAudio && !isImage) continue;
+      const dir = getCleanDir(item.path);
+      if (!dirMap.has(dir)) {
+        dirMap.set(dir, { configs: [], assets: [] });
+      }
+      const group = dirMap.get(dir);
 
-      let cleanRel = relPath;
+      if (isJson || isIni) {
+        group.configs.push(item);
+      } else if (isImage || isAudio) {
+        group.assets.push(item);
+      }
+    }
+
+    // Process library JSONs if present
+    const newlyImportedBgs = [];
+    for (const lj of libraryJsonFiles) {
+      try {
+        let text = '';
+        if (lj.data) text = decoder.decode(lj.data);
+        else if (lj.file) text = await lj.file.text();
+        const raw = JSON.parse(text);
+        if (Array.isArray(raw.backgrounds)) {
+          this.loadBackgrounds(raw.backgrounds, { replace: false, notifyListeners: false });
+        } else if (Array.isArray(raw)) {
+          this.loadBackgrounds(raw, { replace: false, notifyListeners: false });
+        }
+      } catch (err) {
+        console.warn('Failed to parse library json:', lj.name, err);
+      }
+    }
+
+    const newlyAddedAssets = [];
+    const poolNamesInBatch = new Set();
+
+    // Helper: Register asset into pool, applying suffix counters (_1, _2) on collision with different files
+    async function registerPoolAsset(item) {
+      const origName = item.name;
+      const lower = origName.toLowerCase();
+      const isAudio = item.type.startsWith('audio/') || /\.(opus|mp3|ogg|wav|m4a|flac)$/i.test(lower);
+
+      let cleanRel = origName;
       if (isAudio) {
-        cleanRel = normalizeAmbiencePath(relPath);
-      } else {
-        const parts = relPath.split('/');
-        cleanRel = parts[parts.length - 1];
+        cleanRel = normalizeAmbiencePath(item.path);
       }
 
-      const existing = assetPool.find((a) => a.name === file.name && a.size === file.size);
-      if (existing) continue;
+      // Check if identical asset already exists in pool
+      const identical = assetPool.find((a) => a.name.toLowerCase() === origName.toLowerCase() && a.size === item.size);
+      if (identical) {
+        return { poolName: identical.name, origName, reused: true };
+      }
 
-      const url = typeof URL !== 'undefined' ? URL.createObjectURL(file) : '';
+      // If name collision with different content, generate suffix counter
+      let candidate = origName;
+      let counter = 1;
+      const dotIdx = origName.lastIndexOf('.');
+      const base = dotIdx !== -1 ? origName.slice(0, dotIdx) : origName;
+      const ext = dotIdx !== -1 ? origName.slice(dotIdx) : '';
+
+      while (
+        assetPool.some((a) => a.name.toLowerCase() === candidate.toLowerCase()) ||
+        poolNamesInBatch.has(candidate.toLowerCase())
+      ) {
+        candidate = `${base}_${counter}${ext}`;
+        counter++;
+      }
+
+      poolNamesInBatch.add(candidate.toLowerCase());
+
+      let blob = null;
+      if (item.file) {
+        blob = item.file;
+      } else if (item.data) {
+        blob = typeof Blob !== 'undefined' ? new Blob([item.data], { type: item.type }) : null;
+      }
+      const url = blob && typeof URL !== 'undefined' ? URL.createObjectURL(blob) : '';
+
       const entry = {
         id: 'ast_' + Math.random().toString(36).slice(2, 9),
-        name: file.name,
-        relPath: cleanRel,
-        fullRelPath: relPath,
+        name: candidate,
+        relPath: isAudio ? cleanRel : candidate,
+        fullRelPath: item.path,
         type: isAudio ? 'audio' : 'image',
-        size: file.size,
-        lastModified: file.lastModified,
+        size: item.size,
+        lastModified: item.file?.lastModified || Date.now(),
         url,
-        file,
+        file: blob,
       };
 
       assetPool.push(entry);
-      added.push(entry);
+      newlyAddedAssets.push(entry);
+      return { poolName: candidate, origName, reused: false };
     }
 
-    if (added.length > 0) {
-      dbSaveAssets(added);
-      notify();
+    // Process each directory group
+    for (const [dir, group] of dirMap.entries()) {
+      const assetMap = new Map(); // origName -> poolName
+      for (const astItem of group.assets) {
+        const res = await registerPoolAsset(astItem);
+        assetMap.set(res.origName, res.poolName);
+      }
+
+      let folderName = dir || 'Imported';
+      folderName = normalizeBgPath(folderName);
+
+      let bgCreated = null;
+
+      // Detect .ini files or .json files
+      const iniItem = group.configs.find((c) => c.name.toLowerCase().endsWith('.ini'));
+      const jsonItem = group.configs.find((c) => c.name.toLowerCase().endsWith('.json'));
+
+      if (iniItem) {
+        try {
+          let text = '';
+          if (iniItem.data) text = decoder.decode(iniItem.data);
+          else if (iniItem.file) text = await iniItem.file.text();
+          bgCreated = parseBackgroundIni(text, folderName);
+        } catch (err) {
+          console.warn('Failed to parse INI in directory:', dir, err);
+        }
+      } else if (jsonItem) {
+        try {
+          let text = '';
+          if (jsonItem.data) text = decoder.decode(jsonItem.data);
+          else if (jsonItem.file) text = await jsonItem.file.text();
+          const raw = JSON.parse(text);
+          if (raw.states) {
+            bgCreated = parseBackgroundJson(raw.states, folderName);
+          } else if (typeof raw === 'object' && !Array.isArray(raw)) {
+            bgCreated = parseBackgroundJson(raw, folderName);
+          }
+        } catch (err) {
+          console.warn('Failed to parse JSON in directory:', dir, err);
+        }
+      } else if (group.assets.length > 0 && dir) {
+        // Auto-create background from image/audio directory
+        bgCreated = createBackground(folderName);
+        const images = group.assets.filter((a) => a.type.startsWith('image/'));
+        const audios = group.assets.filter((a) => a.type.startsWith('audio/'));
+
+        let bgImg = '';
+        let fgImg = '';
+        for (const img of images) {
+          const l = img.name.toLowerCase();
+          if (!bgImg && (l.includes('back') || l.includes('bg'))) {
+            bgImg = img.name;
+          } else if (!fgImg && (l.includes('front') || l.includes('fg') || l.includes('desk') || l.includes('overlay'))) {
+            fgImg = img.name;
+          }
+        }
+        if (!bgImg && images.length > 0) bgImg = images[0].name;
+        if (!fgImg && images.length > 1 && images[1].name !== bgImg) fgImg = images[1].name;
+
+        bgCreated.states.default.background = bgImg;
+        bgCreated.states.default.foreground = fgImg;
+        if (audios.length > 0) {
+          bgCreated.states.default.ambience = normalizeAmbiencePath(audios[0].path);
+        }
+      }
+
+      if (bgCreated) {
+        // Map pool aliases into assetSources so slots keep clean original names
+        if (!bgCreated.assetSources) bgCreated.assetSources = {};
+        for (const [origName, poolName] of assetMap.entries()) {
+          if (origName !== poolName) {
+            bgCreated.assetSources[origName] = poolName;
+          }
+        }
+
+        // Auto-slot fallback: if st.background is empty but folder has images, assign first image
+        const st = bgCreated.states?.default;
+        if (st && !st.background && !st.usePositions && group.assets.length > 0) {
+          const firstImg = group.assets.find((a) => a.type.startsWith('image/'));
+          if (firstImg) st.background = firstImg.name;
+        }
+
+        newlyImportedBgs.push(bgCreated);
+      }
     }
+
+    if (newlyAddedAssets.length > 0) {
+      dbSaveAssets(newlyAddedAssets);
+    }
+
+    if (newlyImportedBgs.length > 0) {
+      // If current backgrounds has only an untouched placeholder 'Default' background, replace it cleanly
+      if (
+        backgrounds.length === 1 &&
+        backgrounds[0].folder === 'Default' &&
+        !backgrounds[0].states.default.background &&
+        (!backgrounds[0].states.default.positions || Object.keys(backgrounds[0].states.default.positions).length === 0)
+      ) {
+        backgrounds = [];
+      }
+
+      this.loadBackgrounds(newlyImportedBgs, { replace: false, notifyListeners: false });
+      // Switch active background to first newly imported background
+      this.selectBg(newlyImportedBgs[0].id);
+    }
+
+    notify();
+
+    return {
+      importedBackgrounds: newlyImportedBgs,
+      addedAssets: newlyAddedAssets,
+    };
   },
 
   /**

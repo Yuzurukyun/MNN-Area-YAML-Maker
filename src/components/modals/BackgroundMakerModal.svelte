@@ -56,6 +56,9 @@
   let newTplName = '';
   let newTplDesc = '';
 
+  let importMenuOpen = false;
+  let navImportMenuOpen = false;
+
   // Purge menu & confirmation modal state
   let purgeMenuOpen = false;
   let showPurgeConfirmModal = false;
@@ -1365,15 +1368,89 @@
     }
   }
 
+  // Recursively extracts all files and directory relative paths from a DataTransfer object
+  async function getAllFilesFromDataTransfer(dataTransfer) {
+    if (!dataTransfer) return [];
+    const items = dataTransfer.items;
+    if (!items || items.length === 0) {
+      return Array.from(dataTransfer.files || []);
+    }
+
+    const files = [];
+    const entries = [];
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (typeof item.webkitGetAsEntry === 'function') {
+        const entry = item.webkitGetAsEntry();
+        if (entry) entries.push(entry);
+      }
+    }
+
+    if (entries.length === 0) {
+      return Array.from(dataTransfer.files || []);
+    }
+
+    async function traverseEntry(entry, path = '') {
+      if (entry.isFile) {
+        return new Promise((resolve) => {
+          entry.file((file) => {
+            const fullRel = path ? `${path}/${file.name}` : file.name;
+            try {
+              Object.defineProperty(file, 'webkitRelativePath', {
+                value: fullRel,
+                writable: true,
+              });
+            } catch {
+              file.customRelativePath = fullRel;
+            }
+            files.push(file);
+            resolve();
+          }, () => resolve());
+        });
+      } else if (entry.isDirectory) {
+        const dirReader = entry.createReader();
+        const currentPath = path ? `${path}/${entry.name}` : entry.name;
+        return new Promise((resolve) => {
+          function readBatch() {
+            dirReader.readEntries(async (batch) => {
+              if (!batch || batch.length === 0) {
+                resolve();
+              } else {
+                for (const child of batch) {
+                  await traverseEntry(child, currentPath);
+                }
+                readBatch();
+              }
+            }, () => resolve());
+          }
+          readBatch();
+        });
+      }
+    }
+
+    for (const ent of entries) {
+      await traverseEntry(ent);
+    }
+
+    return files.length > 0 ? files : Array.from(dataTransfer.files || []);
+  }
+
   async function handleFiles(files) {
     if (!files || !files.length) return;
-    const countBefore = backgrounds.length;
-    await bgStore.registerFiles(files);
-    const countAfter = backgrounds.length;
-    if (countAfter > countBefore) {
-      notify(`Loaded ${countAfter - countBefore} background(s) & assets into library`, 'ok');
+    const res = await bgStore.registerFiles(files);
+    const bgsCount = res?.importedBackgrounds?.length || 0;
+    const assetsCount = res?.addedAssets?.length || 0;
+
+    if (bgsCount > 0) {
+      const first = res.importedBackgrounds[0];
+      const posCount = Object.keys(first.states?.default?.positions || {}).length;
+      const posInfo = posCount > 0 ? ` (${posCount} camera angle${posCount > 1 ? 's' : ''})` : '';
+      notify(`Imported background "${first.folder}"${posInfo} (${bgsCount} bg${bgsCount > 1 ? 's' : ''}, ${assetsCount} asset${assetsCount > 1 ? 's' : ''})`, 'ok');
+    } else if (assetsCount > 0) {
+      notify(`Loaded ${assetsCount} asset(s) into Asset Pool.`, 'ok');
     } else {
-      notify('Loaded files into Asset Pool & Background Library', 'ok');
+      notify('Loaded files into Asset Pool & Background Library.', 'info');
     }
   }
 
@@ -1387,7 +1464,7 @@
     if (e.currentTarget?.contains?.(e.relatedTarget)) return;
     isDraggingOverModal = false;
   }
-  function onModalDrop(e) {
+  async function onModalDrop(e) {
     e.preventDefault();
     isDraggingOverModal = false;
     dragOverSlot = null;
@@ -1399,8 +1476,11 @@
       return;
     }
 
-    if (e.dataTransfer?.files?.length) {
-      handleFiles(e.dataTransfer.files);
+    if (e.dataTransfer) {
+      const files = await getAllFilesFromDataTransfer(e.dataTransfer);
+      if (files && files.length > 0) {
+        await handleFiles(files);
+      }
     }
   }
 
@@ -1414,7 +1494,7 @@
   function onPoolDragLeave() {
     isDraggingOverPool = false;
   }
-  function onPoolDrop(e) {
+  async function onPoolDrop(e) {
     e.preventDefault();
     e.stopPropagation();
     isDraggingOverPool = false;
@@ -1426,8 +1506,11 @@
       return;
     }
 
-    if (e.dataTransfer?.files?.length) {
-      handleFiles(e.dataTransfer.files);
+    if (e.dataTransfer) {
+      const files = await getAllFilesFromDataTransfer(e.dataTransfer);
+      if (files && files.length > 0) {
+        await handleFiles(files);
+      }
     }
   }
 
@@ -1461,7 +1544,7 @@
     inspectAsset(asset);
   }
 
-  function onSlotDrop(e, slotType, tod = null) {
+  async function onSlotDrop(e, slotType, tod = null) {
     e.preventDefault();
     e.stopPropagation();
     dragOverSlot = null;
@@ -1491,13 +1574,13 @@
     }
 
     // 2. Dropped from OS File Manager
-    if (e.dataTransfer?.files?.length) {
-      const files = Array.from(e.dataTransfer.files);
+    if (e.dataTransfer) {
+      const files = await getAllFilesFromDataTransfer(e.dataTransfer);
+      if (!files || files.length === 0) return;
 
-      // If multiple files dropped over a slot, treat as general asset import into the pool without slotting!
-      if (files.length > 1) {
-        handleFiles(files);
-        notify(`Imported ${files.length} files into Asset Pool. Drag individual assets onto slots to assign.`, 'ok');
+      // If directory, archive (.zip), or multiple files dropped over a slot, treat as general import into the library
+      if (files.length > 1 || files.some((f) => f.name.endsWith('.ini') || f.name.endsWith('.json') || f.name.endsWith('.zip'))) {
+        await handleFiles(files);
         return;
       }
 
@@ -1516,7 +1599,7 @@
       }
 
       // Register into pool
-      handleFiles([f]);
+      await handleFiles([f]);
       const val = isAmbSlot ? normalizeAmbiencePath(f.name) : f.name;
       assignSlotAsset(slotType, val, tod);
       notify(`Assigned ${val} to ${slotType}${tod ? ` (${tod})` : ''}`, 'ok');
@@ -1576,7 +1659,7 @@
 </script>
 
 <svelte:window
-  on:click={() => { libraryMenuOpen = false; tplMenuOpen = false; purgeMenuOpen = false; closeContextMenu(); }}
+  on:click={() => { libraryMenuOpen = false; tplMenuOpen = false; purgeMenuOpen = false; importMenuOpen = false; navImportMenuOpen = false; closeContextMenu(); }}
   on:keydown={(e) => {
     if (e.key === 'Escape') {
       if (bgContextMenu) { closeContextMenu(); e.stopPropagation(); }
@@ -1588,6 +1671,7 @@
       else if (showAddPositionModal) { showAddPositionModal = false; e.stopPropagation(); }
       else if (showManageTemplatesModal) { showManageTemplatesModal = false; e.stopPropagation(); }
       else if (purgeMenuOpen) { purgeMenuOpen = false; e.stopPropagation(); }
+      else if (importMenuOpen || navImportMenuOpen) { importMenuOpen = false; navImportMenuOpen = false; e.stopPropagation(); }
     }
   }}
 />
@@ -1631,13 +1715,33 @@
       </div>
 
       <div class="toolbar-right">
-        <button
-          class="mini-btn"
-          title="Import background definitions, library backups, or asset ZIPs (.json, .zip)"
-          on:click={() => fileInputLibrary && fileInputLibrary.click()}
-        >
-          📥 Import…
-        </button>
+        <span class="toolbar-dropdown-anchor">
+          <button
+            class="mini-btn"
+            title="Import background definitions, folders, positions.ini, or asset ZIPs"
+            on:click|stopPropagation={() => (importMenuOpen = !importMenuOpen)}
+          >
+            📥 Import ▾
+          </button>
+          {#if importMenuOpen}
+            <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+            <div class="drop-menu import-drop-menu" on:pointerdown|stopPropagation on:click|stopPropagation>
+              <div class="menu-header-tag">IMPORT BACKGROUNDS</div>
+              <button
+                title="Select and import a background folder from disk (auto-detects positions.ini or background.json)"
+                on:click={() => { importMenuOpen = false; fileInputFolder && fileInputFolder.click(); }}
+              >
+                📁 Import Directory / Folder…
+              </button>
+              <button
+                title="Import a ZIP archive, positions.ini, or background.json file"
+                on:click={() => { importMenuOpen = false; fileInputLibrary && fileInputLibrary.click(); }}
+              >
+                📦 Import ZIP, INI, or JSON File…
+              </button>
+            </div>
+          {/if}
+        </span>
         <button
           class="mini-btn"
           title="Copy formatted background.json to clipboard"
@@ -1853,11 +1957,31 @@
               title="Create a new background in the current folder ({activeSubfolder || 'root'})"
               on:click={createNewBackgroundInCurrentFolder}
             >＋ New</button>
-            <button
-              class="mini-btn icon-action-btn"
-              title="Import background.json, backgrounds-library.json, or package .zip"
-              on:click={() => fileInputLibrary && fileInputLibrary.click()}
-            >📥 Import</button>
+            <span class="toolbar-dropdown-anchor">
+              <button
+                class="mini-btn icon-action-btn"
+                title="Import background directory, positions.ini, background.json, or package .zip"
+                on:click|stopPropagation={() => (navImportMenuOpen = !navImportMenuOpen)}
+              >📥 Import ▾</button>
+              {#if navImportMenuOpen}
+                <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+                <div class="drop-menu nav-import-drop-menu" on:pointerdown|stopPropagation on:click|stopPropagation>
+                  <div class="menu-header-tag">IMPORT BACKGROUND</div>
+                  <button
+                    title="Select and import a background folder from disk (auto-detects positions.ini or background.json)"
+                    on:click={() => { navImportMenuOpen = false; fileInputFolder && fileInputFolder.click(); }}
+                  >
+                    📁 Import Folder…
+                  </button>
+                  <button
+                    title="Import a ZIP archive, positions.ini, or background.json file"
+                    on:click={() => { navImportMenuOpen = false; fileInputLibrary && fileInputLibrary.click(); }}
+                  >
+                    📦 Import ZIP / File…
+                  </button>
+                </div>
+              {/if}
+            </span>
           </div>
         </div>
 
@@ -2612,9 +2736,9 @@
           </span>
           <button class="mini-btn" on:click={() => fileInputGeneral.click()}>+ Upload Files</button>
           <button class="mini-btn" on:click={() => fileInputFolder.click()}>+ Upload Folder</button>
-          <input type="file" accept="image/*,audio/*,.json,.zip" multiple hidden bind:this={fileInputGeneral} on:change={(e) => handleFiles(e.target.files)} />
+          <input type="file" accept="image/*,audio/*,.json,.zip,.ini" multiple hidden bind:this={fileInputGeneral} on:change={(e) => handleFiles(e.target.files)} />
           <input type="file" webkitdirectory multiple hidden bind:this={fileInputFolder} on:change={(e) => handleFiles(e.target.files)} />
-          <input type="file" accept=".json,.zip" multiple hidden bind:this={fileInputLibrary} on:change={(e) => handleFiles(e.target.files)} />
+          <input type="file" accept=".zip,.ini,.json" multiple hidden bind:this={fileInputLibrary} on:change={(e) => handleFiles(e.target.files)} />
         </div>
       </div>
 
@@ -3577,7 +3701,8 @@
     border: 1px solid var(--line);
     border-radius: var(--radius);
     background: var(--panel2);
-    overflow: hidden;
+    overflow: visible;
+    position: relative;
   }
 
   .nav-head {
@@ -4035,7 +4160,21 @@
     margin-left: 2px;
   }
 
-  .templates-drop-menu {
+  .toolbar-dropdown-anchor {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+  .nav-head-actions .toolbar-dropdown-anchor {
+    width: 100%;
+  }
+  .nav-head-actions .toolbar-dropdown-anchor > button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .templates-drop-menu,
+  .import-drop-menu {
     right: 0;
     left: auto;
     width: 280px;
@@ -4043,6 +4182,17 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
+    z-index: 1000;
+  }
+  .nav-import-drop-menu {
+    left: 0;
+    right: auto;
+    width: 250px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    z-index: 1000;
   }
   .menu-header-tag {
     font-size: 9.5px;

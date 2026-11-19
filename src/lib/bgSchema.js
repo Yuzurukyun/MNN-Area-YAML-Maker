@@ -264,6 +264,163 @@ export function parseBackgroundJson(raw, folder = 'ImportedBackground') {
 }
 
 /**
+ * Maps standard Ace Attorney Online / MNN shorthand position codes to human-friendly position names.
+ */
+export const INI_POSITION_MAP = {
+  wit: 'Witness',
+  witness: 'Witness',
+  def: 'Defense',
+  defense: 'Defense',
+  pro: 'Prosecution',
+  prosecution: 'Prosecution',
+  jud: 'Judge',
+  judge: 'Judge',
+  hld: 'Counsel',
+  hlp: 'Counsel Prosecution',
+  jur: 'Jury',
+  jury: 'Jury',
+  sea: 'Gallery',
+  gal: 'Gallery',
+  gallery: 'Gallery',
+  coun: 'Counsel',
+  counsel: 'Counsel',
+  norm: 'Normal',
+  normal: 'Normal',
+  helper: 'Counsel',
+};
+
+export function mapIniPositionName(rawCode) {
+  if (!rawCode) return 'Normal';
+  const clean = rawCode.trim().toLowerCase();
+  if (INI_POSITION_MAP[clean]) return INI_POSITION_MAP[clean];
+  return rawCode.trim().charAt(0).toUpperCase() + rawCode.trim().slice(1);
+}
+
+/**
+ * Parses a background INI file (e.g. positions.ini) into an internal Background structure.
+ * Supports position shorthands (wit, def, pro, jud, hld, hlp), slot properties (back, front, ambient_sfx),
+ * and converts cleanly into a JSON-ready background object.
+ */
+export function parseBackgroundIni(iniText, folder = 'ImportedBackground') {
+  if (typeof iniText !== 'string') {
+    throw new Error('Invalid INI: input must be a string.');
+  }
+
+  const bg = createBackground(folder);
+  const lines = iniText.split(/\r?\n/);
+
+  let currentSection = '';
+  const sections = {};
+
+  for (let line of lines) {
+    line = line.trim();
+    if (!line || line.startsWith('#') || line.startsWith(';')) continue;
+
+    const secMatch = line.match(/^\[([^\]]+)\]$/);
+    if (secMatch) {
+      currentSection = secMatch[1].trim();
+      if (!sections[currentSection]) sections[currentSection] = {};
+      continue;
+    }
+
+    const eqIdx = line.indexOf('=');
+    const colonIdx = line.indexOf(':');
+    let splitIdx = -1;
+    if (eqIdx !== -1 && colonIdx !== -1) {
+      splitIdx = Math.min(eqIdx, colonIdx);
+    } else if (eqIdx !== -1) {
+      splitIdx = eqIdx;
+    } else if (colonIdx !== -1) {
+      splitIdx = colonIdx;
+    }
+
+    if (splitIdx !== -1) {
+      const rawKey = line.slice(0, splitIdx).trim().toLowerCase();
+      let rawVal = line.slice(splitIdx + 1).trim();
+      const commentIdx = rawVal.search(/[;#]/);
+      if (commentIdx !== -1) {
+        rawVal = rawVal.slice(0, commentIdx).trim();
+      }
+      if ((rawVal.startsWith('"') && rawVal.endsWith('"')) || (rawVal.startsWith("'") && rawVal.endsWith("'"))) {
+        rawVal = rawVal.slice(1, -1).trim();
+      }
+
+      const sec = currentSection || '__root__';
+      if (!sections[sec]) sections[sec] = {};
+      sections[sec][rawKey] = rawVal;
+    }
+  }
+
+  const secKeys = Object.keys(sections).filter((k) => k !== '__root__' && k.toLowerCase() !== 'default' && k.toLowerCase() !== 'base');
+  const hasPositions = secKeys.length > 0;
+
+  const positions = {};
+  const rootSec = { ...(sections.__root__ || {}), ...(sections.default || {}), ...(sections.base || {}) };
+  let defaultBg = rootSec.back || rootSec.background || rootSec.bg || rootSec.image || '';
+  let defaultFg = rootSec.front || rootSec.foreground || rootSec.fg || rootSec.desk || rootSec.overlay || '';
+  let defaultAmb = rootSec.ambient_sfx || rootSec.ambient || rootSec.ambience || rootSec.audio || rootSec.sound || '';
+
+  if (hasPositions) {
+    for (const secKey of secKeys) {
+      const data = sections[secKey];
+      const posName = mapIniPositionName(secKey);
+
+      const bgImg = data.back || data.background || data.bg || data.image || '';
+      const fgImg = data.front || data.foreground || data.fg || data.desk || data.overlay || '';
+      const amb = data.ambient_sfx || data.ambient || data.ambience || data.audio || data.sound || '';
+
+      const time_variants = {};
+      const todKeys = new Set();
+      const basePrefixes = ['ambient_sfx', 'background', 'foreground', 'ambient', 'ambience', 'audio', 'sound', 'front', 'desk', 'overlay', 'back', 'bg', 'image', 'fg'];
+      for (const k of Object.keys(data)) {
+        for (const pfx of basePrefixes) {
+          if (k.startsWith(`${pfx}_`)) {
+            const tod = k.slice(pfx.length + 1).toLowerCase();
+            if (tod && tod !== 'sfx') todKeys.add(tod);
+            break;
+          }
+        }
+      }
+      for (const tod of todKeys) {
+        time_variants[tod] = createTimeVariant({
+          background: data[`back_${tod}`] || data[`background_${tod}`] || data[`bg_${tod}`] || data[`image_${tod}`] || '',
+          foreground: data[`front_${tod}`] || data[`foreground_${tod}`] || data[`fg_${tod}`] || data[`desk_${tod}`] || data[`overlay_${tod}`] || '',
+          ambience: data[`ambient_sfx_${tod}`] || data[`ambient_${tod}`] || data[`ambience_${tod}`] || data[`audio_${tod}`] || data[`sound_${tod}`] || '',
+        });
+      }
+
+      positions[posName] = createPosition(posName, {
+        background: bgImg,
+        foreground: fgImg,
+        ambience: amb,
+        time_variants,
+      });
+
+      if (!defaultBg && bgImg) defaultBg = bgImg;
+      if (!defaultFg && fgImg) defaultFg = fgImg;
+      if (!defaultAmb && amb) defaultAmb = amb;
+    }
+  }
+
+  bg.states = {
+    default: createStateVariant('default', {
+      background: defaultBg,
+      foreground: defaultFg,
+      ambience: defaultAmb,
+      usePositions: hasPositions,
+      positions: hasPositions ? positions : {},
+    }),
+  };
+
+  if (hasPositions) {
+    const posKeys = Object.keys(positions);
+    bg.activePosition = posKeys.includes('Normal') ? 'Normal' : posKeys[0] || 'Normal';
+  }
+
+  return bg;
+}
+
+/**
  * Resolves the active visual assets (background, foreground, ambience) for a given state, position, and TOD.
  */
 export function resolveActiveVisual(bg, { state = 'default', position = 'Normal', tod = 'day' } = {}) {

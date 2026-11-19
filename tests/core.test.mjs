@@ -10,6 +10,8 @@ import {
   createBackground,
   serializeBackgroundJson,
   parseBackgroundJson,
+  parseBackgroundIni,
+  mapIniPositionName,
   resolveActiveVisual,
   hasTimeVariants,
   BUILTIN_BG_TEMPLATES,
@@ -826,9 +828,99 @@ if (origBg) {
   const dupTv = bgStore.duplicateTimeVariant(dupBg.id, 'default', null, 'day');
   ok(Boolean(dupTv && dupBg.states.default.time_variants[dupTv]), 'duplicateTimeVariant duplicates time variant');
 
+  // Test duplicatePosition
+  dupBg.states.default.usePositions = true;
+  dupBg.states.default.positions = {
+    Normal: { name: 'Normal', background: 'normal.png', foreground: '', ambience: '', time_variants: {} },
+  };
+  const dupPos = bgStore.duplicatePosition(dupBg.id, 'default', 'Normal');
+  ok(Boolean(dupPos && dupBg.states.default.positions[dupPos]), 'duplicatePosition duplicates camera position');
+  eq(dupBg.states.default.positions[dupPos].background, 'normal.png', 'duplicatePosition copies position slots');
+
   bgStore.removeBackground(dupBg.id);
 }
 unsubBg();
+
+/* ---- parseBackgroundIni tests ---- */
+const samplePositionsIni = `
+[wit]
+back = witnessempty.webp
+ambient_sfx = wsl/generic_room_day.opus
+
+[def]
+back = cloudy_back.webp
+ambient_sfx = wsl/generic_room_day_cloudy.opus
+front = rain_front.webp
+
+[pro]
+back = rain_back.webp
+ambient_sfx = wsl/generic_room_day_rain.opus
+front = rain_front.webp
+
+[jud]
+back = witnessempty.webp
+ambient_sfx = wsl/generic_room_day.opus
+
+[hld]
+back = cloudy_back.webp
+front = rain_front.webp
+
+[hlp]
+back = rain_back.webp
+front = rain_front.webp
+`;
+
+const parsedIni = parseBackgroundIni(samplePositionsIni, 'WS Lambda/East Island/Manor/Manor Second Floor [Day]');
+eq(parsedIni.folder, 'WS Lambda/East Island/Manor/Manor Second Floor [Day]', 'parseBackgroundIni preserves folder path');
+ok(parsedIni.states.default.usePositions, 'parseBackgroundIni detects courtroom positions mode');
+eq(Object.keys(parsedIni.states.default.positions).length, 6, 'parseBackgroundIni parses all 6 courtroom positions');
+ok(Boolean(parsedIni.states.default.positions.Witness), 'shorthand [wit] mapped to Witness');
+ok(Boolean(parsedIni.states.default.positions.Defense), 'shorthand [def] mapped to Defense');
+ok(Boolean(parsedIni.states.default.positions.Prosecution), 'shorthand [pro] mapped to Prosecution');
+ok(Boolean(parsedIni.states.default.positions.Judge), 'shorthand [jud] mapped to Judge');
+ok(Boolean(parsedIni.states.default.positions.Counsel), 'shorthand [hld] mapped to Counsel');
+ok(Boolean(parsedIni.states.default.positions['Counsel Prosecution']), 'shorthand [hlp] mapped to Counsel Prosecution');
+eq(parsedIni.states.default.positions.Witness.background, 'witnessempty.webp', 'Witness background slot matches');
+eq(parsedIni.states.default.positions.Witness.ambience, 'wsl/generic_room_day.opus', 'Witness ambience slot matches');
+eq(parsedIni.states.default.positions.Defense.background, 'cloudy_back.webp', 'Defense background slot matches');
+eq(parsedIni.states.default.positions.Defense.foreground, 'rain_front.webp', 'Defense foreground slot matches');
+eq(parsedIni.activePosition, 'Witness', 'active position defaults to first available position');
+
+// Single scene non-position INI test
+const singleSceneIni = `
+[default]
+back = room.png
+front = desk.png
+ambient_sfx = rain.opus
+`;
+const parsedSingle = parseBackgroundIni(singleSceneIni, 'SingleRoom');
+ok(!parsedSingle.states.default.usePositions, 'single scene INI has usePositions = false');
+eq(parsedSingle.states.default.background, 'room.png', 'single scene background parsed');
+eq(parsedSingle.states.default.foreground, 'desk.png', 'single scene foreground parsed');
+eq(parsedSingle.states.default.ambience, 'rain.opus', 'single scene ambience parsed');
+
+// Test registerFiles directory auto-slotting & duplicate asset collision suffix
+const testFiles = [
+  { path: 'Manor/positions.ini', name: 'positions.ini', data: new TextEncoder().encode(samplePositionsIni) },
+  { path: 'Manor/cloudy_back.webp', name: 'cloudy_back.webp', data: new Uint8Array([1, 2, 3, 4]), size: 4 },
+  { path: 'Manor/rain_front.webp', name: 'rain_front.webp', data: new Uint8Array([5, 6, 7]), size: 3 },
+];
+const regResult = await bgStore.registerFiles(testFiles);
+ok(regResult.importedBackgrounds.length > 0, 'registerFiles imports background from directory with INI');
+const importedManor = regResult.importedBackgrounds.find(b => b.folder === 'Manor');
+ok(Boolean(importedManor), 'background "Manor" was created');
+ok(importedManor.states.default.usePositions, 'imported background has usePositions enabled');
+
+// Test duplicate asset collision in next batch: same filename cloudy_back.webp with different size (10 bytes)
+const testFiles2 = [
+  { path: 'Other/background.json', name: 'background.json', data: new TextEncoder().encode(JSON.stringify({ default: { background: 'cloudy_back.webp' } })) },
+  { path: 'Other/cloudy_back.webp', name: 'cloudy_back.webp', data: new Uint8Array(10), size: 10 },
+];
+const regResult2 = await bgStore.registerFiles(testFiles2);
+const importedOther = regResult2.importedBackgrounds.find(b => b.folder === 'Other');
+ok(Boolean(importedOther), 'second background "Other" was created');
+eq(importedOther.states.default.background, 'cloudy_back.webp', 'slot in Other background still simply retains clean "cloudy_back.webp"');
+ok(importedOther.assetSources['cloudy_back.webp']?.startsWith('cloudy_back_'), 'assetSources maps cloudy_back.webp to cloudy_back_1.webp due to collision');
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
