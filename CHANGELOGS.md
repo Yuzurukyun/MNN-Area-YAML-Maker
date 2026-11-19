@@ -547,9 +547,10 @@
 
 - **Legacy MNN / Ace Attorney Online `.ini` Background Parser (`src/lib/bgSchema.js`):**
     - Added complete INI background parser `parseBackgroundIni(iniText, folderName)` enabling backwards compatibility for legacy MNN / Ace Attorney Online background directories (e.g. `positions.ini` or `*.ini`).
-    - Maps shorthand section names (`[wit]` -> Witness, `[def]` -> Defense, `[pro]` -> Prosecution, `[jud]` -> Judge, `[hld]` -> Counsel, `[hlp]` -> Counsel Prosecution, `[jur]` -> Jury, `[sea]`/`[gal]` -> Gallery, `[norm]` -> Normal).
+    - Maps shorthand section names (`[wit]` -> Witness, `[def]` -> Defense, `[pro]` -> Prosecution, `[jud]` -> Judge, `[hld]` -> Counsel, `[hlp]` -> Counsel Prosecution, `[jur]` -> Jury, `[sea]`/`[gal]` -> Gallery, `[norm]` -> Witness).
+    - Sets `Witness` (`wit`) as the default courtroom position across all camera positions, active tab selection, and base state fallback slots (`Gallery =/= Normal`, with `witness == normal`).
+    - Takes `.ini` data strictly as-is: INI definitions do not support time variants, so sections are parsed directly without time-variant guesswork (`time_variants: {}`).
     - Maps slot properties (`back`/`background`/`bg`/`image` -> background, `front`/`foreground`/`fg`/`desk`/`overlay` -> foreground, `ambient_sfx`/`ambient`/`ambience`/`audio`/`sound` -> ambience).
-    - Supports time-of-day variants in INI (e.g. `back_night`, `back_rain`, `front_evening`), automatically parsing them into standard `time_variants`.
     - Imports legacy INI folders cleanly and converts them directly into modern, standard `background.json` structures upon export.
 - **Universal Directory & ZIP Import Engine (`src/lib/bgStore.js`):**
     - Unified file, folder, and archive processing into an intelligent directory tree walker.
@@ -570,10 +571,10 @@
 
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **230 passed, 0 failed** (all assertions covering INI parsing, courtroom position mapping, single scene INI, duplicate asset collision suffixing with slot alias preservation, camera position duplication, slot clearing on purge, and state duplication).
-- `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5191 KB), `export/yuzu_area_maker_nomusic.html` (537 KB), and `docs/index.html` (537 KB) with 0 warnings and 0 errors.
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **239 passed, 0 failed** (all assertions covering INI parsing, courtroom position mapping with Witness default, single scene INI, taking INI data as-is without time variants, duplicate asset collision suffixing with slot alias preservation, camera position duplication, slot clearing on purge, and state duplication).
+- `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5199 KB), `export/yuzu_area_maker_nomusic.html` (545 KB), and `docs/index.html` (545 KB) with 0 warnings and 0 errors.
 - Live browser CDP tests verified:
-    - **Legacy INI Import & Conversion:** Imported `Manor_Second_Floor_[Day].zip` containing `positions.ini` and scene images; background appeared immediately in sidebar as `Manor Second Floor [Day]` and became the active selection ([verified_ini_imported_bg_list.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_ini_imported_bg_list.png)).
+    - **Legacy INI Import & Witness Default:** Imported `Manor_Second_Floor_[Day].zip` containing `positions.ini` and scene images; background appeared immediately in sidebar as `Manor Second Floor [Day]`, became the active selection, and selected `Witness` as default active position ([verified_ini_imported_bg_list.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_ini_imported_bg_list.png)).
     - **Courtroom Positions & Auto-Slotting:** Courtroom positions toggle enabled automatically with 6 camera positions (`Witness`, `Defense`, `Prosecution`, `Judge`, `Counsel`, `Counsel Prosecution`). `Witness` auto-slotted `witnessempty.webp` and ambience `wsl/generic_room_day.opus`; `Defense` auto-slotted `cloudy_back.webp` and `rain_front.webp` ([verified_ini_courtroom_positions_and_slots.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_ini_courtroom_positions_and_slots.png)).
     - **Two-Option Import Dropdowns:** Clicking `📥 Import ▾` in sidebar header displays the styled popup menu with `📁 Import Folder…` and `📦 Import ZIP / File…` ([verified_import_dropdown_options.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_import_dropdown_options.png)).
     - **Duplicate Asset Suffixing & Alias Mapping:** Importing duplicate assets with differing file contents assigns pool suffix `cloudy_back_1.webp` while retaining clean slot name and registering `bg.assetSources`.

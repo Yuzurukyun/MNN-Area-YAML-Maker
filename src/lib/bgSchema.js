@@ -94,7 +94,7 @@ export function createBackground(folder = 'NewBackground', opts = {}) {
     description: opts.description || '',
     states,
     activeState: 'default',
-    activePosition: 'Normal',
+    activePosition: opts.activePosition || 'Witness',
     activeTod: 'day',
   };
 }
@@ -260,6 +260,15 @@ export function parseBackgroundJson(raw, folder = 'ImportedBackground') {
     bg.states.default = createStateVariant('default');
   }
 
+  if (bg.states.default?.usePositions && bg.states.default.positions) {
+    const posKeys = Object.keys(bg.states.default.positions);
+    bg.activePosition = posKeys.includes('Witness')
+      ? 'Witness'
+      : posKeys.includes('Normal')
+      ? 'Normal'
+      : posKeys[0] || 'Witness';
+  }
+
   return bg;
 }
 
@@ -284,13 +293,13 @@ export const INI_POSITION_MAP = {
   gallery: 'Gallery',
   coun: 'Counsel',
   counsel: 'Counsel',
-  norm: 'Normal',
-  normal: 'Normal',
+  norm: 'Witness',
+  normal: 'Witness',
   helper: 'Counsel',
 };
 
 export function mapIniPositionName(rawCode) {
-  if (!rawCode) return 'Normal';
+  if (!rawCode) return 'Witness';
   const clean = rawCode.trim().toLowerCase();
   if (INI_POSITION_MAP[clean]) return INI_POSITION_MAP[clean];
   return rawCode.trim().charAt(0).toUpperCase() + rawCode.trim().slice(1);
@@ -361,6 +370,19 @@ export function parseBackgroundIni(iniText, folder = 'ImportedBackground') {
   let defaultAmb = rootSec.ambient_sfx || rootSec.ambient || rootSec.ambience || rootSec.audio || rootSec.sound || '';
 
   if (hasPositions) {
+    // In MNN / courtroom setups, the default angle is "wit" (Witness).
+    // If [wit] (or [witness], [norm], [normal]) is defined, default scene slots take directly from it.
+    const witKey = secKeys.find((k) => {
+      const l = k.toLowerCase();
+      return l === 'wit' || l === 'witness' || l === 'norm' || l === 'normal';
+    });
+    if (witKey) {
+      const witData = sections[witKey];
+      defaultBg = witData.back || witData.background || witData.bg || witData.image || defaultBg;
+      defaultFg = witData.front || witData.foreground || witData.fg || witData.desk || witData.overlay || defaultFg;
+      defaultAmb = witData.ambient_sfx || witData.ambient || witData.ambience || witData.audio || witData.sound || defaultAmb;
+    }
+
     for (const secKey of secKeys) {
       const data = sections[secKey];
       const posName = mapIniPositionName(secKey);
@@ -369,31 +391,12 @@ export function parseBackgroundIni(iniText, folder = 'ImportedBackground') {
       const fgImg = data.front || data.foreground || data.fg || data.desk || data.overlay || '';
       const amb = data.ambient_sfx || data.ambient || data.ambience || data.audio || data.sound || '';
 
-      const time_variants = {};
-      const todKeys = new Set();
-      const basePrefixes = ['ambient_sfx', 'background', 'foreground', 'ambient', 'ambience', 'audio', 'sound', 'front', 'desk', 'overlay', 'back', 'bg', 'image', 'fg'];
-      for (const k of Object.keys(data)) {
-        for (const pfx of basePrefixes) {
-          if (k.startsWith(`${pfx}_`)) {
-            const tod = k.slice(pfx.length + 1).toLowerCase();
-            if (tod && tod !== 'sfx') todKeys.add(tod);
-            break;
-          }
-        }
-      }
-      for (const tod of todKeys) {
-        time_variants[tod] = createTimeVariant({
-          background: data[`back_${tod}`] || data[`background_${tod}`] || data[`bg_${tod}`] || data[`image_${tod}`] || '',
-          foreground: data[`front_${tod}`] || data[`foreground_${tod}`] || data[`fg_${tod}`] || data[`desk_${tod}`] || data[`overlay_${tod}`] || '',
-          ambience: data[`ambient_sfx_${tod}`] || data[`ambient_${tod}`] || data[`ambience_${tod}`] || data[`audio_${tod}`] || data[`sound_${tod}`] || '',
-        });
-      }
-
+      // INI files never had time variants; data is taken strictly as-is
       positions[posName] = createPosition(posName, {
         background: bgImg,
         foreground: fgImg,
         ambience: amb,
-        time_variants,
+        time_variants: {},
       });
 
       if (!defaultBg && bgImg) defaultBg = bgImg;
@@ -414,7 +417,10 @@ export function parseBackgroundIni(iniText, folder = 'ImportedBackground') {
 
   if (hasPositions) {
     const posKeys = Object.keys(positions);
-    bg.activePosition = posKeys.includes('Normal') ? 'Normal' : posKeys[0] || 'Normal';
+    // The default MUST BE "Witness" (mapped from "wit")
+    bg.activePosition = posKeys.includes('Witness') ? 'Witness' : posKeys[0] || 'Witness';
+  } else {
+    bg.activePosition = 'Witness';
   }
 
   return bg;
@@ -423,14 +429,14 @@ export function parseBackgroundIni(iniText, folder = 'ImportedBackground') {
 /**
  * Resolves the active visual assets (background, foreground, ambience) for a given state, position, and TOD.
  */
-export function resolveActiveVisual(bg, { state = 'default', position = 'Normal', tod = 'day' } = {}) {
+export function resolveActiveVisual(bg, { state = 'default', position = 'Witness', tod = 'day' } = {}) {
   if (!bg || !bg.states) return { background: '', foreground: '', ambience: '' };
 
   const st = bg.states[state] || bg.states.default;
   if (!st) return { background: '', foreground: '', ambience: '' };
 
   if (st.usePositions && st.positions) {
-    const pos = st.positions[position] || Object.values(st.positions)[0];
+    const pos = (position && st.positions[position]) || st.positions.Witness || st.positions.Normal || Object.values(st.positions)[0];
     if (pos) {
       // Check if position has time variant
       const tv = pos.time_variants?.[tod];
@@ -544,16 +550,16 @@ export const BUILTIN_BG_TEMPLATES = [
   {
     id: 'builtin-courtroom-5',
     name: 'Courtroom (5 Positions)',
-    description: 'Courtroom setup: Normal, Witness, Prosecution, Defense, Judge',
+    description: 'Courtroom setup: Witness (default), Defense, Prosecution, Judge, Counsel',
     builtin: true,
     structure: {
       usePositions: true,
       positions: {
-        Normal: { background: '', foreground: '', ambience: '', time_variants: {} },
         Witness: { background: '', foreground: '', ambience: '', time_variants: {} },
-        Prosecution: { background: '', foreground: '', ambience: '', time_variants: {} },
         Defense: { background: '', foreground: '', ambience: '', time_variants: {} },
+        Prosecution: { background: '', foreground: '', ambience: '', time_variants: {} },
         Judge: { background: '', foreground: '', ambience: '', time_variants: {} },
+        Counsel: { background: '', foreground: '', ambience: '', time_variants: {} },
       },
       time_variants: {},
       states: ['default'],
@@ -562,16 +568,16 @@ export const BUILTIN_BG_TEMPLATES = [
   {
     id: 'builtin-courtroom-day-night',
     name: 'Courtroom + Day / Night Cycle',
-    description: '5 courtroom positions, each configured with Day & Night time variants',
+    description: '5 courtroom positions with Day & Night time variants (Witness default)',
     builtin: true,
     structure: {
       usePositions: true,
       positions: {
-        Normal: { background: '', foreground: '', ambience: '', time_variants: { day: {}, night: {} } },
         Witness: { background: '', foreground: '', ambience: '', time_variants: { day: {}, night: {} } },
-        Prosecution: { background: '', foreground: '', ambience: '', time_variants: { day: {}, night: {} } },
         Defense: { background: '', foreground: '', ambience: '', time_variants: { day: {}, night: {} } },
+        Prosecution: { background: '', foreground: '', ambience: '', time_variants: { day: {}, night: {} } },
         Judge: { background: '', foreground: '', ambience: '', time_variants: { day: {}, night: {} } },
+        Counsel: { background: '', foreground: '', ambience: '', time_variants: { day: {}, night: {} } },
       },
       time_variants: {},
       states: ['default'],
@@ -673,7 +679,7 @@ export function applyBgTemplate(bg, template) {
         }
       }
       if (!st.positions[bg.activePosition]) {
-        bg.activePosition = Object.keys(st.positions)[0] || 'Normal';
+        bg.activePosition = st.positions.Witness ? 'Witness' : (Object.keys(st.positions)[0] || 'Witness');
       }
     } else {
       if (!st.time_variants) st.time_variants = {};

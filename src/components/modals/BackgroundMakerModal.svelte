@@ -695,7 +695,9 @@
   $: activeStateKey = activeBg?.activeState || 'default';
   $: activeState = activeBg?.states?.[activeStateKey] || activeBg?.states?.default || createStateVariant('default');
   $: usePositions = Boolean(activeState?.usePositions);
-  $: activePosKey = activeBg?.activePosition || 'Normal';
+  $: activePosKey = (activeBg?.activePosition && activeState?.positions?.[activeBg.activePosition])
+    ? activeBg.activePosition
+    : (activeState?.positions?.Witness ? 'Witness' : Object.keys(activeState?.positions || {})[0] || 'Witness');
   $: activePos = activeState?.positions?.[activePosKey] || Object.values(activeState?.positions || {})[0] || null;
 
   // Test stage state
@@ -890,12 +892,12 @@
 
   // Known camera positions gathered across templates, presets & library
   const stdCourtroomPositions = [
-    'Normal',
     'Witness',
-    'Prosecution',
     'Defense',
+    'Prosecution',
     'Judge',
     'Counsel',
+    'Counsel Prosecution',
     'Gallery',
     'Jury',
     'Bench',
@@ -996,9 +998,13 @@
       st.usePositions = enable;
       if (enable && (!st.positions || Object.keys(st.positions).length === 0)) {
         st.positions = {
-          Normal: createPosition('Normal', { background: st.background }),
+          Witness: createPosition('Witness', {
+            background: st.background || '',
+            foreground: st.foreground || '',
+            ambience: st.ambience || '',
+          }),
         };
-        bg.activePosition = 'Normal';
+        bg.activePosition = 'Witness';
       }
     });
   }

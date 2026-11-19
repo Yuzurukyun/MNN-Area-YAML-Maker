@@ -884,7 +884,16 @@ eq(parsedIni.states.default.positions.Witness.background, 'witnessempty.webp', '
 eq(parsedIni.states.default.positions.Witness.ambience, 'wsl/generic_room_day.opus', 'Witness ambience slot matches');
 eq(parsedIni.states.default.positions.Defense.background, 'cloudy_back.webp', 'Defense background slot matches');
 eq(parsedIni.states.default.positions.Defense.foreground, 'rain_front.webp', 'Defense foreground slot matches');
-eq(parsedIni.activePosition, 'Witness', 'active position defaults to first available position');
+eq(parsedIni.activePosition, 'Witness', 'active position defaults to Witness (wit)');
+eq(parsedIni.states.default.background, 'witnessempty.webp', 'default state background takes from wit');
+eq(parsedIni.states.default.ambience, 'wsl/generic_room_day.opus', 'default state ambience takes from wit');
+eq(Object.keys(parsedIni.states.default.positions.Witness.time_variants).length, 0, 'INI positions have no time variants (taken as-is)');
+eq(mapIniPositionName('wit'), 'Witness', 'wit maps to Witness');
+eq(mapIniPositionName('norm'), 'Witness', 'norm maps to Witness (witness == normal)');
+eq(mapIniPositionName('normal'), 'Witness', 'normal maps to Witness');
+eq(mapIniPositionName('sea'), 'Gallery', 'sea maps to Gallery');
+eq(mapIniPositionName('gal'), 'Gallery', 'gal maps to Gallery');
+ok(mapIniPositionName('sea') !== 'Normal', 'Gallery =/= Normal');
 
 // Single scene non-position INI test
 const singleSceneIni = `
