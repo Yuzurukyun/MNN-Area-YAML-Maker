@@ -732,8 +732,11 @@
 - **"From Folder" Origin Path Tracking & Project Export (`src/lib/bgSchema.js`, `src/lib/bgStore.js`, `src/lib/assetDb.js`, `src/components/modals/BackgroundMakerModal.svelte`, `src/components/Header.svelte`):**
     - Added `sanitizeToRootFolder(path)`: strips personal PC user directories (`C:/Users/name/...`, `/home/name/...`, drive letters) and guarantees paths always start cleanly at the root project folder (e.g. `Ante Infinitum/background/WS Lambda/Manor Room 1`).
     - Exported to project file data: included `from_folder` in `background.json`, `assets` with `fromFolder` in `backgrounds-library.json`, and `P.bgAssets` in `areas-project.json`, enabling seamless restoration of source origins when sharing or re-opening project backups.
-    - Full-width display & text autoscroll: updated `.repo-media-meta .m-val` and `.repo-unused-source-hint code` to take 100% of the available horizontal space (`flex: 1; min-width: 0; width: 100%`).
-    - Integrated `use:autoscroll`: when path exceeds available space, text smoothly scrolls across on hover (or continuously if configured in Settings) matching other labels across Area Maker.
+- **Repository Asset Inspector Modal Proportional Layout Fix (`src/components/modals/BackgroundMakerModal.svelte`):**
+    - Replaced rigid `height: min(85vh, 720px)` with natural content height (`max-height: 85vh`), completely eliminating the 400px empty black void beneath the usages table when an asset has few references.
+    - Set 16:9 aspect ratio (`aspect-ratio: 16 / 9; max-height: 245px`) on `.repo-media-viewport`, allowing standard courtroom backgrounds to fill the frame naturally with zero vertical letterbox bars.
+    - Applied clean multiline wrapping (`word-break: break-all; line-height: 1.4; max-height: 52px; overflow-y: auto`) on `.m-val` in `.repo-media-meta`, ensuring long paths (e.g. `Ante Infinitum/background/WS Lambda/West Island/House/House Room 1 [Evening]`) display in full without premature ellipsis clipping.
+    - Removed redundant `USAGES:` row in metadata box to eliminate visual conflict with the dedicated usages table header.
 
 ### Verification
 
@@ -743,7 +746,7 @@
 - **Zero Forced Reflow on Mount:** Confirmed `use:autoscroll` reflow bypass eliminates 500 synchronous layout queries when mounting `BackgroundMakerModal.svelte`, ensuring instant modal opening.
 - Verified on real disk assets: tested against actual repository `base/` (6,343 files) — successfully extracted 140 backgrounds, imported 346 unique images and 175 ambient audios (521 total assets), and cleanly filtered out 5,602 non-background/non-ambient bloat files with 0 dropped images or sounds.
 - Live browser CDP tests verified:
-    - **Full-Width "From Folder" & Autoscroll on Hover:** Verified via Chrome CDP that `.repo-media-meta .m-val` expands to full available width (379.4px) without clipping. When a path overflows (569px text), hovering smoothly activates `autoscroll` (`scrollLeft: 27px`, `textOverflow: 'clip'`) ([verified_from_folder_full_width_and_scroll.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_from_folder_full_width_and_scroll.png)).
+    - **Compact & Proportional Asset Inspector:** Verified modal wraps snugly to content height (414px high instead of 720px), eliminates empty black void, fills 16:9 viewport naturally, and displays full unclipped directory path ([verified_compact_proportional_inspector.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_compact_proportional_inspector.png)).
     - **Unified Auto-arrange Button:** Verified single cohesive button styled consistently with `Layouts ▾` and `Reachable ▾`, with `▶ Run Auto-arrange` inside dropdown menu.
     - **Field Header Emdash Spacing:** Verified `key — description` renders with clean non-collapsing spaces on both sides of the emdash.
     - **Post-Import Immediate Reactivity:** Verified that "Unused (N)" count and asset repository lists update reactively immediately upon completing import without reopening modal.

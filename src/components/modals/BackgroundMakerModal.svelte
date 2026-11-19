@@ -3930,18 +3930,14 @@
           <div class="repo-media-meta">
             <div class="meta-row">
               <span class="m-label">PATH:</span>
-              <code class="m-val" title={repoInspectAsset.relPath || repoInspectAsset.name} use:autoscroll>{repoInspectAsset.relPath || repoInspectAsset.name}</code>
+              <code class="m-val font-mono" title={repoInspectAsset.relPath || repoInspectAsset.name}>{repoInspectAsset.relPath || repoInspectAsset.name}</code>
             </div>
             {#if getFromFolderPath(repoInspectAsset)}
               <div class="meta-row">
                 <span class="m-label">FROM FOLDER:</span>
-                <code class="m-val" title={getFromFolderPath(repoInspectAsset)} use:autoscroll>{getFromFolderPath(repoInspectAsset)}</code>
+                <code class="m-val font-mono" title={getFromFolderPath(repoInspectAsset)}>{getFromFolderPath(repoInspectAsset)}</code>
               </div>
             {/if}
-            <div class="meta-row">
-              <span class="m-label">USAGES:</span>
-              <span class="m-val-highlight">{repoAssetUsages.length} reference{repoAssetUsages.length === 1 ? '' : 's'}</span>
-            </div>
           </div>
         </div>
 
@@ -6199,14 +6195,23 @@
 
   /* Repository Asset Inspector Modal (Horizontal Split Layout) */
   .repo-inspect-modal {
-    max-width: 1200px;
-    width: 95vw;
-    height: min(85vh, 720px);
+    max-width: 1040px;
+    width: 94vw;
     max-height: 85vh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
     padding: 0;
+    border-radius: var(--radius-lg, 8px);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.75);
+  }
+
+  .repo-inspect-modal .lightbox-head {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel2);
   }
 
   .repo-inspect-size-badge {
@@ -6222,8 +6227,7 @@
 
   .repo-inspect-body {
     display: grid;
-    grid-template-columns: 1fr 1.25fr;
-    flex: 1;
+    grid-template-columns: 440px 1fr;
     min-height: 0;
     overflow: hidden;
   }
@@ -6231,17 +6235,18 @@
   .repo-inspect-media-col {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 16px;
+    gap: 10px;
+    padding: 14px 16px;
     border-right: 1px solid var(--line);
-    background: color-mix(in srgb, var(--panel) 92%, #000);
+    background: color-mix(in srgb, var(--panel) 94%, #000);
     min-height: 0;
-    overflow: hidden;
+    justify-content: flex-start;
   }
 
   .repo-media-viewport {
-    flex: 1;
-    min-height: 220px;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    max-height: 245px;
     background: #000;
     border: 1px solid var(--line2);
     border-radius: var(--radius);
@@ -6250,6 +6255,7 @@
     justify-content: center;
     overflow: hidden;
     position: relative;
+    flex-shrink: 0;
   }
 
   .repo-letterboxed-img {
@@ -6265,7 +6271,7 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
-    padding: 10px 14px;
+    padding: 8px 12px;
     background: var(--input-bg);
     border: 1px solid var(--line);
     border-radius: var(--radius);
@@ -6277,7 +6283,7 @@
 
   .repo-media-meta .meta-row {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
     width: 100%;
     min-width: 0;
@@ -6288,9 +6294,10 @@
     font-size: 10px;
     color: var(--dim);
     letter-spacing: 0.05em;
-    min-width: 82px;
+    min-width: 80px;
     flex-shrink: 0;
     user-select: none;
+    padding-top: 3px;
   }
 
   .repo-media-meta .m-val {
@@ -6298,27 +6305,24 @@
     min-width: 0;
     width: 100%;
     color: var(--text-strong);
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
     display: block;
     background: var(--panel2);
     border: 1px solid var(--line);
     border-radius: 3px;
-    padding: 2px 6px;
+    padding: 3px 6px;
     box-sizing: border-box;
     cursor: default;
-  }
-
-  .repo-media-meta .m-val-highlight {
-    font-weight: 700;
-    color: var(--accent);
+    font-size: 11px;
+    line-height: 1.4;
+    word-break: break-all;
+    max-height: 52px;
+    overflow-y: auto;
   }
 
   .repo-inspect-usages-col {
     display: flex;
     flex-direction: column;
-    padding: 16px;
+    padding: 14px 16px;
     min-height: 0;
     overflow: hidden;
     gap: 10px;
@@ -6400,7 +6404,7 @@
   }
 
   .repo-usages-table-wrap {
-    flex: 1;
+    max-height: 340px;
     overflow-y: auto;
     border: 1px solid var(--line);
     border-radius: var(--radius);
