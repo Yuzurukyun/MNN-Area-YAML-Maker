@@ -502,8 +502,8 @@
     - Fixed issue where selecting or dragging text inside input fields or textareas (e.g. rename inputs, JSON inspectors, settings sliders, or template names) and releasing the mouse button outside the dialog card triggered an accidental backdrop click event that closed the modal.
     - Added backdrop drag-out protection tracking `scrimMouseDownTarget === e.currentTarget && e.target === e.currentTarget` alongside `on:mousedown|stopPropagation` on modal cards across all modals (`BackgroundMakerModal`, `AuditModal`, `ExportModal`, `SettingsModal`, `TemplatesModal`, `ConfirmModal`, `HelpModal`, and `TestMode`).
     - Modals now only close when a user explicitly initiates and completes a click directly on the backdrop scrim, never from dragging text selection out of inputs.
-- **Double-Click Slot Label to Rename (`BackgroundMakerModal.svelte`):**
-    - Double-clicking the filename label on any slot card (Background Image, Foreground, Ambience) or Time of Day mini-slot immediately opens the Rename Export Filename modal.
+- **Single-Click Slot Label to Rename (`BackgroundMakerModal.svelte`):**
+    - Single-clicking the filename label on any slot card (Background Image, Foreground, Ambience) or Time of Day mini-slot immediately opens the Rename Export Filename modal (since single-clicking the thumbnail specifically opens the Lightbox preview, single-clicking the text label provides direct, effortless access to renaming).
     - Added `.clickable-rename` with hover color highlighting and dotted underline cues for intuitive discoverability alongside the pencil icon `✏️`.
 - **Single-Click Lightbox Preview & In-Line Dual Renaming (`BackgroundMakerModal.svelte`):**
     - Single-clicking slot thumbnails or Asset Repository Pool cards directly opens the full-screen Lightbox asset inspector (with internal drag-detection flag `assetDragOccurred` ensuring drag-to-slot functionality remains completely uninterrupted).
@@ -518,8 +518,8 @@
 - `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **204 passed, 0 failed** (all assertions covering slot clearing on purge, global asset renaming propagation, slot export alias tracking, duplicate background, folder rename, state duplication, and time variant duplication).
 - `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5182 KB), `export/yuzu_area_maker_nomusic.html` (529 KB), and `docs/index.html` (529 KB) with 0 warnings.
 - Live browser CDP tests verified:
-    - **Universal Scrim Drag-Out Protection:** Selecting text inside rename input and dragging mouse completely outside dialog card onto backdrop before releasing mouseup does NOT dismiss the dialog; direct backdrop clicks still close cleanly (`verified_double_click_rename_dialog.png`).
-    - **Double-Click Slot Label to Rename:** Double-clicking slot filename labels on Background, Foreground, Ambience, and TOD mini-slots immediately opens the Rename Export Filename dialog with value pre-filled (`verified_double_click_rename_dialog.png`).
+    - **Universal Scrim Drag-Out Protection:** Selecting text inside rename input and dragging mouse completely outside dialog card onto backdrop before releasing mouseup does NOT dismiss the dialog; direct backdrop clicks still close cleanly (`verified_single_click_rename_dialog.png`).
+    - **Single-Click Slot Label to Rename:** Single-clicking slot filename labels on Background, Foreground, Ambience, and TOD mini-slots immediately opens the Rename Export Filename dialog with value pre-filled (`verified_single_click_rename_dialog.png`).
     - **Single-Click Lightbox Preview:** Single-clicking slot thumbnails or pool asset cards opens the Lightbox asset inspector smoothly while preserving asset drag-to-slot capability (`verified_lightbox_dual_inline_rename.png`).
     - **Strictly In-Line Dual Renaming Header:** Lightbox header displays `[IMAGE]` badge and `GLOBAL:` / `EXPORT:` input boxes vertically centered with 0.00px offset (`verified_lightbox_dual_inline_rename.png`).
     - **Dual Renaming Propagation:** Editing `GLOBAL:` renames asset globally across pool and library; editing `EXPORT:` creates/updates background slot alias and displays `alias of [original_name]` tag on slot (`verified_slots_reflecting_renames.png`).

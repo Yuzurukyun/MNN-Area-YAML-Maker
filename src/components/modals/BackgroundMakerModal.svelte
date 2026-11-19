@@ -1823,8 +1823,8 @@
                   {/if}
                   <div
                     class="slot-name-col clickable-rename"
-                    title="Double-click to rename export filename; right-click for options"
-                    on:dblclick|stopPropagation={() => triggerRenameSlotExport('background')}
+                    title="Click to rename export filename; right-click for options"
+                    on:click|stopPropagation={() => triggerRenameSlotExport('background')}
                   >
                     <span class="asset-filename" title={activeBgVal} use:autoscroll>{activeBgVal}</span>
                     {#if activeBg?.assetSources?.[activeBgVal]}
@@ -1903,8 +1903,8 @@
                   {/if}
                   <div
                     class="slot-name-col clickable-rename"
-                    title="Double-click to rename export filename; right-click for options"
-                    on:dblclick|stopPropagation={() => triggerRenameSlotExport('foreground')}
+                    title="Click to rename export filename; right-click for options"
+                    on:click|stopPropagation={() => triggerRenameSlotExport('foreground')}
                   >
                     <span class="asset-filename" title={activeFgVal} use:autoscroll>{activeFgVal}</span>
                     {#if activeBg?.assetSources?.[activeFgVal]}
@@ -1972,8 +1972,8 @@
                   >🎵</div>
                   <div
                     class="slot-name-col clickable-rename"
-                    title="Double-click to rename export filename; right-click for options"
-                    on:dblclick|stopPropagation={() => triggerRenameSlotExport('ambience')}
+                    title="Click to rename export filename; right-click for options"
+                    on:click|stopPropagation={() => triggerRenameSlotExport('ambience')}
                   >
                     <span class="asset-filename" title={activeAmbienceVal} use:autoscroll>{activeAmbienceVal}</span>
                     {#if activeBg?.assetSources?.[activeAmbienceVal] || (activeAmbienceVal && activeBg?.assetSources?.[activeAmbienceVal.split('/').pop()])}
@@ -2030,10 +2030,11 @@
                       on:drop={(e) => onSlotDrop(e, 'background', todKey)}
                     >
                       <span class="mslot-lbl">BG:</span>
+                      <!-- svelte-ignore a11y_click_events_have_key_events -->
                       <span
                         class="mslot-val clickable-rename"
-                        title="{tv.background || 'Same as base'} (Double-click to rename)"
-                        on:dblclick|stopPropagation={() => tv.background && triggerRenameSlotExport('background', todKey)}
+                        title="{tv.background || 'Same as base'} (Click to rename)"
+                        on:click|stopPropagation={() => tv.background && triggerRenameSlotExport('background', todKey)}
                       >{tv.background || 'Same as base'}</span>
                       {#if tv.background && activeBg?.assetSources?.[tv.background]}
                         <span class="mslot-alias-dot" title="Alias of {activeBg.assetSources[tv.background]}">●</span>
@@ -2055,10 +2056,11 @@
                       on:drop={(e) => onSlotDrop(e, 'foreground', todKey)}
                     >
                       <span class="mslot-lbl">FG:</span>
+                      <!-- svelte-ignore a11y_click_events_have_key_events -->
                       <span
                         class="mslot-val clickable-rename"
-                        title="{tv.foreground || 'None'} (Double-click to rename)"
-                        on:dblclick|stopPropagation={() => tv.foreground && triggerRenameSlotExport('foreground', todKey)}
+                        title="{tv.foreground || 'None'} (Click to rename)"
+                        on:click|stopPropagation={() => tv.foreground && triggerRenameSlotExport('foreground', todKey)}
                       >{tv.foreground || 'None'}</span>
                       {#if tv.foreground && activeBg?.assetSources?.[tv.foreground]}
                         <span class="mslot-alias-dot" title="Alias of {activeBg.assetSources[tv.foreground]}">●</span>
@@ -2080,10 +2082,11 @@
                       on:drop={(e) => onSlotDrop(e, 'ambience', todKey)}
                     >
                       <span class="mslot-lbl">Audio:</span>
+                      <!-- svelte-ignore a11y_click_events_have_key_events -->
                       <span
                         class="mslot-val clickable-rename"
-                        title="{tv.ambience || 'Same as base'} (Double-click to rename)"
-                        on:dblclick|stopPropagation={() => tv.ambience && triggerRenameSlotExport('ambience', todKey)}
+                        title="{tv.ambience || 'Same as base'} (Click to rename)"
+                        on:click|stopPropagation={() => tv.ambience && triggerRenameSlotExport('ambience', todKey)}
                       >{tv.ambience || 'Same as base'}</span>
                       {#if tv.ambience && (activeBg?.assetSources?.[tv.ambience] || activeBg?.assetSources?.[tv.ambience.split('/').pop()])}
                         <span class="mslot-alias-dot" title="Alias">●</span>
