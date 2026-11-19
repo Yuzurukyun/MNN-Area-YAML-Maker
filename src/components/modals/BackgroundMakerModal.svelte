@@ -453,6 +453,12 @@
 
   // Slot asset assignments
   function assignSlotAsset(targetType, filename, targetTod = null) {
+    if (targetType === 'ambience') {
+      filename = normalizeAmbiencePath(filename);
+    } else {
+      filename = (filename || '').trim().replace(/\\/g, '/');
+    }
+
     updateBg((bg) => {
       const st = bg.states[bg.activeState || 'default'];
       if (!st) return;
@@ -478,6 +484,65 @@
   let libraryMenuOpen = false;
   let isDraggingOverModal = false;
 
+  // Type classification helpers
+  function isImageAsset(assetOrFile) {
+    if (!assetOrFile) return false;
+    if (assetOrFile.type === 'image') return true;
+    if (typeof assetOrFile.type === 'string' && assetOrFile.type.startsWith('image/')) return true;
+    const name = assetOrFile.name || assetOrFile.relPath || '';
+    return /\.(png|webp|jpg|jpeg|gif|svg|avif)$/i.test(name);
+  }
+
+  function isAudioAsset(assetOrFile) {
+    if (!assetOrFile) return false;
+    if (assetOrFile.type === 'audio') return true;
+    if (typeof assetOrFile.type === 'string' && assetOrFile.type.startsWith('audio/')) return true;
+    const name = assetOrFile.name || assetOrFile.relPath || '';
+    return /\.(opus|mp3|ogg|wav|m4a|flac)$/i.test(name);
+  }
+
+  let dragOverSlot = null; // e.g. 'background', 'foreground', 'ambience', or 'background:day'
+  let dragOverSlotValid = false;
+
+  function onSlotDragOver(e, slotType, tod = null) {
+    e.preventDefault();
+    const slotKey = tod ? `${slotType}:${tod}` : slotType;
+    dragOverSlot = slotKey;
+
+    const isImgSlot = slotType === 'background' || slotType === 'foreground';
+    const isAmbSlot = slotType === 'ambience';
+
+    let isValid = false;
+    if (draggedAsset) {
+      if (isImgSlot) isValid = isImageAsset(draggedAsset);
+      else if (isAmbSlot) isValid = isAudioAsset(draggedAsset);
+    } else if (e.dataTransfer?.items?.length) {
+      if (e.dataTransfer.items.length > 1) {
+        // Multi-file drag is treated as general import, not single-slot drop
+        isValid = false;
+      } else {
+        const item = e.dataTransfer.items[0];
+        if (isImgSlot) isValid = item.type.startsWith('image/');
+        else if (isAmbSlot) isValid = item.type.startsWith('audio/') || item.type === '';
+      }
+    } else {
+      isValid = true;
+    }
+
+    dragOverSlotValid = isValid;
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = isValid ? 'copy' : 'none';
+    }
+  }
+
+  function onSlotDragLeave(e, slotType, tod = null) {
+    const slotKey = tod ? `${slotType}:${tod}` : slotType;
+    if (dragOverSlot === slotKey) {
+      dragOverSlot = null;
+      dragOverSlotValid = false;
+    }
+  }
+
   async function handleFiles(files) {
     if (!files || !files.length) return;
     const countBefore = backgrounds.length;
@@ -492,7 +557,9 @@
 
   function onModalDragOver(e) {
     e.preventDefault();
-    isDraggingOverModal = true;
+    if (!draggedAsset && e.dataTransfer?.types?.includes('Files')) {
+      isDraggingOverModal = true;
+    }
   }
   function onModalDragLeave(e) {
     if (e.currentTarget?.contains?.(e.relatedTarget)) return;
@@ -501,6 +568,15 @@
   function onModalDrop(e) {
     e.preventDefault();
     isDraggingOverModal = false;
+    dragOverSlot = null;
+    dragOverSlotValid = false;
+
+    // Internal asset card drag dropped outside slots -> ignore, do not re-import as file!
+    if (draggedAsset || e.dataTransfer?.types?.includes('application/x-area-maker-asset')) {
+      draggedAsset = null;
+      return;
+    }
+
     if (e.dataTransfer?.files?.length) {
       handleFiles(e.dataTransfer.files);
     }
@@ -509,14 +585,25 @@
   // Drag over pool
   function onPoolDragOver(e) {
     e.preventDefault();
-    isDraggingOverPool = true;
+    if (!draggedAsset && e.dataTransfer?.types?.includes('Files')) {
+      isDraggingOverPool = true;
+    }
   }
   function onPoolDragLeave() {
     isDraggingOverPool = false;
   }
   function onPoolDrop(e) {
     e.preventDefault();
+    e.stopPropagation();
     isDraggingOverPool = false;
+    dragOverSlot = null;
+    dragOverSlotValid = false;
+
+    if (draggedAsset || e.dataTransfer?.types?.includes('application/x-area-maker-asset')) {
+      draggedAsset = null;
+      return;
+    }
+
     if (e.dataTransfer?.files?.length) {
       handleFiles(e.dataTransfer.files);
     }
@@ -535,18 +622,74 @@
         url: asset.url
       }));
     } catch {}
+    e.dataTransfer.effectAllowed = 'copyMove';
+  }
+
+  function onAssetDragEnd() {
+    draggedAsset = null;
+    dragOverSlot = null;
+    dragOverSlotValid = false;
   }
 
   function onSlotDrop(e, slotType, tod = null) {
     e.preventDefault();
+    e.stopPropagation();
+    dragOverSlot = null;
+    dragOverSlotValid = false;
+
+    const isImgSlot = slotType === 'background' || slotType === 'foreground';
+    const isAmbSlot = slotType === 'ambience';
+
+    // 1. Dragged from Asset Pool
     if (draggedAsset) {
-      assignSlotAsset(slotType, draggedAsset.relPath, tod);
+      if (isImgSlot && !isImageAsset(draggedAsset)) {
+        notify('Audio files cannot be assigned to image slots.', 'warn');
+        draggedAsset = null;
+        return;
+      }
+      if (isAmbSlot && !isAudioAsset(draggedAsset)) {
+        notify('Image files cannot be assigned to Ambience Audio.', 'warn');
+        draggedAsset = null;
+        return;
+      }
+
+      const val = isAmbSlot ? normalizeAmbiencePath(draggedAsset.relPath) : draggedAsset.relPath;
+      assignSlotAsset(slotType, val, tod);
+      notify(`Assigned ${val} to ${slotType}${tod ? ` (${tod})` : ''}`, 'ok');
       draggedAsset = null;
-    } else if (e.dataTransfer?.files?.length) {
-      const f = e.dataTransfer.files[0];
+      return;
+    }
+
+    // 2. Dropped from OS File Manager
+    if (e.dataTransfer?.files?.length) {
+      const files = Array.from(e.dataTransfer.files);
+
+      // If multiple files dropped over a slot, treat as general asset import into the pool without slotting!
+      if (files.length > 1) {
+        handleFiles(files);
+        notify(`Imported ${files.length} files into Asset Pool. Drag individual assets onto slots to assign.`, 'ok');
+        return;
+      }
+
+      // Single file dropped directly onto a slot
+      const f = files[0];
+      const isFileAudio = isAudioAsset(f);
+      const isFileImage = isImageAsset(f);
+
+      if (isImgSlot && !isFileImage) {
+        notify('Only image files (.webp, .png, .jpg) can be assigned to image slots.', 'warn');
+        return;
+      }
+      if (isAmbSlot && !isFileAudio) {
+        notify('Only audio files (.opus, .mp3, .ogg, .wav) can be assigned to Ambience Audio.', 'warn');
+        return;
+      }
+
+      // Register into pool
       handleFiles([f]);
-      const isAudio = f.type.startsWith('audio/') || /\.(opus|mp3|ogg|wav)$/i.test(f.name);
-      assignSlotAsset(slotType, isAudio ? normalizeAmbiencePath(f.name) : f.name, tod);
+      const val = isAmbSlot ? normalizeAmbiencePath(f.name) : f.name;
+      assignSlotAsset(slotType, val, tod);
+      notify(`Assigned ${val} to ${slotType}${tod ? ` (${tod})` : ''}`, 'ok');
     }
   }
 
@@ -596,6 +739,10 @@
     }
     return true;
   });
+
+  // Available categorized assets for quick-picking
+  $: availableImages = assetPool.filter((a) => a.type === 'image');
+  $: availableAudios = assetPool.filter((a) => a.type === 'audio');
 </script>
 
 <svelte:window
@@ -994,23 +1141,40 @@
           <div class="slots-grid">
             <!-- Background Image -->
             <div
-              class="slot-card"
+              class="slot-card {dragOverSlot === 'background' ? (dragOverSlotValid ? 'drag-target-valid' : 'drag-target-invalid') : ''}"
               role="region"
               aria-label="Background image slot"
-              on:dragover|preventDefault
+              on:dragover={(e) => onSlotDragOver(e, 'background')}
+              on:dragleave={(e) => onSlotDragLeave(e, 'background')}
               on:drop={(e) => onSlotDrop(e, 'background')}
             >
               <div class="slot-head">
                 <span class="slot-title">★ Background Image</span>
                 {#if activeBgVal}
                   <button class="icon-btn" title="Clear image" on:click={() => assignSlotAsset('background', '')}>✕</button>
+                {:else if availableImages.length > 0}
+                  <select
+                    class="mini-slot-picker"
+                    title="Quick pick from imported images"
+                    on:change={(e) => {
+                      if (e.target.value) {
+                        assignSlotAsset('background', e.target.value);
+                        e.target.value = '';
+                      }
+                    }}
+                  >
+                    <option value="">▾ Pick image…</option>
+                    {#each availableImages as a}
+                      <option value={a.relPath || a.name}>{a.relPath || a.name}</option>
+                    {/each}
+                  </select>
                 {/if}
               </div>
 
               {#if activeBgVal}
                 <div class="slot-content has-asset">
                   {#if activeBgThumb}
-                    <img src={activeBgThumb} alt={activeBgVal} class="slot-thumb" />
+                    <img draggable="false" src={activeBgThumb} alt={activeBgVal} class="slot-thumb" />
                   {:else}
                     <div class="no-thumb-box">🖼</div>
                   {/if}
@@ -1026,23 +1190,40 @@
 
             <!-- Foreground Overlay Filter -->
             <div
-              class="slot-card"
+              class="slot-card {dragOverSlot === 'foreground' ? (dragOverSlotValid ? 'drag-target-valid' : 'drag-target-invalid') : ''}"
               role="region"
               aria-label="Foreground overlay slot"
-              on:dragover|preventDefault
+              on:dragover={(e) => onSlotDragOver(e, 'foreground')}
+              on:dragleave={(e) => onSlotDragLeave(e, 'foreground')}
               on:drop={(e) => onSlotDrop(e, 'foreground')}
             >
               <div class="slot-head">
                 <span class="slot-title">Foreground Overlay (Filter / Desk)</span>
                 {#if activeFgVal}
                   <button class="icon-btn" title="Clear overlay" on:click={() => assignSlotAsset('foreground', '')}>✕</button>
+                {:else if availableImages.length > 0}
+                  <select
+                    class="mini-slot-picker"
+                    title="Quick pick from imported overlay images"
+                    on:change={(e) => {
+                      if (e.target.value) {
+                        assignSlotAsset('foreground', e.target.value);
+                        e.target.value = '';
+                      }
+                    }}
+                  >
+                    <option value="">▾ Pick overlay…</option>
+                    {#each availableImages as a}
+                      <option value={a.relPath || a.name}>{a.relPath || a.name}</option>
+                    {/each}
+                  </select>
                 {/if}
               </div>
 
               {#if activeFgVal}
                 <div class="slot-content has-asset">
                   {#if activeFgThumb}
-                    <img src={activeFgThumb} alt={activeFgVal} class="slot-thumb" />
+                    <img draggable="false" src={activeFgThumb} alt={activeFgVal} class="slot-thumb" />
                   {:else}
                     <div class="no-thumb-box">🌫</div>
                   {/if}
@@ -1058,16 +1239,33 @@
 
             <!-- Ambience Audio -->
             <div
-              class="slot-card"
+              class="slot-card {dragOverSlot === 'ambience' ? (dragOverSlotValid ? 'drag-target-valid' : 'drag-target-invalid') : ''}"
               role="region"
               aria-label="Ambience audio slot"
-              on:dragover|preventDefault
+              on:dragover={(e) => onSlotDragOver(e, 'ambience')}
+              on:dragleave={(e) => onSlotDragLeave(e, 'ambience')}
               on:drop={(e) => onSlotDrop(e, 'ambience')}
             >
               <div class="slot-head">
                 <span class="slot-title">Ambience Audio (base/sounds/ambient/)</span>
                 {#if activeAmbienceVal}
                   <button class="icon-btn" title="Clear sound" on:click={() => assignSlotAsset('ambience', '')}>✕</button>
+                {:else if availableAudios.length > 0}
+                  <select
+                    class="mini-slot-picker"
+                    title="Quick pick from imported audio"
+                    on:change={(e) => {
+                      if (e.target.value) {
+                        assignSlotAsset('ambience', e.target.value);
+                        e.target.value = '';
+                      }
+                    }}
+                  >
+                    <option value="">▾ Pick audio…</option>
+                    {#each availableAudios as a}
+                      <option value={a.relPath || a.name}>{a.relPath || a.name}</option>
+                    {/each}
+                  </select>
                 {/if}
               </div>
 
@@ -1108,39 +1306,51 @@
 
                     <!-- Mini slots -->
                     <div
-                      class="mini-slot"
+                      class="mini-slot {dragOverSlot === `background:${todKey}` ? (dragOverSlotValid ? 'drag-target-valid' : 'drag-target-invalid') : ''}"
                       role="region"
                       aria-label="Background slot for {todKey}"
-                      title="Drop or click to set background for {todKey}"
-                      on:dragover|preventDefault
+                      title="Drop image to set background for {todKey}"
+                      on:dragover={(e) => onSlotDragOver(e, 'background', todKey)}
+                      on:dragleave={(e) => onSlotDragLeave(e, 'background', todKey)}
                       on:drop={(e) => onSlotDrop(e, 'background', todKey)}
                     >
                       <span class="mslot-lbl">BG:</span>
                       <span class="mslot-val">{tv.background || 'Same as base'}</span>
+                      {#if tv.background}
+                        <button class="mslot-clear-btn" title="Clear background (fallback to base)" on:click|stopPropagation={() => assignSlotAsset('background', '', todKey)}>✕</button>
+                      {/if}
                     </div>
 
                     <div
-                      class="mini-slot"
+                      class="mini-slot {dragOverSlot === `foreground:${todKey}` ? (dragOverSlotValid ? 'drag-target-valid' : 'drag-target-invalid') : ''}"
                       role="region"
                       aria-label="Foreground slot for {todKey}"
-                      title="Drop or click to set foreground overlay for {todKey}"
-                      on:dragover|preventDefault
+                      title="Drop overlay image to set foreground for {todKey}"
+                      on:dragover={(e) => onSlotDragOver(e, 'foreground', todKey)}
+                      on:dragleave={(e) => onSlotDragLeave(e, 'foreground', todKey)}
                       on:drop={(e) => onSlotDrop(e, 'foreground', todKey)}
                     >
                       <span class="mslot-lbl">FG:</span>
                       <span class="mslot-val">{tv.foreground || 'None'}</span>
+                      {#if tv.foreground}
+                        <button class="mslot-clear-btn" title="Clear foreground" on:click|stopPropagation={() => assignSlotAsset('foreground', '', todKey)}>✕</button>
+                      {/if}
                     </div>
 
                     <div
-                      class="mini-slot"
+                      class="mini-slot {dragOverSlot === `ambience:${todKey}` ? (dragOverSlotValid ? 'drag-target-valid' : 'drag-target-invalid') : ''}"
                       role="region"
                       aria-label="Ambience audio slot for {todKey}"
-                      title="Drop or click to set ambience audio for {todKey}"
-                      on:dragover|preventDefault
+                      title="Drop sound (.opus / .mp3) to set ambience audio for {todKey}"
+                      on:dragover={(e) => onSlotDragOver(e, 'ambience', todKey)}
+                      on:dragleave={(e) => onSlotDragLeave(e, 'ambience', todKey)}
                       on:drop={(e) => onSlotDrop(e, 'ambience', todKey)}
                     >
                       <span class="mslot-lbl">Audio:</span>
                       <span class="mslot-val">{tv.ambience || 'Same as base'}</span>
+                      {#if tv.ambience}
+                        <button class="mslot-clear-btn" title="Clear ambience (fallback to base)" on:click|stopPropagation={() => assignSlotAsset('ambience', '', todKey)}>✕</button>
+                      {/if}
                     </div>
 
                     <button
@@ -1279,6 +1489,7 @@
           <div class="canvas-viewport" style="--stage-aspect:{stageAspectW} / {stageAspectH}">
             {#if resolvedBgUrl}
               <img
+                draggable="false"
                 src={resolvedBgUrl}
                 alt="Background"
                 class="stage-bg-layer"
@@ -1294,6 +1505,7 @@
 
             {#if resolvedFgUrl}
               <img
+                draggable="false"
                 src={resolvedFgUrl}
                 alt="Foreground"
                 class="stage-fg-layer"
@@ -1449,10 +1661,11 @@
                 draggable="true"
                 title="Drag onto any slot: {asset.relPath} ({Math.round(asset.size / 1024)} KB)"
                 on:dragstart={(e) => onAssetDragStart(e, asset)}
+                on:dragend={onAssetDragEnd}
               >
                 {#if asset.type === 'image'}
                   <div class="card-thumb-wrap">
-                    <img src={asset.url} alt={asset.name} class="asset-img" />
+                    <img draggable="false" src={asset.url} alt={asset.name} class="asset-img" />
                   </div>
                 {:else}
                   <div class="card-thumb-wrap audio">
@@ -2393,6 +2606,50 @@
   }
   .slot-card:hover {
     border-color: var(--accent);
+  }
+  .slot-card.drag-target-valid,
+  .mini-slot.drag-target-valid {
+    outline: 2px dashed var(--accent) !important;
+    outline-offset: -2px;
+    background: rgba(224, 90, 71, 0.12) !important;
+  }
+  .slot-card.drag-target-invalid,
+  .mini-slot.drag-target-invalid {
+    outline: 2px dashed #ef4444 !important;
+    outline-offset: -2px;
+    background: rgba(239, 68, 68, 0.15) !important;
+    cursor: not-allowed !important;
+  }
+  .mini-slot-picker {
+    background: var(--input-bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    color: var(--dim);
+    font-size: 10px;
+    padding: 2px 4px;
+    max-width: 140px;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.15s ease;
+  }
+  .mini-slot-picker:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+  .mslot-clear-btn {
+    background: none;
+    border: none;
+    color: var(--dim);
+    font-size: 10px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+    margin-left: auto;
+    flex-shrink: 0;
+    transition: color 0.15s ease;
+  }
+  .mslot-clear-btn:hover {
+    color: #ef4444;
   }
 
   .slot-head {

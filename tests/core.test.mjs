@@ -768,5 +768,15 @@ ok(!refOnly1.has('scene_b.png'), 'refOnly1 no longer references scene_b.png afte
 const refNone = bgStore.getReferencedAssetNames([]);
 eq(refNone.size, 0, 'empty background list references zero assets');
 
+/* ---- Slot type validation & ambience normalization ---- */
+eq(normalizeAmbiencePath('base/sounds/ambient/nature/forest.opus'), 'nature/forest.opus', 'normalizes nested ambience path');
+eq(normalizeAmbiencePath('nature/forest.opus'), 'nature/forest.opus', 'preserves already normalized ambience path');
+eq(normalizeAmbiencePath('wind.mp3'), 'wind.mp3', 'normalizes single audio filename');
+
+const slotTestBg = createBackground('Validation/Test');
+eq(slotTestBg.states.default.background, '', 'starts with empty background');
+eq(slotTestBg.states.default.foreground, '', 'starts with empty foreground');
+eq(slotTestBg.states.default.ambience, '', 'starts with empty ambience');
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

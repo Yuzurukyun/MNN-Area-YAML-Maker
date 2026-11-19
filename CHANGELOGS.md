@@ -422,26 +422,37 @@
     - Replaced generic browser `confirm()` popups with a custom styled confirmation modal (`.purge-confirm-dialog`).
     - Surfaces clear explanations of what will be purged, distinguishing between safe unused asset cleanup and destructive full pool purges (`⚠️ Destructive Action` badge).
 
+### Slot Type Safety, Duplicate Prevention & Import Disambiguation
+
+- **Ghost Duplicate Asset Creation Fix (`BackgroundMakerModal.svelte`):**
+    - Fixed issue where dragging an asset card from the pool dock into a slot caused Chromium's native `<img>` dragging to synthesize a temporary file with a UUID filename, which bubbled up to `onModalDrop` and registered as a duplicate asset in the pool.
+    - Added `draggable="false"` on all thumbnail `<img>` elements and called `e.stopPropagation()` on slot drops.
+    - Added explicit guard in `onModalDrop` and `onPoolDrop` to ignore internal asset drags (`application/x-area-maker-asset`), ensuring asset cards dropped onto slots or modal background never re-import as new files.
+- **Strict Slot Type Enforcement (`BackgroundMakerModal.svelte`):**
+    - Disallowed audio files from being slotted into image slots (`background`, `foreground`, and TOD `background`/`foreground`). Any attempt to drop or assign audio to an image slot is strictly blocked with an explanatory warning toast (`⚠️ Audio files cannot be assigned to image slots.`).
+    - Disallowed image files from being slotted into ambience audio slots (`ambience` and TOD `ambience`). Any attempt to drop or assign an image to ambience is strictly blocked with an explanatory warning toast (`⚠️ Image files cannot be assigned to Ambience Audio.`).
+    - Added interactive drag-over visual cues: dragging valid assets over slots displays a glowing accent border (`.drag-target-valid`), while dragging mismatched assets displays a red dashed border and a forbidden cursor (`.drag-target-invalid` with `dropEffect = 'none'`).
+- **Batch Import vs Single-Slot Drop Separation (`BackgroundMakerModal.svelte`):**
+    - Fixed issue where dragging multiple files from desktop to import them accidentally slotted the first file into whichever slot the cursor was over.
+    - Dropping multiple files (`files.length > 1`) anywhere over slot cards now cleanly imports all files into the Asset Repository Pool without assigning them to any individual slot.
+    - Dropping a single file directly onto a slot card registers it into the pool and assigns it only if its file type matches the slot type.
+- **Slot Quick-Pickers & Mini-Slot Clear Actions (`BackgroundMakerModal.svelte`):**
+    - Added quick-pick dropdowns (`▾ Pick image…`, `▾ Pick overlay…`, `▾ Pick audio…`) on empty slot card headers, allowing users to assign assets directly with a single click without requiring drag-and-drop.
+    - Added clear `✕` buttons on Time of Day mini-slots (`.mslot-clear-btn`), enabling users to clear individual TOD slot overrides back to base without deleting the entire time variant.
+
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **187 passed, 0 failed** (7 new assertions verifying `bgStore.getReferencedAssetNames(bgs)` reactivity on background array mutations, empty array handling, and asset purge/clear).
-- `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5143 KB), `export/yuzu_area_maker_nomusic.html` (490 KB), and `docs/index.html` (490 KB) with 0 warnings.
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **193 passed, 0 failed** (6 new assertions verifying ambience path normalization and clean empty slot initialization).
+- `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5149 KB), `export/yuzu_area_maker_nomusic.html` (496 KB), and `docs/index.html` (496 KB) with 0 warnings.
 - Live browser CDP tests verified:
+    - Dragging or dropping audio files onto Background Image or Foreground Overlay is strictly blocked with warning toast (`rejected: true`).
+    - Dragging or dropping image files onto Ambience Audio is strictly blocked with warning toast (`rejected: true`).
+    - Dropping valid image file onto Background slot assigns cleanly (`assigned: true`).
+    - Dragging an asset card from the asset pool into a slot does NOT create a duplicate in the asset pool (`noDuplicateCreated: true`, pool count remains constant).
+    - Dropping multiple files over a slot card imports all files into the Asset Pool without auto-slotting into the slot card (`didNotSlot: true`).
+    - Time of Day mini-slot clear buttons reset overrides back to empty base defaults.
     - `[ 🧹 Purge ▾ ]` dropdown renders in the bottom dock and opens upwards with `🧹 Purge Unused (N)` and `🗑 Purge All (N)`.
     - Clicking `🧹 Purge Unused` opens styled confirmation modal; confirming purges unreferenced assets from memory and IndexedDB.
-    - **Real-time reactivity verified:** Deleting backgrounds immediately marks assets as unreferenced and updates the `Unused` pill and purge counter from 0 to 1 in real time without closing or reopening the modal.
+    - Real-time reactivity verified: Deleting backgrounds immediately marks assets as unreferenced and updates the `Unused` pill and purge counter in real time without closing or reopening the modal.
     - Clicking `🗑 Purge All` opens destructive confirmation modal with warning badge; confirming clears all assets and disables the Purge dropdown.
-    - Variant delete `✕` button renders on far right end of `.tod-row-card` (child 5 of 5) isolated from the badge.
-    - `+ Time Variant` button opens modal with preset and library time-of-day dropdown.
-    - `+ State` button opens modal with suggested and library state dropdown.
-    - `📋 Templates ▾` menu applies templates cleanly to active background in 1 click.
-    - Manage & Save Templates dialog lists all 6 presets and enables saving active background structures.
-    - Standalone `📷` snapshot button in Header dispatches canvas screenshot export.
-    - `Export ▾` dropdown menu contains only YAML, JSON, and ZIP (no duplicate PNG).
-    - Link mode dropdown `[ 🔗 Reachable ▾ ]` switches layers and displays checkmarks.
-    - `[ 👁 View ▾ 1 ]` dropdown toggles visibility filters and displays active count badge.
-    - Inspector segmented toggle `[ ⚡ Essentials | 🛠️ Full Server Spec ]` progressively discloses server flags while retaining modified section pills.
-    - Visual preview chevron collapses and expands node/scene preview.
-    - `Autoscroll long labels when not focused` setting renders in Settings modal and drives continuous auto-scrolling when enabled, and hover-scrolling when false.
-    - Background Maker Asset Pool dock expands and collapses on `▼` / `▲` toggle.
     - Music player left completely untouched.
