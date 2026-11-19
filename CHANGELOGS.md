@@ -446,19 +446,65 @@
         - **Ambience:** Title `Ambience` with dimmed secondary descriptor `base/sounds/ambient`.
     - Styled slot descriptions with smaller, dimmed monospace font tokens (`var(--dim)`, 9.5px) matching the app's inspector and toolbar design language, with `white-space: nowrap` and ellipsis preventing wrapping alongside quick-pick dropdowns.
 
+### Slot Type Safety, Duplicate Prevention & Import Disambiguation
+
+- **Ghost Duplicate Asset Creation Fix (`BackgroundMakerModal.svelte`):**
+    - Fixed issue where dragging an asset card from the pool dock into a slot caused Chromium's native `<img>` dragging to synthesize a temporary file with a UUID filename, which bubbled up to `onModalDrop` and registered as a duplicate asset in the pool.
+    - Added `draggable="false"` on all thumbnail `<img>` elements and called `e.stopPropagation()` on slot drops.
+    - Added explicit guard in `onModalDrop` and `onPoolDrop` to ignore internal asset drags (`application/x-area-maker-asset`), ensuring asset cards dropped onto slots or modal background never re-import as new files.
+- **Strict Slot Type Enforcement (`BackgroundMakerModal.svelte`):**
+    - Disallowed audio files from being slotted into image slots (`background`, `foreground`, and TOD `background`/`foreground`). Any attempt to drop or assign audio to an image slot is strictly blocked with an explanatory warning toast (`⚠️ Audio files cannot be assigned to image slots.`).
+    - Disallowed image files from being slotted into ambience audio slots (`ambience` and TOD `ambience`). Any attempt to drop or assign an image to ambience is strictly blocked with an explanatory warning toast (`⚠️ Image files cannot be assigned to Ambience Audio.`).
+    - Added interactive drag-over visual cues: dragging valid assets over slots displays a glowing accent border (`.drag-target-valid`), while dragging mismatched assets displays a red dashed border and a forbidden cursor (`.drag-target-invalid` with `dropEffect = 'none'`).
+- **Batch Import vs Single-Slot Drop Separation (`BackgroundMakerModal.svelte`):**
+    - Fixed issue where dragging multiple files from desktop to import them accidentally slotted the first file into whichever slot the cursor was over.
+    - Dropping multiple files (`files.length > 1`) anywhere over slot cards now cleanly imports all files into the Asset Repository Pool without assigning them to any individual slot.
+    - Dropping a single file directly onto a slot card registers it into the pool and assigns it only if its file type matches the slot type.
+- **Slot Quick-Pickers & Mini-Slot Clear Actions (`BackgroundMakerModal.svelte`):**
+    - Added quick-pick dropdowns (`▾ Pick image…`, `▾ Pick overlay…`, `▾ Pick audio…`) on empty slot card headers, allowing users to assign assets directly with a single click without requiring drag-and-drop.
+    - Added clear `✕` buttons on Time of Day mini-slots (`.mslot-clear-btn`), enabling users to clear individual TOD slot overrides back to base without deleting the entire time variant.
+
+### Background Maker Header Restructure, Purge Reset, Global/Local Asset Renaming & Context Menus
+
+- **Purge All Slot Clearing & Dead Reference Elimination (`src/lib/bgStore.js`, `BackgroundMakerModal.svelte`):**
+    - Fixed issue where clicking **Purge All** emptied the Asset Repository Pool but left backgrounds, states, positions, and time variants holding onto dead/orphan filenames (`st.background`, `st.foreground`, `st.ambience`).
+    - `bgStore.clearAllAssets(clearBackgroundSlots = true)` now resets all assigned slot filenames across all backgrounds, states, positions, and time variants to `''`, clears all slot aliases (`bg.assetSources = {}`), and updates the Live Stage Monitor to clean `No image assigned` fallback in real time.
+- **Two-Row Header Layout & Blinking Caret (`BackgroundMakerModal.svelte`):**
+    - Removed the gray badge box `<span class="maker-subtag">MNN SCENE ASSET BUILDER</span>`.
+    - Transformed the header into a clean two-row layout:
+        - **Row 1 (`.maker-title-row`):** Full-width header title `// BACKGROUND.JSON MAKER_` with terminal blinking cursor (`.cursor` animated with `cursor-blink` keyframes), plus the modal close `✕` button on the far right.
+        - **Row 2 (`.maker-toolbar-row`):** Dedicated toolbar row below the title hosting `✓ Apply to Area #N` on the left and `Import…`, `Copy JSON`, `Export JSON`, `Export Package (.zip)`, `Library ▾`, `Templates ▾` on the right, completely resolving header crowding.
+- **Global Asset Renaming with Instant Propagation (`src/lib/bgStore.js`, `src/App.svelte`, `BackgroundMakerModal.svelte`):**
+    - Added global asset renaming function `bgStore.renameAsset(assetId, newName)` accessible from the Asset Repository Pool cards context menu.
+    - Automatically updates the asset file and filename in the asset pool and IndexedDB cache, propagates the new name across all backgrounds, states, positions, time variants, and `assetSources` maps in the library, and dispatches a `bg-asset-renamed` event.
+    - `App.svelte` listens for `bg-asset-renamed` and synchronizes all area node backgrounds (`area.background`, `area.background_tod`, and canvas image overlays) across the active project graph in real time.
+- **Per-Background Slot Export Filename Aliases (`src/lib/bgStore.js`, `BackgroundMakerModal.svelte`):**
+    - Added local slot override renaming function via the pencil icon `✏️` on slot headers and right-click context menu (**Rename Export Filename…**).
+    - Allows users to customize the exported filename written into `background.json` and package ZIP for that specific background (e.g. exporting `IMG_098.png` as `courtroom_day.png`) without modifying the original asset in the pool.
+    - Preserves source-to-export mapping via `bg.assetSources[exportName] = originalPoolAssetName`.
+    - Renders an `alias of [original_name]` indicator tag beneath the slot filename and an amber dot indicator `●` on Time of Day mini-slots.
+    - Slot context menu includes **Reset Export Filename (Reset to Asset Name)** to revert aliases back to the pool asset name.
+    - `bgStore.exportZip` and `bgStore.exportAllZip` read `bg.assetSources` and bundle assets directly under their customized slot names in the ZIP packages.
+    - `bgStore.getReferencedAssetNames` recognizes source assets mapped in `assetSources` as used so aliased assets are never accidentally purged.
+- **Right-Click Context Menu System & Lightbox Previewer (`BackgroundMakerModal.svelte`):**
+    - Added rich floating context menus (`.bg-ctx-menu`) across Background JSON Maker surfaces:
+        - **Asset Pool Cards:** Rename Asset (Global), Inspect Asset Preview, Assign as Background, Assign as Foreground, Assign as Ambience (disabled for images), Copy Filename, Copy Server Path, Delete from Pool.
+        - **Primary Slot Cards & TOD Mini-Slots:** Rename Export Filename…, Reset to Asset Name, Inspect Asset Preview, Copy Filename, Copy Server Path, Clear Slot.
+        - **Left Sidebar Backgrounds:** Duplicate Background, Rename Folder Path…, Export JSON, Export Package (.zip), Delete Background.
+        - **State Variant Tabs:** Duplicate State, Rename State…, Delete State.
+        - **Time of Day Variant Rows:** Duplicate Time Variant, Rename Time Variant Key…, Clear All Overrides (Reset to Base), Delete Time Variant.
+        - **Live Stage Monitor:** Switch Fit Mode (Contain / Cover), Inspect Stage Image Preview, Copy Live Visual Config JSON.
+    - Added full-screen Lightbox asset preview modal (`.inspect-lightbox`) opened via context menu or double-clicking any slot or pool card, displaying full-resolution images or playing audio with scrub controls and file metadata.
+
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **193 passed, 0 failed** (6 new assertions verifying ambience path normalization and clean empty slot initialization).
-- `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5149 KB), `export/yuzu_area_maker_nomusic.html` (496 KB), and `docs/index.html` (496 KB) with 0 warnings.
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **204 passed, 0 failed** (11 new assertions covering slot clearing on purge, global asset renaming propagation, slot export alias tracking, duplicate background, folder rename, state duplication, and time variant duplication).
+- `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5299 KB), `export/yuzu_area_maker_nomusic.html` (534 KB), and `docs/index.html` (534 KB) with 0 warnings.
 - Live browser CDP tests verified:
-    - Dragging or dropping audio files onto Background Image or Foreground Overlay is strictly blocked with warning toast (`rejected: true`).
-    - Dragging or dropping image files onto Ambience Audio is strictly blocked with warning toast (`rejected: true`).
-    - Dropping valid image file onto Background slot assigns cleanly (`assigned: true`).
-    - Dragging an asset card from the asset pool into a slot does NOT create a duplicate in the asset pool (`noDuplicateCreated: true`, pool count remains constant).
-    - Dropping multiple files over a slot card imports all files into the Asset Pool without auto-slotting into the slot card (`didNotSlot: true`).
-    - Time of Day mini-slot clear buttons reset overrides back to empty base defaults.
-    - `[ 🧹 Purge ▾ ]` dropdown renders in the bottom dock and opens upwards with `🧹 Purge Unused (N)` and `🗑 Purge All (N)`.
-    - Clicking `🧹 Purge Unused` opens styled confirmation modal; confirming purges unreferenced assets from memory and IndexedDB.
-    - Real-time reactivity verified: Deleting backgrounds immediately marks assets as unreferenced and updates the `Unused` pill and purge counter in real time without closing or reopening the modal.
-    - Clicking `🗑 Purge All` opens destructive confirmation modal with warning badge; confirming clears all assets and disables the Purge dropdown.
+    - **Header & Toolbar Layout:** Title row renders `// BACKGROUND.JSON MAKER_` with blinking cursor without the gray badge; action buttons occupy their own dedicated row below without title clipping ([verified_bg_maker_header_and_toolbar.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_bg_maker_header_and_toolbar.png)).
+    - **Purge All Slot Clearing:** Clicking `Purge All` removes assets and cleanly resets all slots and Live Stage Monitor to empty state without leaving ghost references ([verified_purge_all_clean_slots.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_purge_all_clean_slots.png)).
+    - **Asset Context Menu:** Right-clicking asset cards opens options menu with global rename, preview, quick-assign, copy, and delete ([verified_asset_context_menu.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_asset_context_menu.png)).
+    - **Slot Context Menu:** Right-clicking slot cards opens slot actions with rename export filename, inspect, copy path, and clear slot ([verified_slot_context_menu.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_slot_context_menu.png)).
+    - **Slot Export Renaming & Aliasing:** Renaming slot export filename displays `alias of [original_name]` and updates Live Stage Monitor without altering pool asset ([verified_slot_alias_tag.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_slot_alias_tag.png)).
     - Music player left completely untouched.
+    - Verified strictly on branch `v2.1.0-dev`.

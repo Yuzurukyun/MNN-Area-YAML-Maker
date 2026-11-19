@@ -396,8 +396,8 @@ export const bgStore = {
       data: this.exportLibraryJson(),
     });
 
-    const referencedImages = new Map(); // imgName -> folder
-    const referencedAudios = new Set();
+    const referencedImages = []; // Array<{ exportName, sourceName, folder }>
+    const referencedAudios = []; // Array<{ exportName, sourceName }>
 
     for (const bg of backgrounds) {
       const folder = normalizeBgPath(bg.folder) || 'Background';
@@ -409,9 +409,23 @@ export const bgStore = {
 
       function collectAssets(obj) {
         if (!obj) return;
-        if (obj.background) referencedImages.set(obj.background, folder);
-        if (obj.foreground) referencedImages.set(obj.foreground, folder);
-        if (obj.ambience) referencedAudios.add(normalizeAmbiencePath(obj.ambience));
+        if (obj.background) {
+          const exportName = obj.background;
+          const sourceName = bg.assetSources?.[exportName] || exportName;
+          referencedImages.push({ exportName, sourceName, folder });
+        }
+        if (obj.foreground) {
+          const exportName = obj.foreground;
+          const sourceName = bg.assetSources?.[exportName] || exportName;
+          referencedImages.push({ exportName, sourceName, folder });
+        }
+        if (obj.ambience) {
+          const normAmb = normalizeAmbiencePath(obj.ambience);
+          const exportName = normAmb;
+          const ambBase = normAmb.split('/').pop();
+          const sourceName = bg.assetSources?.[exportName] || bg.assetSources?.[ambBase] || exportName;
+          referencedAudios.push({ exportName, sourceName });
+        }
       }
 
       for (const st of Object.values(bg.states || {})) {
@@ -431,23 +445,24 @@ export const bgStore = {
     }
 
     // Attach asset data if available in asset pool
-    for (const [imgName, folder] of referencedImages.entries()) {
-      if (!imgName) continue;
-      const matched = assetPool.find((a) => a.type === 'image' && (a.name === imgName || a.relPath === imgName));
+    for (const item of referencedImages) {
+      if (!item.exportName) continue;
+      const matched = assetPool.find((a) => a.type === 'image' && (a.name === item.sourceName || a.relPath === item.sourceName || a.name === item.exportName || a.relPath === item.exportName));
       if (matched && matched.file) {
         filesToZip.push({
-          path: `base/background/${folder}/${imgName}`,
+          path: `base/background/${item.folder}/${item.exportName}`,
           data: matched.file,
         });
       }
     }
 
-    for (const audName of referencedAudios) {
-      if (!audName) continue;
-      const matched = assetPool.find((a) => a.type === 'audio' && (a.relPath === audName || a.name === audName.split('/').pop()));
+    for (const item of referencedAudios) {
+      if (!item.exportName) continue;
+      const audBase = item.exportName.split('/').pop();
+      const matched = assetPool.find((a) => a.type === 'audio' && (a.relPath === item.sourceName || a.name === item.sourceName || a.name === item.sourceName.split('/').pop() || a.relPath === item.exportName || a.name === audBase));
       if (matched && matched.file) {
         filesToZip.push({
-          path: `base/sounds/ambient/${audName}`,
+          path: `base/sounds/ambient/${item.exportName}`,
           data: matched.file,
         });
       }
@@ -636,6 +651,15 @@ export const bgStore = {
       }
     }
     for (const bg of targetBgs) {
+      if (bg.assetSources) {
+        for (const src of Object.values(bg.assetSources)) {
+          if (src) {
+            referenced.add(src.trim());
+            const soundFile = src.split('/').pop()?.trim();
+            if (soundFile) referenced.add(soundFile);
+          }
+        }
+      }
       for (const st of Object.values(bg.states || {})) {
         collect(st);
         if (st.time_variants) {
@@ -683,9 +707,10 @@ export const bgStore = {
   },
 
   /**
-   * Clears all assets from pool and IndexedDB.
+   * Clears all assets from pool and IndexedDB, and resets all background slot assignments
+   * so backgrounds do not retain orphan purged assets.
    */
-  async clearAllAssets() {
+  async clearAllAssets(clearBackgroundSlots = true) {
     for (const a of assetPool) {
       if (a.url && typeof URL !== 'undefined' && URL.revokeObjectURL) {
         try { URL.revokeObjectURL(a.url); } catch {}
@@ -693,6 +718,44 @@ export const bgStore = {
     }
     assetPool = [];
     await dbClearAssets();
+
+    if (clearBackgroundSlots) {
+      for (const bg of backgrounds) {
+        if (!bg || !bg.states) continue;
+        bg.assetSources = {};
+        for (const st of Object.values(bg.states)) {
+          if (!st) continue;
+          st.background = '';
+          st.foreground = '';
+          st.ambience = '';
+          if (st.positions) {
+            for (const pos of Object.values(st.positions)) {
+              if (!pos) continue;
+              pos.background = '';
+              pos.foreground = '';
+              pos.ambience = '';
+              if (pos.time_variants) {
+                for (const tv of Object.values(pos.time_variants)) {
+                  if (!tv) continue;
+                  tv.background = '';
+                  tv.foreground = '';
+                  tv.ambience = '';
+                }
+              }
+            }
+          }
+          if (st.time_variants) {
+            for (const tv of Object.values(st.time_variants)) {
+              if (!tv) continue;
+              tv.background = '';
+              tv.foreground = '';
+              tv.ambience = '';
+            }
+          }
+        }
+      }
+    }
+
     notify();
   },
 
@@ -737,10 +800,11 @@ export const bgStore = {
       }
     }
 
-    // Attach asset data if available in asset pool
+    // Attach asset data if available in asset pool, mapping through bg.assetSources if present
     for (const imgName of referencedImages) {
       if (!imgName) continue;
-      const matched = assetPool.find((a) => a.type === 'image' && (a.name === imgName || a.relPath === imgName));
+      const sourceName = bg.assetSources?.[imgName] || imgName;
+      const matched = assetPool.find((a) => a.type === 'image' && (a.name === sourceName || a.relPath === sourceName || a.name === imgName || a.relPath === imgName));
       if (matched && matched.file) {
         filesToZip.push({
           path: `base/background/${folder}/${imgName}`,
@@ -751,7 +815,9 @@ export const bgStore = {
 
     for (const audName of referencedAudios) {
       if (!audName) continue;
-      const matched = assetPool.find((a) => a.type === 'audio' && (a.relPath === audName || a.name === audName.split('/').pop()));
+      const audBase = audName.split('/').pop();
+      const sourceName = bg.assetSources?.[audName] || bg.assetSources?.[audBase] || audName;
+      const matched = assetPool.find((a) => a.type === 'audio' && (a.relPath === sourceName || a.name === sourceName || a.name === sourceName.split('/').pop() || a.relPath === audName || a.name === audBase));
       if (matched && matched.file) {
         filesToZip.push({
           path: `base/sounds/ambient/${audName}`,
@@ -765,17 +831,184 @@ export const bgStore = {
     downloadZipBlob(zipBytes, downloadName);
   },
 
-  // Helper to find preview URL for an asset filename
-  getAssetUrl(nameOrPath, type = 'image') {
+  // Helper to find preview URL for an asset filename, resolving custom slot aliases if bg provided
+  getAssetUrl(nameOrPath, type = 'image', bg = null) {
     if (!nameOrPath) return '';
     if (nameOrPath.startsWith('data:') || nameOrPath.startsWith('blob:') || nameOrPath.startsWith('http://') || nameOrPath.startsWith('https://')) {
       return nameOrPath;
     }
+    const targetBg = bg || (backgrounds.find((b) => b.id === selectedBgId) || backgrounds[0]);
+    let lookupTarget = nameOrPath;
+    if (targetBg && targetBg.assetSources && targetBg.assetSources[nameOrPath]) {
+      lookupTarget = targetBg.assetSources[nameOrPath];
+    }
     const match = assetPool.find((a) => {
       if (type && a.type !== type) return false;
-      return a.name === nameOrPath || a.relPath === nameOrPath || a.fullRelPath === nameOrPath;
+      return a.name === lookupTarget || a.relPath === lookupTarget || a.fullRelPath === lookupTarget || a.name === nameOrPath || a.relPath === nameOrPath;
     });
     return match ? match.url : '';
+  },
+
+  /**
+   * Renames an asset globally across the asset pool and propagates the new name
+   * to all background definitions and any matching area nodes.
+   */
+  async renameAsset(assetId, newName) {
+    const cleanName = (newName || '').trim();
+    if (!cleanName) return { success: false, error: 'Asset name cannot be empty.' };
+
+    const asset = assetPool.find((a) => a.id === assetId);
+    if (!asset) return { success: false, error: 'Asset not found in pool.' };
+
+    const oldName = asset.name;
+    if (oldName === cleanName) return { success: true };
+
+    const collision = assetPool.find((a) => a.id !== assetId && a.name.toLowerCase() === cleanName.toLowerCase());
+    if (collision) return { success: false, error: `An asset named "${cleanName}" already exists in the pool.` };
+
+    asset.name = cleanName;
+    asset.relPath = cleanName;
+    if (asset.file && typeof File !== 'undefined') {
+      try {
+        asset.file = new File([asset.file], cleanName, { type: asset.file.type });
+      } catch {}
+    }
+
+    // Propagate rename across all backgrounds
+    for (const bg of backgrounds) {
+      if (!bg || !bg.states) continue;
+      if (bg.assetSources) {
+        for (const [k, v] of Object.entries(bg.assetSources)) {
+          if (v === oldName) bg.assetSources[k] = cleanName;
+        }
+      }
+      function updateSlots(obj) {
+        if (!obj) return;
+        if (obj.background === oldName) obj.background = cleanName;
+        if (obj.foreground === oldName) obj.foreground = cleanName;
+        if (obj.ambience) {
+          if (obj.ambience === oldName) {
+            obj.ambience = cleanName;
+          } else if (obj.ambience.endsWith('/' + oldName)) {
+            const prefix = obj.ambience.slice(0, obj.ambience.lastIndexOf('/') + 1);
+            obj.ambience = prefix + cleanName;
+          }
+        }
+      }
+      for (const st of Object.values(bg.states)) {
+        updateSlots(st);
+        if (st.time_variants) {
+          for (const tv of Object.values(st.time_variants)) updateSlots(tv);
+        }
+        if (st.positions) {
+          for (const pos of Object.values(st.positions)) {
+            updateSlots(pos);
+            if (pos.time_variants) {
+              for (const tv of Object.values(pos.time_variants)) updateSlots(tv);
+            }
+          }
+        }
+      }
+    }
+
+    try {
+      await dbSaveAssets([asset]);
+    } catch (e) {
+      console.warn('Failed to update renamed asset in IndexedDB:', e);
+    }
+
+    notify();
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('bg-asset-renamed', { detail: { oldName, newName: cleanName } }));
+    }
+
+    return { success: true, oldName, newName: cleanName };
+  },
+
+  /**
+   * Deletes a single asset from the asset pool and IndexedDB cache.
+   */
+  async deleteAsset(assetId) {
+    const asset = assetPool.find((a) => a.id === assetId);
+    if (!asset) return false;
+    if (asset.url && typeof URL !== 'undefined' && URL.revokeObjectURL) {
+      try { URL.revokeObjectURL(asset.url); } catch {}
+    }
+    assetPool = assetPool.filter((a) => a.id !== assetId);
+    await dbDeleteAssets([assetId]);
+    notify();
+    return true;
+  },
+
+  /**
+   * Duplicates an existing background with a unique folder path.
+   */
+  duplicateBackground(bgId) {
+    const bg = backgrounds.find((b) => b.id === bgId);
+    if (!bg) return null;
+    const cloned = JSON.parse(JSON.stringify(bg));
+    cloned.id = 'bg_' + Math.random().toString(36).slice(2, 9);
+    cloned.folder = ensureUniqueBgFolder(`${bg.folder} Copy`);
+    backgrounds.push(cloned);
+    selectedBgId = cloned.id;
+    notify();
+    return cloned;
+  },
+
+  /**
+   * Renames a background folder path with collision checks.
+   */
+  renameBackgroundFolder(bgId, newFolder) {
+    const bg = backgrounds.find((b) => b.id === bgId);
+    if (!bg) return { success: false, error: 'Background not found' };
+    const clean = normalizeBgPath(newFolder);
+    if (!clean) return { success: false, error: 'Folder path cannot be empty' };
+    const oldFolder = bg.folder;
+    if (oldFolder === clean) return { success: true };
+    const unique = ensureUniqueBgFolder(clean, bgId);
+    bg.folder = unique;
+    notify();
+    return { success: true, oldFolder, newFolder: unique };
+  },
+
+  /**
+   * Duplicates a state variant within a background.
+   */
+  duplicateState(bgId, stKey) {
+    const bg = backgrounds.find((b) => b.id === bgId);
+    if (!bg || !bg.states || !bg.states[stKey]) return null;
+    const baseState = bg.states[stKey];
+    let candidate = `${stKey}_copy`;
+    let counter = 2;
+    while (bg.states[candidate]) {
+      candidate = `${stKey}_copy${counter++}`;
+    }
+    bg.states[candidate] = JSON.parse(JSON.stringify(baseState));
+    bg.activeState = candidate;
+    notify();
+    return candidate;
+  },
+
+  /**
+   * Duplicates a time of day variant within a background.
+   */
+  duplicateTimeVariant(bgId, stKey, posKey, fromTodKey) {
+    const bg = backgrounds.find((b) => b.id === bgId);
+    if (!bg) return null;
+    const st = bg.states?.[stKey];
+    if (!st) return null;
+    const targetObj = posKey && st.positions?.[posKey] ? st.positions[posKey] : st;
+    if (!targetObj.time_variants || !targetObj.time_variants[fromTodKey]) return null;
+    let candidate = `${fromTodKey}_copy`;
+    let counter = 2;
+    while (targetObj.time_variants[candidate]) {
+      candidate = `${fromTodKey}_copy${counter++}`;
+    }
+    targetObj.time_variants[candidate] = JSON.parse(JSON.stringify(targetObj.time_variants[fromTodKey]));
+    bg.activeTod = candidate;
+    notify();
+    return candidate;
   },
 };
 

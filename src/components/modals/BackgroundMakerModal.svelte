@@ -66,12 +66,491 @@
     showPurgeConfirmModal = false;
     if (purgeTargetMode === 'unused') {
       const count = await bgStore.purgeUnusedAssets();
-      notify(`Purged ${count} unused asset(s)`, 'ok');
+      notify(`Purged ${count} unused asset(s).`, 'ok');
     } else if (purgeTargetMode === 'all') {
       const count = assetPool.length;
-      await bgStore.clearAllAssets();
-      notify(`Purged all ${count} asset(s) from memory and cache`, 'ok');
+      await bgStore.clearAllAssets(true);
+      notify(`Purged all ${count} asset(s). All background slots have been reset to empty.`, 'info');
     }
+  }
+
+  // Context Menu State
+  let bgContextMenu = null; // { x, y, title, items: Array<{ label, icon, run, disabled, danger, separator }> }
+
+  function openContextMenu(e, items, title = 'OPTIONS') {
+    e.preventDefault();
+    e.stopPropagation();
+    const menuW = 230;
+    const menuH = items.length * 28 + 36;
+    const x = Math.min(e.clientX, window.innerWidth - menuW - 14);
+    const y = Math.min(e.clientY, window.innerHeight - menuH - 14);
+    bgContextMenu = { x: Math.max(10, x), y: Math.max(10, y), title, items };
+  }
+
+  function closeContextMenu() {
+    bgContextMenu = null;
+  }
+
+  // Lightbox Preview Modal State
+  let inspectModalAsset = null; // { name, url, type, size, relPath }
+
+  function inspectAsset(assetOrName, displayName = '', type = 'image') {
+    closeContextMenu();
+    if (typeof assetOrName === 'object' && assetOrName !== null) {
+      inspectModalAsset = assetOrName;
+    } else if (typeof assetOrName === 'string') {
+      const matched = assetPool.find((a) => a.name === assetOrName || a.relPath === assetOrName);
+      if (matched) {
+        inspectModalAsset = matched;
+      } else {
+        const url = bgStore.getAssetUrl(assetOrName, type, activeBg);
+        inspectModalAsset = {
+          name: displayName || assetOrName,
+          url: url || assetOrName,
+          type,
+          size: 0,
+          relPath: assetOrName,
+        };
+      }
+    }
+  }
+
+  // Rename Dialog State
+  let showRenameModal = false;
+  let renameModalConfig = {
+    title: 'Rename',
+    label: 'New Name:',
+    hint: '',
+    placeholder: '',
+    value: '',
+    onConfirm: async () => ({ success: true }),
+  };
+  let renameInputValue = '';
+  let renameModalError = '';
+
+  function openRenameDialog(cfg) {
+    closeContextMenu();
+    renameModalConfig = cfg;
+    renameInputValue = cfg.value || '';
+    renameModalError = '';
+    showRenameModal = true;
+  }
+
+  async function submitRenameModal() {
+    const val = renameInputValue.trim();
+    if (!val) {
+      renameModalError = 'Name cannot be empty.';
+      return;
+    }
+    const res = await renameModalConfig.onConfirm(val);
+    if (res && res.error) {
+      renameModalError = res.error;
+      return;
+    }
+    showRenameModal = false;
+  }
+
+  // Global Asset Renaming
+  function triggerRenameAsset(asset) {
+    openRenameDialog({
+      title: '✏️ Rename Asset (Global)',
+      label: 'Asset Filename:',
+      hint: `Renaming "${asset.name}" will update all backgrounds, states, and area nodes referencing it.`,
+      placeholder: 'e.g. hallway_dark.png',
+      value: asset.name,
+      onConfirm: async (newName) => {
+        const res = await bgStore.renameAsset(asset.id, newName);
+        if (!res.success) return { error: res.error };
+        notify(`Renamed asset to "${newName}" across all backgrounds and nodes.`, 'ok');
+        return { success: true };
+      },
+    });
+  }
+
+  // Local Slot Override Renaming (Per-Background Export Name)
+  function triggerRenameSlotExport(slotType, todKey = null) {
+    if (!activeBg) return;
+    const targetObj = todKey
+      ? (usePositions ? activePos?.time_variants?.[todKey] : activeState?.time_variants?.[todKey])
+      : (usePositions ? activePos : activeState);
+    if (!targetObj) return;
+
+    const currentVal = targetObj[slotType];
+    if (!currentVal) return;
+
+    const sourceName = activeBg.assetSources?.[currentVal] || currentVal;
+
+    openRenameDialog({
+      title: `✏️ Rename Export Filename (${slotType}${todKey ? ' @ ' + todKey : ''})`,
+      label: 'Export Filename for this Background:',
+      hint: `Customizes the filename written into background.json and package ZIP for this background only. The asset "${sourceName}" in the pool is unchanged.`,
+      placeholder: 'e.g. cafeteria_night.png',
+      value: currentVal,
+      onConfirm: (newExportName) => {
+        setSlotExportName(slotType, newExportName, todKey);
+        return { success: true };
+      },
+    });
+  }
+
+  function setSlotExportName(slotType, newName, todKey = null) {
+    if (!activeBg) return;
+    const cleanName = (newName || '').trim();
+    if (!cleanName) return;
+
+    updateBg((bg) => {
+      bg.assetSources = bg.assetSources || {};
+      const targetObj = todKey
+        ? (usePositions ? activePos?.time_variants?.[todKey] : activeState?.time_variants?.[todKey])
+        : (usePositions ? activePos : activeState);
+
+      if (!targetObj) return;
+      const oldVal = targetObj[slotType];
+      if (!oldVal || oldVal === cleanName) return;
+
+      const originalSource = bg.assetSources[oldVal] || oldVal;
+      bg.assetSources[cleanName] = originalSource;
+      if (oldVal !== originalSource) {
+        delete bg.assetSources[oldVal];
+      }
+      targetObj[slotType] = cleanName;
+    });
+    notify(`Set export filename for ${slotType} to "${cleanName}".`, 'ok');
+  }
+
+  function resetSlotToSourceName(slotType, todKey = null) {
+    if (!activeBg || !activeBg.assetSources) return;
+    updateBg((bg) => {
+      const targetObj = todKey
+        ? (usePositions ? activePos?.time_variants?.[todKey] : activeState?.time_variants?.[todKey])
+        : (usePositions ? activePos : activeState);
+      if (!targetObj) return;
+      const curVal = targetObj[slotType];
+      if (bg.assetSources && bg.assetSources[curVal]) {
+        const originalSource = bg.assetSources[curVal];
+        delete bg.assetSources[curVal];
+        targetObj[slotType] = originalSource;
+        notify(`Reset ${slotType} back to asset name "${originalSource}".`, 'info');
+      }
+    });
+  }
+
+  // Context Menu Openers
+  function openAssetContextMenu(e, asset) {
+    const isImg = asset.type === 'image';
+    const isAud = asset.type === 'audio';
+    const serverPath = isAud
+      ? `base/sounds/ambient/${asset.name}`
+      : `base/background/${activeBg?.folder || 'Background'}/${asset.name}`;
+
+    openContextMenu(e, [
+      {
+        label: 'Rename Asset (Global)…',
+        icon: '✏️',
+        run: () => triggerRenameAsset(asset),
+      },
+      {
+        label: 'Inspect Asset Preview',
+        icon: '🔍',
+        run: () => inspectAsset(asset),
+      },
+      { separator: true },
+      {
+        label: 'Assign as Background Image',
+        icon: '🖼️',
+        disabled: !isImg,
+        run: () => assignSlotAsset('background', asset.name),
+      },
+      {
+        label: 'Assign as Foreground Overlay',
+        icon: '🌫️',
+        disabled: !isImg,
+        run: () => assignSlotAsset('foreground', asset.name),
+      },
+      {
+        label: 'Assign as Ambience Audio',
+        icon: '🎵',
+        disabled: !isAud,
+        run: () => assignSlotAsset('ambience', asset.name),
+      },
+      { separator: true },
+      {
+        label: 'Copy Filename',
+        icon: '📋',
+        run: () => { copyText(asset.name); notify(`Copied "${asset.name}".`, 'ok'); },
+      },
+      {
+        label: 'Copy Server Path',
+        icon: '📋',
+        run: () => { copyText(serverPath); notify(`Copied path.`, 'ok'); },
+      },
+      { separator: true },
+      {
+        label: 'Delete from Pool',
+        icon: '🗑️',
+        danger: true,
+        run: async () => {
+          await bgStore.deleteAsset(asset.id);
+          notify(`Removed "${asset.name}" from pool.`, 'info');
+        },
+      },
+    ], `ASSET: ${asset.name}`);
+  }
+
+  function openSlotContextMenu(e, slotType, todKey = null) {
+    const targetObj = todKey
+      ? (usePositions ? activePos?.time_variants?.[todKey] : activeState?.time_variants?.[todKey])
+      : (usePositions ? activePos : activeState);
+    const curVal = targetObj ? targetObj[slotType] : '';
+    const isAudio = slotType === 'ambience';
+    const hasAsset = Boolean(curVal);
+    const hasAlias = Boolean(activeBg?.assetSources?.[curVal]);
+    const sourceName = hasAlias ? activeBg.assetSources[curVal] : curVal;
+
+    const items = [];
+    if (hasAsset) {
+      items.push({
+        label: 'Rename Export Filename…',
+        icon: '✏️',
+        run: () => triggerRenameSlotExport(slotType, todKey),
+      });
+      if (hasAlias) {
+        items.push({
+          label: `Reset to Asset Name (${sourceName})`,
+          icon: '🔄',
+          run: () => resetSlotToSourceName(slotType, todKey),
+        });
+      }
+      items.push({
+        label: 'Inspect Asset Preview',
+        icon: '🔍',
+        run: () => inspectAsset(sourceName, curVal, isAudio ? 'audio' : 'image'),
+      });
+      items.push({ separator: true });
+      items.push({
+        label: 'Copy Filename',
+        icon: '📋',
+        run: () => { copyText(curVal); notify(`Copied "${curVal}".`, 'ok'); },
+      });
+      items.push({
+        label: 'Copy Server Path',
+        icon: '📋',
+        run: () => {
+          const path = isAudio ? `base/sounds/ambient/${curVal}` : `base/background/${activeBg?.folder || 'Background'}/${curVal}`;
+          copyText(path);
+          notify(`Copied path.`, 'ok');
+        },
+      });
+      items.push({ separator: true });
+      items.push({
+        label: todKey ? 'Clear Override (Use Base)' : 'Clear Slot',
+        icon: '✕',
+        danger: true,
+        run: () => assignSlotAsset(slotType, '', todKey),
+      });
+    } else {
+      const candidates = isAudio ? availableAudios : availableImages;
+      items.push({
+        label: candidates.length > 0 ? `Pick from Pool (${candidates.length} available)` : 'No matching assets in pool',
+        icon: '▾',
+        disabled: candidates.length === 0,
+        run: () => {
+          if (candidates.length > 0) {
+            assignSlotAsset(slotType, candidates[0].relPath || candidates[0].name, todKey);
+          }
+        },
+      });
+      items.push({
+        label: 'Upload File to this Slot…',
+        icon: '📥',
+        run: () => fileInputGeneral && fileInputGeneral.click(),
+      });
+    }
+
+    const titlePrefix = slotType === 'background' ? 'BACKGROUND' : (slotType === 'foreground' ? 'FOREGROUND' : 'AMBIENCE');
+    openContextMenu(e, items, `${titlePrefix} SLOT${todKey ? ' (' + todKey + ')' : ''}`);
+  }
+
+  function openBgContextMenu(e, bg) {
+    openContextMenu(e, [
+      {
+        label: 'Duplicate Background',
+        icon: '📋',
+        run: () => bgStore.duplicateBackground(bg.id),
+      },
+      {
+        label: 'Rename Folder Path…',
+        icon: '✏️',
+        run: () => {
+          openRenameDialog({
+            title: '✏️ Rename Background Folder',
+            label: 'Folder Path (e.g. Umamusume/Library):',
+            hint: 'Server folder path relative to base/background/.',
+            placeholder: 'Series/Room',
+            value: bg.folder,
+            onConfirm: (newFolder) => bgStore.renameBackgroundFolder(bg.id, newFolder),
+          });
+        },
+      },
+      { separator: true },
+      {
+        label: 'Export background.json',
+        icon: '💾',
+        run: () => {
+          const json = serializeBackgroundJson(bg);
+          const blob = new Blob([json], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'background.json';
+          a.click();
+          URL.revokeObjectURL(url);
+        },
+      },
+      {
+        label: 'Export Package (.zip)',
+        icon: '📦',
+        run: () => bgStore.exportZip(bg.id),
+      },
+      { separator: true },
+      {
+        label: 'Delete Background',
+        icon: '🗑️',
+        danger: true,
+        disabled: backgrounds.length <= 1,
+        run: () => removeBackground(bg.id),
+      },
+    ], `BACKGROUND: ${bg.folder}`);
+  }
+
+  function openStateContextMenu(e, stKey) {
+    const isDefault = stKey === 'default';
+    openContextMenu(e, [
+      {
+        label: 'Duplicate State Variant',
+        icon: '📋',
+        run: () => bgStore.duplicateState(activeBg.id, stKey),
+      },
+      {
+        label: 'Rename State…',
+        icon: '✏️',
+        disabled: isDefault,
+        title: isDefault ? 'The default state cannot be renamed.' : '',
+        run: () => {
+          openRenameDialog({
+            title: `✏️ Rename State "${stKey}"`,
+            label: 'New State Key:',
+            hint: 'Alternative visual state key in background.json (e.g. crowded, dark, festive).',
+            placeholder: 'e.g. night_festive',
+            value: stKey,
+            onConfirm: (newName) => {
+              const clean = newName.trim();
+              if (activeBg.states[clean]) return { error: `State "${clean}" already exists.` };
+              updateBg((bg) => {
+                bg.states[clean] = bg.states[stKey];
+                delete bg.states[stKey];
+                if (bg.activeState === stKey) bg.activeState = clean;
+              });
+              return { success: true };
+            },
+          });
+        },
+      },
+      { separator: true },
+      {
+        label: 'Delete State',
+        icon: '🗑️',
+        danger: true,
+        disabled: isDefault,
+        title: isDefault ? 'The default state cannot be deleted.' : '',
+        run: () => removeStateVariant(stKey),
+      },
+    ], `STATE: ${stKey}`);
+  }
+
+  function openTodContextMenu(e, todKey) {
+    openContextMenu(e, [
+      {
+        label: 'Duplicate Time Variant',
+        icon: '📋',
+        run: () => bgStore.duplicateTimeVariant(activeBg.id, activeStateKey, activePosKey, todKey),
+      },
+      {
+        label: 'Rename Time Variant Key…',
+        icon: '✏️',
+        run: () => {
+          openRenameDialog({
+            title: `✏️ Rename Time of Day "${todKey}"`,
+            label: 'Time Key:',
+            hint: 'Time-of-day key in background.json (e.g. day, evening, night, morning).',
+            placeholder: 'e.g. midnight',
+            value: todKey,
+            onConfirm: (newName) => {
+              const clean = newName.trim();
+              const targetObj = usePositions ? activePos : activeState;
+              if (targetObj.time_variants[clean]) return { error: `Variant "${clean}" already exists.` };
+              updateBg((bg) => {
+                const st = bg.states[activeStateKey];
+                const tObj = usePositions ? st.positions[activePosKey] : st;
+                tObj.time_variants[clean] = tObj.time_variants[todKey];
+                delete tObj.time_variants[todKey];
+                if (bg.activeTod === todKey) bg.activeTod = clean;
+              });
+              return { success: true };
+            },
+          });
+        },
+      },
+      {
+        label: 'Clear All Overrides (Reset to Base)',
+        icon: '✕',
+        run: () => {
+          updateBg((bg) => {
+            const st = bg.states[activeStateKey];
+            const tObj = usePositions ? st.positions[activePosKey] : st;
+            if (tObj.time_variants?.[todKey]) {
+              tObj.time_variants[todKey] = { background: '', foreground: '', ambience: '' };
+            }
+          });
+          notify(`Cleared slot overrides for "${todKey}".`, 'info');
+        },
+      },
+      { separator: true },
+      {
+        label: 'Delete Time Variant',
+        icon: '🗑️',
+        danger: true,
+        run: () => removeTimeVariant(todKey),
+      },
+    ], `TIME VARIANT: ${todKey}`);
+  }
+
+  function openStageContextMenu(e) {
+    openContextMenu(e, [
+      {
+        label: stageFitMode === 'contain' ? 'Switch to Fit: Cover (Fill Screen)' : 'Switch to Fit: Contain (Letterbox)',
+        icon: '🖼️',
+        run: () => {
+          stageFitMode = stageFitMode === 'contain' ? 'cover' : 'contain';
+          notify(`Stage fit mode: ${stageFitMode}`, 'info');
+        },
+      },
+      {
+        label: 'Inspect Stage Image Preview',
+        icon: '🔍',
+        disabled: !resolvedVisual.background,
+        run: () => inspectAsset(resolvedVisual.background, `${activeBg?.folder || 'Scene'} [${stageTod}]`, 'image'),
+      },
+      { separator: true },
+      {
+        label: 'Copy Live Visual Config JSON',
+        icon: '📋',
+        run: () => {
+          copyText(JSON.stringify(resolvedVisual, null, 2));
+          notify('Copied resolved visual JSON to clipboard.', 'ok');
+        },
+      },
+    ], 'STAGE MONITOR');
   }
 
   // Local drag-over indicator
@@ -157,15 +636,15 @@
       })
     : { background: '', foreground: '', ambience: '' };
 
-  $: resolvedBgUrl = bgStore.getAssetUrl(resolvedVisual.background, 'image');
-  $: resolvedFgUrl = bgStore.getAssetUrl(resolvedVisual.foreground, 'image');
-  $: resolvedAmbienceUrl = bgStore.getAssetUrl(resolvedVisual.ambience, 'audio');
+  $: resolvedBgUrl = bgStore.getAssetUrl(resolvedVisual.background, 'image', activeBg);
+  $: resolvedFgUrl = bgStore.getAssetUrl(resolvedVisual.foreground, 'image', activeBg);
+  $: resolvedAmbienceUrl = bgStore.getAssetUrl(resolvedVisual.ambience, 'audio', activeBg);
 
   // Slot values for active context
   $: activeBgVal = usePositions ? activePos?.background : activeState?.background;
-  $: activeBgThumb = bgStore.getAssetUrl(activeBgVal, 'image');
+  $: activeBgThumb = bgStore.getAssetUrl(activeBgVal, 'image', activeBg);
   $: activeFgVal = usePositions ? activePos?.foreground : activeState?.foreground;
-  $: activeFgThumb = bgStore.getAssetUrl(activeFgVal, 'image');
+  $: activeFgThumb = bgStore.getAssetUrl(activeFgVal, 'image', activeBg);
   $: activeAmbienceVal = usePositions ? activePos?.ambience : activeState?.ambience;
   $: activeTimeVariants = usePositions ? (activePos?.time_variants || {}) : (activeState?.time_variants || {});
 
@@ -746,10 +1225,13 @@
 </script>
 
 <svelte:window
-  on:click={() => { libraryMenuOpen = false; tplMenuOpen = false; purgeMenuOpen = false; }}
+  on:click={() => { libraryMenuOpen = false; tplMenuOpen = false; purgeMenuOpen = false; closeContextMenu(); }}
   on:keydown={(e) => {
     if (e.key === 'Escape') {
-      if (showPurgeConfirmModal) { showPurgeConfirmModal = false; e.stopPropagation(); }
+      if (bgContextMenu) { closeContextMenu(); e.stopPropagation(); }
+      else if (inspectModalAsset) { inspectModalAsset = null; e.stopPropagation(); }
+      else if (showRenameModal) { showRenameModal = false; e.stopPropagation(); }
+      else if (showPurgeConfirmModal) { showPurgeConfirmModal = false; e.stopPropagation(); }
       else if (showAddTodModal) { showAddTodModal = false; e.stopPropagation(); }
       else if (showAddStateModal) { showAddStateModal = false; e.stopPropagation(); }
       else if (showManageTemplatesModal) { showManageTemplatesModal = false; e.stopPropagation(); }
@@ -769,16 +1251,17 @@
     on:dragleave={onModalDragLeave}
     on:drop={onModalDrop}
   >
-    <!-- Top Notch & Header -->
-    <button class="modal-x" title="Close Background Maker (Esc)" on:click={() => dispatch('close')}>✕</button>
+    <!-- ROW 1: Title Bar with Blinking Caret -->
+    <div class="maker-title-row">
+      <h2 class="maker-title">
+        <span class="maker-prefix">//</span> BACKGROUND.JSON <span>MAKER</span><span class="cursor">_</span>
+      </h2>
+      <button class="modal-x" title="Close Background Maker (Esc)" on:click={() => dispatch('close')}>✕</button>
+    </div>
 
-    <div class="maker-head">
-      <div class="head-left">
-        <span class="maker-tag">// BACKGROUND.JSON MAKER</span>
-        <span class="maker-subtag">MNN SCENE ASSET BUILDER</span>
-      </div>
-
-      <div class="head-actions">
+    <!-- ROW 2: Header Action Toolbar -->
+    <div class="maker-toolbar-row">
+      <div class="toolbar-left">
         {#if selectedArea}
           <button
             class="primary-btn mini-btn"
@@ -788,6 +1271,9 @@
             ✓ Apply to Area #{Math.max(0, $state.project.areas.indexOf(selectedArea))}
           </button>
         {/if}
+      </div>
+
+      <div class="toolbar-right">
         <button
           class="mini-btn"
           title="Import background definitions, library backups, or asset ZIPs (.json, .zip)"
@@ -1023,8 +1509,10 @@
               class="bg-item {bg.id === activeBg?.id ? 'active' : ''}"
               role="button"
               tabindex="0"
+              title="Click to select; right-click for options"
               on:click={() => bgStore.selectBg(bg.id)}
               on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && bgStore.selectBg(bg.id)}
+              on:contextmenu|preventDefault|stopPropagation={(e) => openBgContextMenu(e, bg)}
             >
               <div class="bg-item-row">
                 <div class="bg-item-titles" title={bg.folder}>
@@ -1078,7 +1566,9 @@
                 {#each Object.keys(activeBg?.states || {}) as stKey}
                   <button
                     class="state-tab {activeStateKey === stKey ? 'active' : ''}"
+                    title="Click to switch state; right-click for options"
                     on:click={() => updateBg((bg) => (bg.activeState = stKey))}
+                    on:contextmenu|preventDefault|stopPropagation={(e) => openStateContextMenu(e, stKey)}
                   >
                     {stKey}{stKey === 'default' ? ' ★' : ''}
                   </button>
@@ -1144,6 +1634,8 @@
               class="slot-card {dragOverSlot === 'background' ? (dragOverSlotValid ? 'drag-target-valid' : 'drag-target-invalid') : ''}"
               role="region"
               aria-label="Background image slot"
+              title="Drop image to assign; right-click for options"
+              on:contextmenu|preventDefault|stopPropagation={(e) => openSlotContextMenu(e, 'background')}
               on:dragover={(e) => onSlotDragOver(e, 'background')}
               on:dragleave={(e) => onSlotDragLeave(e, 'background')}
               on:drop={(e) => onSlotDrop(e, 'background')}
@@ -1154,7 +1646,10 @@
                   <span class="slot-desc">Scene backdrop</span>
                 </div>
                 {#if activeBgVal}
-                  <button class="icon-btn" title="Clear image" on:click={() => assignSlotAsset('background', '')}>✕</button>
+                  <div class="slot-head-actions">
+                    <button class="slot-rename-btn" title="Rename export filename for this background" on:click|stopPropagation={() => triggerRenameSlotExport('background')}>✏️</button>
+                    <button class="icon-btn" title="Clear image" on:click|stopPropagation={() => assignSlotAsset('background', '')}>✕</button>
+                  </div>
                 {:else if availableImages.length > 0}
                   <select
                     class="mini-slot-picker"
@@ -1175,13 +1670,25 @@
               </div>
 
               {#if activeBgVal}
-                <div class="slot-content has-asset">
+                <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+                <div
+                  class="slot-content has-asset"
+                  title="Double-click to inspect; right-click for options"
+                  on:dblclick={() => inspectAsset(activeBgVal, `${activeBg?.folder || 'Scene'} Background`, 'image')}
+                >
                   {#if activeBgThumb}
                     <img draggable="false" src={activeBgThumb} alt={activeBgVal} class="slot-thumb" />
                   {:else}
                     <div class="no-thumb-box">🖼</div>
                   {/if}
-                  <span class="asset-filename" title={activeBgVal} use:autoscroll>{activeBgVal}</span>
+                  <div class="slot-name-col">
+                    <span class="asset-filename" title={activeBgVal} use:autoscroll>{activeBgVal}</span>
+                    {#if activeBg?.assetSources?.[activeBgVal]}
+                      <span class="alias-tag" title="Custom export filename (source: {activeBg.assetSources[activeBgVal]})">
+                        alias of <em>{activeBg.assetSources[activeBgVal]}</em>
+                      </span>
+                    {/if}
+                  </div>
                 </div>
               {:else}
                 <div class="slot-content empty-drop">
@@ -1196,6 +1703,8 @@
               class="slot-card {dragOverSlot === 'foreground' ? (dragOverSlotValid ? 'drag-target-valid' : 'drag-target-invalid') : ''}"
               role="region"
               aria-label="Foreground overlay slot"
+              title="Drop overlay image to assign; right-click for options"
+              on:contextmenu|preventDefault|stopPropagation={(e) => openSlotContextMenu(e, 'foreground')}
               on:dragover={(e) => onSlotDragOver(e, 'foreground')}
               on:dragleave={(e) => onSlotDragLeave(e, 'foreground')}
               on:drop={(e) => onSlotDrop(e, 'foreground')}
@@ -1206,7 +1715,10 @@
                   <span class="slot-desc">Filter / Desk</span>
                 </div>
                 {#if activeFgVal}
-                  <button class="icon-btn" title="Clear overlay" on:click={() => assignSlotAsset('foreground', '')}>✕</button>
+                  <div class="slot-head-actions">
+                    <button class="slot-rename-btn" title="Rename export filename for this background" on:click|stopPropagation={() => triggerRenameSlotExport('foreground')}>✏️</button>
+                    <button class="icon-btn" title="Clear overlay" on:click|stopPropagation={() => assignSlotAsset('foreground', '')}>✕</button>
+                  </div>
                 {:else if availableImages.length > 0}
                   <select
                     class="mini-slot-picker"
@@ -1227,13 +1739,25 @@
               </div>
 
               {#if activeFgVal}
-                <div class="slot-content has-asset">
+                <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+                <div
+                  class="slot-content has-asset"
+                  title="Double-click to inspect; right-click for options"
+                  on:dblclick={() => inspectAsset(activeFgVal, `${activeBg?.folder || 'Scene'} Foreground`, 'image')}
+                >
                   {#if activeFgThumb}
                     <img draggable="false" src={activeFgThumb} alt={activeFgVal} class="slot-thumb" />
                   {:else}
                     <div class="no-thumb-box">🌫</div>
                   {/if}
-                  <span class="asset-filename" title={activeFgVal} use:autoscroll>{activeFgVal}</span>
+                  <div class="slot-name-col">
+                    <span class="asset-filename" title={activeFgVal} use:autoscroll>{activeFgVal}</span>
+                    {#if activeBg?.assetSources?.[activeFgVal]}
+                      <span class="alias-tag" title="Custom export filename (source: {activeBg.assetSources[activeFgVal]})">
+                        alias of <em>{activeBg.assetSources[activeFgVal]}</em>
+                      </span>
+                    {/if}
+                  </div>
                 </div>
               {:else}
                 <div class="slot-content empty-drop">
@@ -1248,6 +1772,8 @@
               class="slot-card {dragOverSlot === 'ambience' ? (dragOverSlotValid ? 'drag-target-valid' : 'drag-target-invalid') : ''}"
               role="region"
               aria-label="Ambience audio slot"
+              title="Drop sound to assign; right-click for options"
+              on:contextmenu|preventDefault|stopPropagation={(e) => openSlotContextMenu(e, 'ambience')}
               on:dragover={(e) => onSlotDragOver(e, 'ambience')}
               on:dragleave={(e) => onSlotDragLeave(e, 'ambience')}
               on:drop={(e) => onSlotDrop(e, 'ambience')}
@@ -1258,7 +1784,10 @@
                   <span class="slot-desc">base/sounds/ambient</span>
                 </div>
                 {#if activeAmbienceVal}
-                  <button class="icon-btn" title="Clear sound" on:click={() => assignSlotAsset('ambience', '')}>✕</button>
+                  <div class="slot-head-actions">
+                    <button class="slot-rename-btn" title="Rename export filename for this background" on:click|stopPropagation={() => triggerRenameSlotExport('ambience')}>✏️</button>
+                    <button class="icon-btn" title="Clear sound" on:click|stopPropagation={() => assignSlotAsset('ambience', '')}>✕</button>
+                  </div>
                 {:else if availableAudios.length > 0}
                   <select
                     class="mini-slot-picker"
@@ -1279,9 +1808,21 @@
               </div>
 
               {#if activeAmbienceVal}
-                <div class="slot-content has-asset">
+                <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+                <div
+                  class="slot-content has-asset"
+                  title="Double-click to inspect/listen; right-click for options"
+                  on:dblclick={() => inspectAsset(activeAmbienceVal, `${activeBg?.folder || 'Scene'} Ambience`, 'audio')}
+                >
                   <div class="no-thumb-box audio">🎵</div>
-                  <span class="asset-filename" title={activeAmbienceVal} use:autoscroll>{activeAmbienceVal}</span>
+                  <div class="slot-name-col">
+                    <span class="asset-filename" title={activeAmbienceVal} use:autoscroll>{activeAmbienceVal}</span>
+                    {#if activeBg?.assetSources?.[activeAmbienceVal] || (activeAmbienceVal && activeBg?.assetSources?.[activeAmbienceVal.split('/').pop()])}
+                      <span class="alias-tag" title="Custom export filename">
+                        alias of <em>{activeBg.assetSources[activeAmbienceVal] || activeBg.assetSources[activeAmbienceVal.split('/').pop()]}</em>
+                      </span>
+                    {/if}
+                  </div>
                 </div>
               {:else}
                 <div class="slot-content empty-drop">
@@ -1308,7 +1849,12 @@
             {:else}
               <div class="tod-list">
                 {#each Object.entries(activeTimeVariants) as [todKey, tv]}
-                  <div class="tod-row-card">
+                  <!-- svelte-ignore a11y_no_static_element_interactions -->
+                  <div
+                    class="tod-row-card"
+                    title="Right-click for time variant options"
+                    on:contextmenu|preventDefault|stopPropagation={(e) => openTodContextMenu(e, todKey)}
+                  >
                     <div class="tod-badge-col">
                       <span class="tod-badge">{todKey}</span>
                     </div>
@@ -1318,14 +1864,19 @@
                       class="mini-slot {dragOverSlot === `background:${todKey}` ? (dragOverSlotValid ? 'drag-target-valid' : 'drag-target-invalid') : ''}"
                       role="region"
                       aria-label="Background slot for {todKey}"
-                      title="Drop image to set background for {todKey}"
+                      title="Right-click for options; drop image to set background for {todKey}"
+                      on:contextmenu|preventDefault|stopPropagation={(e) => openSlotContextMenu(e, 'background', todKey)}
                       on:dragover={(e) => onSlotDragOver(e, 'background', todKey)}
                       on:dragleave={(e) => onSlotDragLeave(e, 'background', todKey)}
                       on:drop={(e) => onSlotDrop(e, 'background', todKey)}
                     >
                       <span class="mslot-lbl">BG:</span>
-                      <span class="mslot-val">{tv.background || 'Same as base'}</span>
+                      <span class="mslot-val" title={tv.background || 'Same as base'}>{tv.background || 'Same as base'}</span>
+                      {#if tv.background && activeBg?.assetSources?.[tv.background]}
+                        <span class="mslot-alias-dot" title="Alias of {activeBg.assetSources[tv.background]}">●</span>
+                      {/if}
                       {#if tv.background}
+                        <button class="mslot-rename-btn" title="Rename export filename for this background" on:click|stopPropagation={() => triggerRenameSlotExport('background', todKey)}>✏️</button>
                         <button class="mslot-clear-btn" title="Clear background (fallback to base)" on:click|stopPropagation={() => assignSlotAsset('background', '', todKey)}>✕</button>
                       {/if}
                     </div>
@@ -1334,14 +1885,19 @@
                       class="mini-slot {dragOverSlot === `foreground:${todKey}` ? (dragOverSlotValid ? 'drag-target-valid' : 'drag-target-invalid') : ''}"
                       role="region"
                       aria-label="Foreground slot for {todKey}"
-                      title="Drop overlay image to set foreground for {todKey}"
+                      title="Right-click for options; drop overlay image to set foreground for {todKey}"
+                      on:contextmenu|preventDefault|stopPropagation={(e) => openSlotContextMenu(e, 'foreground', todKey)}
                       on:dragover={(e) => onSlotDragOver(e, 'foreground', todKey)}
                       on:dragleave={(e) => onSlotDragLeave(e, 'foreground', todKey)}
                       on:drop={(e) => onSlotDrop(e, 'foreground', todKey)}
                     >
                       <span class="mslot-lbl">FG:</span>
-                      <span class="mslot-val">{tv.foreground || 'None'}</span>
+                      <span class="mslot-val" title={tv.foreground || 'None'}>{tv.foreground || 'None'}</span>
+                      {#if tv.foreground && activeBg?.assetSources?.[tv.foreground]}
+                        <span class="mslot-alias-dot" title="Alias of {activeBg.assetSources[tv.foreground]}">●</span>
+                      {/if}
                       {#if tv.foreground}
+                        <button class="mslot-rename-btn" title="Rename export filename for this background" on:click|stopPropagation={() => triggerRenameSlotExport('foreground', todKey)}>✏️</button>
                         <button class="mslot-clear-btn" title="Clear foreground" on:click|stopPropagation={() => assignSlotAsset('foreground', '', todKey)}>✕</button>
                       {/if}
                     </div>
@@ -1350,14 +1906,19 @@
                       class="mini-slot {dragOverSlot === `ambience:${todKey}` ? (dragOverSlotValid ? 'drag-target-valid' : 'drag-target-invalid') : ''}"
                       role="region"
                       aria-label="Ambience audio slot for {todKey}"
-                      title="Drop sound (.opus / .mp3) to set ambience audio for {todKey}"
+                      title="Right-click for options; drop sound to set ambience audio for {todKey}"
+                      on:contextmenu|preventDefault|stopPropagation={(e) => openSlotContextMenu(e, 'ambience', todKey)}
                       on:dragover={(e) => onSlotDragOver(e, 'ambience', todKey)}
                       on:dragleave={(e) => onSlotDragLeave(e, 'ambience', todKey)}
                       on:drop={(e) => onSlotDrop(e, 'ambience', todKey)}
                     >
                       <span class="mslot-lbl">Audio:</span>
-                      <span class="mslot-val">{tv.ambience || 'Same as base'}</span>
+                      <span class="mslot-val" title={tv.ambience || 'Same as base'}>{tv.ambience || 'Same as base'}</span>
+                      {#if tv.ambience && (activeBg?.assetSources?.[tv.ambience] || activeBg?.assetSources?.[tv.ambience.split('/').pop()])}
+                        <span class="mslot-alias-dot" title="Alias">●</span>
+                      {/if}
                       {#if tv.ambience}
+                        <button class="mslot-rename-btn" title="Rename export filename for this background" on:click|stopPropagation={() => triggerRenameSlotExport('ambience', todKey)}>✏️</button>
                         <button class="mslot-clear-btn" title="Clear ambience (fallback to base)" on:click|stopPropagation={() => assignSlotAsset('ambience', '', todKey)}>✕</button>
                       {/if}
                     </div>
@@ -1495,7 +2056,13 @@
           </div>
 
           <!-- Scaled Canvas Viewport with letterboxing (black bars) -->
-          <div class="canvas-viewport" style="--stage-aspect:{stageAspectW} / {stageAspectH}">
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div
+            class="canvas-viewport"
+            style="--stage-aspect:{stageAspectW} / {stageAspectH}"
+            title="Live Stage Preview. Right-click for options (aspect ratio fit, inspect, copy JSON)"
+            on:contextmenu|preventDefault|stopPropagation={openStageContextMenu}
+          >
             {#if resolvedBgUrl}
               <img
                 draggable="false"
@@ -1668,9 +2235,11 @@
                 role="button"
                 tabindex="0"
                 draggable="true"
-                title="Drag onto any slot: {asset.relPath} ({Math.round(asset.size / 1024)} KB)"
+                title="Drag onto any slot, double-click to preview, or right-click: {asset.relPath} ({Math.round(asset.size / 1024)} KB)"
                 on:dragstart={(e) => onAssetDragStart(e, asset)}
                 on:dragend={onAssetDragEnd}
+                on:contextmenu|preventDefault|stopPropagation={(e) => openAssetContextMenu(e, asset)}
+                on:dblclick={() => inspectAsset(asset)}
               >
                 {#if asset.type === 'image'}
                   <div class="card-thumb-wrap">
@@ -1948,6 +2517,97 @@
   </div>
 {/if}
 
+<!-- Context Menu Overlay -->
+{#if bgContextMenu}
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+  <div
+    class="bg-ctx-menu"
+    style="top: {bgContextMenu.y}px; left: {bgContextMenu.x}px;"
+    on:click|stopPropagation
+  >
+    <div class="ctx-header-tag">{bgContextMenu.title}</div>
+    {#each bgContextMenu.items as it}
+      {#if it.separator}
+        <div class="ctx-sep"></div>
+      {:else}
+        <button
+          class="ctx-item {it.danger ? 'danger' : ''}"
+          disabled={it.disabled}
+          on:click={() => { closeContextMenu(); it.run?.(); }}
+        >
+          {#if it.icon}<span class="ctx-item-icon">{it.icon}</span>{/if}
+          <span class="ctx-item-label">{it.label}</span>
+        </button>
+      {/if}
+    {/each}
+  </div>
+{/if}
+
+<!-- Rename Dialog Submodal -->
+{#if showRenameModal}
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+  <div class="modal-bg submodal-scrim" on:click={() => (showRenameModal = false)}>
+    <div class="modal submodal-card rename-dialog" on:click|stopPropagation>
+      <button class="modal-x" title="Close (Esc)" on:click={() => (showRenameModal = false)}>✕</button>
+      <h3>{renameModalConfig.title}</h3>
+      {#if renameModalConfig.hint}
+        <div class="hint" style="margin-top: 4px; line-height: 1.4;">{renameModalConfig.hint}</div>
+      {/if}
+      <div class="submodal-field" style="margin-top: 12px;">
+        <span class="submodal-label">{renameModalConfig.label}</span>
+        <!-- svelte-ignore a11y_autofocus -->
+        <input
+          type="text"
+          class="submodal-input"
+          placeholder={renameModalConfig.placeholder}
+          bind:value={renameInputValue}
+          on:keydown={(e) => e.key === 'Enter' && submitRenameModal()}
+          autofocus
+        />
+        {#if renameModalError}
+          <div class="submodal-warn" style="color: var(--danger); margin-top: 6px;">
+            ⚠️ {renameModalError}
+          </div>
+        {/if}
+      </div>
+      <div class="submodal-actions">
+        <button on:click={() => (showRenameModal = false)}>Cancel</button>
+        <button class="primary" on:click={submitRenameModal}>Save Name</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Lightbox Asset Inspection Modal -->
+{#if inspectModalAsset}
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+  <div class="modal-bg submodal-scrim lightbox-scrim" on:click={() => (inspectModalAsset = null)}>
+    <div class="modal submodal-card inspect-lightbox" on:click|stopPropagation>
+      <button class="modal-x" title="Close (Esc)" on:click={() => (inspectModalAsset = null)}>✕</button>
+      <div class="lightbox-head">
+        <span class="lightbox-badge">{inspectModalAsset.type?.toUpperCase() || 'ASSET'}</span>
+        <h3 class="lightbox-title text-truncate" title={inspectModalAsset.name}>{inspectModalAsset.name}</h3>
+      </div>
+      <div class="lightbox-body">
+        {#if inspectModalAsset.type === 'image' || (inspectModalAsset.name && inspectModalAsset.name.match(/\.(png|webp|jpg|jpeg|gif|svg|avif)$/i))}
+          <img src={inspectModalAsset.url} alt={inspectModalAsset.name} class="lightbox-img" />
+        {:else}
+          <div class="lightbox-audio-player">
+            <span class="lightbox-audio-icon">🎵</span>
+            <audio src={inspectModalAsset.url} controls autoplay></audio>
+          </div>
+        {/if}
+      </div>
+      <div class="lightbox-meta">
+        <span>Path: <code>{inspectModalAsset.relPath || inspectModalAsset.name}</code></span>
+        {#if inspectModalAsset.size}
+          <span>Size: <code>{Math.round(inspectModalAsset.size / 1024)} KB</code></span>
+        {/if}
+      </div>
+    </div>
+  </div>
+{/if}
+
 <style>
   .bg-maker-modal {
     width: min(1320px, 96vw);
@@ -1965,38 +2625,66 @@
     outline-offset: -4px;
   }
 
-  .maker-head {
+  .maker-title-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    width: 100%;
+    gap: 12px;
+    padding-bottom: 2px;
+  }
+
+  .maker-title {
+    font-size: 14px;
+    margin: 0;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    color: var(--text-strong);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-mono);
+  }
+
+  .maker-prefix {
+    color: var(--accent);
+    font-weight: 800;
+    margin-right: 2px;
+  }
+
+  .maker-title span:not(.maker-prefix):not(.cursor) {
+    color: var(--accent2);
+    font-weight: 700;
+  }
+
+  .maker-title .cursor {
+    color: var(--accent);
+    font-weight: 800;
+    margin-left: 1px;
+    animation: cursor-blink 1.1s steps(1) infinite;
+  }
+
+  .maker-toolbar-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     padding-bottom: 10px;
     border-bottom: 1px solid var(--line);
     flex-shrink: 0;
   }
 
-  .head-left {
+  .toolbar-left {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
   }
 
-  .maker-tag {
-    font-size: 13px;
-    font-weight: 800;
-    letter-spacing: 0.12em;
-    color: var(--accent);
-  }
-
-  .maker-subtag {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    color: var(--dim);
-    padding: 2px 7px;
-    background: var(--panel2);
-    border: 1px solid var(--line);
-    border-radius: 3px;
+  .toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
   }
 
   .maker-path-strip {
@@ -2320,13 +3008,6 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     line-height: 1.1;
-  }
-
-  .head-actions {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-right: 32px;
   }
 
   .accent-btn {
@@ -3500,5 +4181,248 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     text-align: center;
+  }
+
+  /* Slot Head Actions & Rename Buttons */
+  .slot-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+  }
+
+  .slot-rename-btn {
+    font-size: 10px;
+    padding: 2px 5px;
+    border-radius: 3px;
+    background: var(--input-bg);
+    border: 1px solid var(--line);
+    cursor: pointer;
+    line-height: 1;
+    color: var(--dim);
+    transition: all 0.12s ease;
+  }
+  .slot-rename-btn:hover {
+    background: var(--sel);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .slot-name-col {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+    gap: 2px;
+  }
+
+  .alias-tag {
+    font-size: 9.5px;
+    color: var(--accent2);
+    font-family: var(--font-mono);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+  }
+  .alias-tag em {
+    font-style: normal;
+    color: var(--dim);
+  }
+
+  .mslot-alias-dot {
+    color: var(--accent2);
+    font-size: 8px;
+    margin: 0 2px;
+    user-select: none;
+  }
+
+  .mslot-rename-btn {
+    font-size: 9px;
+    background: transparent;
+    border: none;
+    color: var(--dim);
+    cursor: pointer;
+    padding: 0 2px;
+    border-radius: 2px;
+    line-height: 1;
+    margin-left: auto;
+    transition: color 0.12s ease;
+  }
+  .mslot-rename-btn:hover {
+    color: var(--accent2);
+    background: var(--sel);
+  }
+
+  /* Floating Context Menu */
+  .bg-ctx-menu {
+    position: fixed;
+    z-index: 300;
+    min-width: 210px;
+    max-width: 290px;
+    background: var(--panel);
+    border: 1px solid var(--line2);
+    border-radius: var(--radius);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    user-select: none;
+    font-family: var(--font-sans);
+    animation: fadeIn 0.08s ease-out;
+  }
+
+  .ctx-header-tag {
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    color: var(--dim);
+    padding: 5px 8px 3px 8px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+  }
+
+  .ctx-sep {
+    height: 1px;
+    background: var(--line);
+    margin: 3px 0;
+  }
+
+  .ctx-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: var(--text);
+    font-size: 11.5px;
+    font-weight: 500;
+    text-align: left;
+    width: 100%;
+    box-sizing: border-box;
+    cursor: pointer;
+    transition: background 0.1s ease, color 0.1s ease;
+  }
+
+  .ctx-item:hover:not(:disabled) {
+    background: var(--sel);
+    color: var(--text-strong);
+  }
+
+  .ctx-item.danger {
+    color: var(--danger);
+  }
+
+  .ctx-item.danger:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--danger) 15%, transparent);
+    color: #ff6b6b;
+  }
+
+  .ctx-item:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .ctx-item-icon {
+    font-size: 12px;
+    flex-shrink: 0;
+    width: 16px;
+    text-align: center;
+  }
+
+  .ctx-item-label {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Lightbox Asset Inspector */
+  .lightbox-scrim {
+    z-index: 250;
+  }
+
+  .inspect-lightbox {
+    max-width: 720px;
+    width: 90vw;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .lightbox-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .lightbox-badge {
+    font-size: 9.5px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: var(--panel2);
+    border: 1px solid var(--line2);
+    color: var(--accent);
+    font-family: var(--font-mono);
+  }
+
+  .lightbox-title {
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text-strong);
+  }
+
+  .lightbox-body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    min-height: 200px;
+    max-height: 52vh;
+    overflow: hidden;
+    padding: 8px;
+  }
+
+  .lightbox-img {
+    max-width: 100%;
+    max-height: 50vh;
+    object-fit: contain;
+  }
+
+  .lightbox-audio-player {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 24px;
+  }
+
+  .lightbox-audio-icon {
+    font-size: 38px;
+  }
+
+  .lightbox-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--dim);
+    padding-top: 6px;
+    border-top: 1px solid var(--line);
+    font-family: var(--font-mono);
+  }
+  .lightbox-meta code {
+    color: var(--text);
+  }
+
+  .rename-dialog {
+    max-width: 440px;
   }
 </style>

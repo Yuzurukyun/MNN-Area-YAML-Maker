@@ -778,5 +778,57 @@ eq(slotTestBg.states.default.background, '', 'starts with empty background');
 eq(slotTestBg.states.default.foreground, '', 'starts with empty foreground');
 eq(slotTestBg.states.default.ambience, '', 'starts with empty ambience');
 
+/* ---- Global Asset Renaming & Slot Aliases ---- */
+const renameBg = createBackground('Rename/Test');
+renameBg.states.default.background = 'custom_export.png';
+renameBg.states.default.foreground = 'desk.png';
+renameBg.states.default.ambience = 'base/sounds/ambient/chatter.opus';
+renameBg.assetSources = { 'custom_export.png': 'old_court.png' };
+
+// Test getReferencedAssetNames includes assetSources mapping
+const refWithAlias = bgStore.getReferencedAssetNames([renameBg]);
+ok(refWithAlias.has('old_court.png'), 'references source asset via alias');
+ok(refWithAlias.has('custom_export.png'), 'references export alias');
+
+// Test clearAllAssets(true) slot clearing
+let curBgState;
+const unsubBg = bgStore.subscribe((s) => { curBgState = s; });
+
+const storeBg = curBgState.backgrounds[0];
+if (storeBg) {
+  storeBg.states.default.background = 'test_bg.png';
+  storeBg.states.default.foreground = 'test_fg.png';
+  storeBg.states.default.ambience = 'test_amb.opus';
+  await bgStore.clearAllAssets(true);
+  eq(storeBg.states.default.background, '', 'clearAllAssets resets background slot to empty');
+  eq(storeBg.states.default.foreground, '', 'clearAllAssets resets foreground slot to empty');
+  eq(storeBg.states.default.ambience, '', 'clearAllAssets resets ambience slot to empty');
+}
+
+// Test duplicateBackground
+const origBg = curBgState.backgrounds[0];
+if (origBg) {
+  const dupBg = bgStore.duplicateBackground(origBg.id);
+  ok(Boolean(dupBg && dupBg.id !== origBg.id), 'duplicateBackground creates new bg with unique id');
+  ok(dupBg.folder.includes('Copy'), 'duplicateBackground folder indicates copy');
+  
+  // Test renameBackgroundFolder
+  const renRes = bgStore.renameBackgroundFolder(dupBg.id, 'Renamed/Scene');
+  ok(renRes.success, 'renameBackgroundFolder succeeds');
+  eq(dupBg.folder, 'Renamed/Scene', 'background folder updated');
+
+  // Test duplicateState
+  const dupSt = bgStore.duplicateState(dupBg.id, 'default');
+  ok(Boolean(dupSt && dupBg.states[dupSt]), 'duplicateState creates new state variant');
+
+  // Test duplicateTimeVariant
+  dupBg.states.default.time_variants = { day: { background: 'day.png', foreground: '', ambience: '' } };
+  const dupTv = bgStore.duplicateTimeVariant(dupBg.id, 'default', null, 'day');
+  ok(Boolean(dupTv && dupBg.states.default.time_variants[dupTv]), 'duplicateTimeVariant duplicates time variant');
+
+  bgStore.removeBackground(dupBg.id);
+}
+unsubBg();
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

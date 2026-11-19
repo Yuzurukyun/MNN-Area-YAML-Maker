@@ -91,7 +91,41 @@
     drag(document.getElementById('resizeLeft'), L, 1, 200, 560);
     drag(document.getElementById('resizeRight'), R, -1, 260, 680);
 
-    return () => window.removeEventListener('resize', fit);
+    const onBgAssetRenamed = (e) => {
+      const { oldName, newName } = e.detail || {};
+      if (!oldName || !newName || oldName === newName) return;
+      update((s) => {
+        for (const a of s.project.areas || []) {
+          if (a.background === oldName) {
+            a.background = newName;
+          } else if (a.background && a.background.endsWith('/' + oldName)) {
+            const prefix = a.background.slice(0, a.background.lastIndexOf('/') + 1);
+            a.background = prefix + newName;
+          }
+          if (a.background_tod && Array.isArray(a.background_tod)) {
+            for (const row of a.background_tod) {
+              if (row[1] === oldName) {
+                row[1] = newName;
+              } else if (row[1] && row[1].endsWith('/' + oldName)) {
+                const prefix = row[1].slice(0, row[1].lastIndexOf('/') + 1);
+                row[1] = prefix + newName;
+              }
+            }
+          }
+        }
+        for (const img of s.project.images || []) {
+          if (img.url === oldName) {
+            img.url = newName;
+          }
+        }
+      });
+    };
+    window.addEventListener('bg-asset-renamed', onBgAssetRenamed);
+
+    return () => {
+      window.removeEventListener('resize', fit);
+      window.removeEventListener('bg-asset-renamed', onBgAssetRenamed);
+    };
   });
 </script>
 
