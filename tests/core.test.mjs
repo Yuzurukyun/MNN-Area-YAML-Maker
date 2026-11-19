@@ -931,5 +931,23 @@ ok(Boolean(importedOther), 'second background "Other" was created');
 eq(importedOther.states.default.background, 'cloudy_back.webp', 'slot in Other background still simply retains clean "cloudy_back.webp"');
 ok(importedOther.assetSources['cloudy_back.webp']?.startsWith('cloudy_back_'), 'assetSources maps cloudy_back.webp to cloudy_back_1.webp due to collision');
 
+// Verify getAssetUrl disambiguation between Manor and Other
+const manorBgUrl = bgStore.getAssetUrl('cloudy_back.webp', 'image', importedManor);
+const otherBgUrl = bgStore.getAssetUrl('cloudy_back.webp', 'image', importedOther);
+ok(Boolean(manorBgUrl), 'manor cloudy_back.webp resolves to an asset url');
+ok(Boolean(otherBgUrl), 'other cloudy_back.webp resolves to an asset url');
+ok(manorBgUrl !== otherBgUrl, 'manor and other cloudy_back.webp resolve to DIFFERENT asset URLs (no black screen conflict)');
+
+// Audio fallback test
+const audioFallback = bgStore.getAssetUrl('wsl/manor_3_cycle.opus', 'audio', importedManor);
+eq(audioFallback, 'base/sounds/ambient/wsl/manor_3_cycle.opus', 'audio fallback resolves to base/sounds/ambient/ path when not in pool');
+
+// Verify standalone sounds directory does not create a background
+const soundFiles = [
+  { path: 'base/sounds/ambient/night_crickets.opus', name: 'night_crickets.opus', data: new Uint8Array(20), size: 20 },
+];
+const regSounds = await bgStore.registerFiles(soundFiles);
+eq(regSounds.importedBackgrounds.length, 0, 'standalone sounds directory does not create fake backgrounds');
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

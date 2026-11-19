@@ -478,7 +478,7 @@ export const bgStore = {
   },
 
   // Asset Pool & Universal Background Directory/ZIP Importer
-  async registerFiles(files) {
+  async registerFiles(files, onProgress = null) {
     if (!files || files.length === 0) return { importedBackgrounds: [], addedAssets: [] };
 
     const decoder = new TextDecoder();
@@ -487,6 +487,8 @@ export const bgStore = {
     // Helper: Normalize file list from either FileList, File[], or { path, data }[]
     const fileList = Array.from(files);
 
+    onProgress?.(`Reading ${fileList.length} item(s)...`);
+
     for (let i = 0; i < fileList.length; i++) {
       const f = fileList[i];
       const name = f.name || f.path || '';
@@ -494,6 +496,7 @@ export const bgStore = {
 
       if (isZip) {
         try {
+          onProgress?.(`Unpacking archive ${name}...`);
           let ab;
           if (f.arrayBuffer) {
             ab = await f.arrayBuffer();
@@ -668,7 +671,14 @@ export const bgStore = {
     }
 
     // Process each directory group
+    let dirIndex = 0;
+    const totalDirs = dirMap.size;
     for (const [dir, group] of dirMap.entries()) {
+      dirIndex++;
+      if (totalDirs > 3) {
+        onProgress?.(`Importing folder ${dirIndex} of ${totalDirs} (${dir || 'root'})...`);
+      }
+
       const assetMap = new Map(); // origName -> poolName
       for (const astItem of group.assets) {
         const res = await registerPoolAsset(astItem);
@@ -677,6 +687,12 @@ export const bgStore = {
 
       let folderName = dir || 'Imported';
       folderName = normalizeBgPath(folderName);
+
+      // Do NOT auto-create backgrounds from standalone audio/sounds directories
+      const lowerDir = dir.toLowerCase();
+      if (lowerDir.startsWith('sounds') || lowerDir.includes('/sounds') || lowerDir === 'audio' || lowerDir.endsWith('/audio')) {
+        continue;
+      }
 
       let bgCreated = null;
 
@@ -737,9 +753,7 @@ export const bgStore = {
         // Map pool aliases into assetSources so slots keep clean original names
         if (!bgCreated.assetSources) bgCreated.assetSources = {};
         for (const [origName, poolName] of assetMap.entries()) {
-          if (origName !== poolName) {
-            bgCreated.assetSources[origName] = poolName;
-          }
+          bgCreated.assetSources[origName] = poolName;
         }
 
         // Auto-slot fallback: if st.background is empty but folder has images, assign first image
@@ -754,6 +768,7 @@ export const bgStore = {
     }
 
     if (newlyAddedAssets.length > 0) {
+      onProgress?.(`Caching ${newlyAddedAssets.length} asset(s) in IndexedDB...`);
       dbSaveAssets(newlyAddedAssets);
     }
 
@@ -985,14 +1000,71 @@ export const bgStore = {
     if (nameOrPath.startsWith('data:') || nameOrPath.startsWith('blob:') || nameOrPath.startsWith('http://') || nameOrPath.startsWith('https://')) {
       return nameOrPath;
     }
+
     const targetBg = bg || (backgrounds.find((b) => b.id === selectedBgId) || backgrounds[0]);
-    let lookupTarget = nameOrPath;
-    if (targetBg && targetBg.assetSources && targetBg.assetSources[nameOrPath]) {
-      lookupTarget = targetBg.assetSources[nameOrPath];
+    const clean = nameOrPath.split('/').pop().toLowerCase();
+
+    // 1. Audio handling: Match by filename or normalized path in pool, fallback to server path
+    if (type === 'audio') {
+      const normPath = normalizeAmbiencePath(nameOrPath).toLowerCase();
+      const mappedAudio = targetBg?.assetSources?.[nameOrPath] || targetBg?.assetSources?.[clean] || nameOrPath;
+      const mappedClean = mappedAudio.split('/').pop().toLowerCase();
+
+      const matchAudio = assetPool.find((a) => {
+        if (a.type !== 'audio') return false;
+        const aName = a.name.toLowerCase();
+        const aRel = normalizeAmbiencePath(a.relPath || a.name).toLowerCase();
+        return (
+          a.name === mappedAudio ||
+          aName === mappedClean ||
+          aRel === normPath ||
+          a.fullRelPath?.toLowerCase().endsWith(mappedClean)
+        );
+      });
+      if (matchAudio) return matchAudio.url;
+
+      // Fallback: server sound path
+      const cleanAmbience = normalizeAmbiencePath(nameOrPath);
+      return `base/sounds/ambient/${cleanAmbience}`;
     }
+
+    // 2. Image handling: Check explicit alias mapping in targetBg.assetSources
+    if (targetBg?.assetSources) {
+      const mapped = targetBg.assetSources[nameOrPath] || targetBg.assetSources[clean];
+      if (mapped) {
+        const matchMapped = assetPool.find((a) => {
+          if (type && a.type !== type) return false;
+          return a.name.toLowerCase() === mapped.toLowerCase() || a.id === mapped || a.relPath === mapped;
+        });
+        if (matchMapped) return matchMapped.url;
+      }
+    }
+
+    // 3. Check if asset in pool was imported from targetBg's directory
+    if (targetBg?.folder) {
+      const normBgFolder = normalizeBgPath(targetBg.folder).toLowerCase();
+      const matchInFolder = assetPool.find((a) => {
+        if (type && a.type !== type) return false;
+        if (!a.fullRelPath) return false;
+        const normAstPath = normalizeBgPath(a.fullRelPath).toLowerCase();
+        return (
+          normAstPath.startsWith(`${normBgFolder}/`) &&
+          (normAstPath.endsWith(`/${clean}`) || a.name.toLowerCase() === clean)
+        );
+      });
+      if (matchInFolder) return matchInFolder.url;
+    }
+
+    // 4. Match by candidate/pool filename or relative path
     const match = assetPool.find((a) => {
       if (type && a.type !== type) return false;
-      return a.name === lookupTarget || a.relPath === lookupTarget || a.fullRelPath === lookupTarget || a.name === nameOrPath || a.relPath === nameOrPath;
+      const aLower = a.name.toLowerCase();
+      return (
+        aLower === clean ||
+        aLower === nameOrPath.toLowerCase() ||
+        a.relPath?.toLowerCase() === nameOrPath.toLowerCase() ||
+        a.fullRelPath?.toLowerCase() === nameOrPath.toLowerCase()
+      );
     });
     return match ? match.url : '';
   },
@@ -1197,7 +1269,7 @@ export function getAreaBgUrl(bgFolder, customStoreState) {
   if (matched) {
     const visual = resolveActiveVisual(matched, { state: 'default', tod: 'day' });
     if (visual && visual.background) {
-      const url = bgStore.getAssetUrl(visual.background, 'image');
+      const url = bgStore.getAssetUrl(visual.background, 'image', matched);
       if (url) return url;
     }
   }

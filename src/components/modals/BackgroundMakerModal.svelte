@@ -59,6 +59,23 @@
   let importMenuOpen = false;
   let navImportMenuOpen = false;
 
+  // Importing loading state
+  let isImporting = false;
+  let importProgressText = '';
+
+  // Background list search / filter
+  let bgSearchQuery = '';
+  $: filteredBackgrounds = bgSearchQuery.trim()
+    ? backgrounds.filter((b) => {
+        const q = bgSearchQuery.trim().toLowerCase();
+        return (
+          b.folder.toLowerCase().includes(q) ||
+          b.name?.toLowerCase().includes(q) ||
+          b.description?.toLowerCase().includes(q)
+        );
+      })
+    : backgrounds;
+
   // Purge menu & confirmation modal state
   let purgeMenuOpen = false;
   let showPurgeConfirmModal = false;
@@ -833,23 +850,22 @@
     bgStore.addBackground(`${prefix}NewBackground`);
   }
 
-  // Known subfolder prefixes gathered across library, project areas & asset pool
+  // Known subfolder prefixes gathered across library & project areas (excludes background folders containing config)
   $: knownSubfolders = (() => {
     const set = new Set();
+    const bgFolderSet = new Set(backgrounds.map((b) => normalizeBgPath(b.folder).toLowerCase()));
     for (const b of backgrounds) {
       const p = splitFolderPath(b.folder);
-      if (p.subfolder) set.add(p.subfolder);
+      if (p.subfolder && !bgFolderSet.has(p.subfolder.toLowerCase())) {
+        set.add(p.subfolder);
+      }
     }
     for (const a of $state.project.areas) {
       if (a.background) {
         const p = splitFolderPath(a.background);
-        if (p.subfolder) set.add(p.subfolder);
-      }
-    }
-    for (const ast of assetPool) {
-      if (ast.fullRelPath && ast.fullRelPath.includes('/')) {
-        const p = splitFolderPath(normalizeBgPath(ast.fullRelPath));
-        if (p.subfolder) set.add(p.subfolder);
+        if (p.subfolder && !bgFolderSet.has(p.subfolder.toLowerCase())) {
+          set.add(p.subfolder);
+        }
       }
     }
     return Array.from(set).sort();
@@ -1444,19 +1460,35 @@
 
   async function handleFiles(files) {
     if (!files || !files.length) return;
-    const res = await bgStore.registerFiles(files);
-    const bgsCount = res?.importedBackgrounds?.length || 0;
-    const assetsCount = res?.addedAssets?.length || 0;
+    isImporting = true;
+    importProgressText = 'Importing files...';
+    try {
+      await new Promise((r) => setTimeout(r, 40));
+      const res = await bgStore.registerFiles(files, (status) => {
+        importProgressText = status;
+      });
+      const bgsCount = res?.importedBackgrounds?.length || 0;
+      const assetsCount = res?.addedAssets?.length || 0;
 
-    if (bgsCount > 0) {
-      const first = res.importedBackgrounds[0];
-      const posCount = Object.keys(first.states?.default?.positions || {}).length;
-      const posInfo = posCount > 0 ? ` (${posCount} camera angle${posCount > 1 ? 's' : ''})` : '';
-      notify(`Imported background "${first.folder}"${posInfo} (${bgsCount} bg${bgsCount > 1 ? 's' : ''}, ${assetsCount} asset${assetsCount > 1 ? 's' : ''})`, 'ok');
-    } else if (assetsCount > 0) {
-      notify(`Loaded ${assetsCount} asset(s) into Asset Pool.`, 'ok');
-    } else {
-      notify('Loaded files into Asset Pool & Background Library.', 'info');
+      if (bgsCount > 0) {
+        const first = res.importedBackgrounds[0];
+        const posCount = Object.keys(first.states?.default?.positions || {}).length;
+        const posInfo = posCount > 0 ? ` (${posCount} camera angle${posCount > 1 ? 's' : ''})` : '';
+        notify(`Imported background "${first.folder}"${posInfo} (${bgsCount} bg${bgsCount > 1 ? 's' : ''}, ${assetsCount} asset${assetsCount > 1 ? 's' : ''})`, 'ok');
+      } else if (assetsCount > 0) {
+        notify(`Loaded ${assetsCount} asset(s) into Asset Pool.`, 'ok');
+      } else {
+        notify('Loaded files into Asset Pool & Background Library.', 'info');
+      }
+    } catch (err) {
+      console.error('Import failed:', err);
+      notify(`Import failed: ${err.message || err}`, 'warn');
+    } finally {
+      isImporting = false;
+      importProgressText = '';
+      if (fileInputGeneral) fileInputGeneral.value = '';
+      if (fileInputFolder) fileInputFolder.value = '';
+      if (fileInputLibrary) fileInputLibrary.value = '';
     }
   }
 
@@ -1619,10 +1651,16 @@
       audioEl.pause();
       isPlayingAudio = false;
     } else {
+      if (!resolvedAmbienceUrl) {
+        notify(`No audio source found for "${resolvedVisual.ambience || 'ambience'}". Ensure file is in pool or server directory.`, 'warn');
+        return;
+      }
       audioEl.play().then(() => {
         isPlayingAudio = true;
       }).catch((err) => {
         console.warn('Audio play error:', err);
+        isPlayingAudio = false;
+        notify(`Could not play audio "${resolvedVisual.ambience}" (${err.message || 'file not found'}).`, 'warn');
       });
     }
   }
@@ -1698,6 +1736,27 @@
     on:dragleave={onModalDragLeave}
     on:drop={onModalDrop}
   >
+    <!-- Importing Progress Overlay -->
+    {#if isImporting}
+      <div
+        class="import-loading-overlay"
+        role="dialog"
+        tabindex="-1"
+        aria-modal="true"
+        aria-label="Import progress"
+        aria-live="polite"
+        on:pointerdown|stopPropagation
+        on:click|stopPropagation
+        on:keydown|stopPropagation
+      >
+        <div class="import-loading-card">
+          <div class="import-spinner"></div>
+          <div class="import-loading-title">IMPORTING ASSETS & BACKGROUNDS</div>
+          <div class="import-loading-msg">{importProgressText || 'Processing files... please wait'}</div>
+        </div>
+      </div>
+    {/if}
+
     <!-- ROW 1: Title Bar with Blinking Caret -->
     <div class="maker-title-row">
       <h2 class="maker-title">
@@ -1955,7 +2014,7 @@
       <aside class="bg-nav">
         <div class="nav-head">
           <div class="nav-head-title-row">
-            <span class="nav-title">BACKGROUNDS ({backgrounds.length})</span>
+            <span class="nav-title">BACKGROUNDS ({filteredBackgrounds.length}{filteredBackgrounds.length !== backgrounds.length ? ` / ${backgrounds.length}` : ''})</span>
           </div>
           <div class="nav-head-actions">
             <button
@@ -1989,48 +2048,67 @@
               {/if}
             </span>
           </div>
+          <!-- Backgrounds Search / Filter Input -->
+          <div class="nav-search-box">
+            <input
+              type="search"
+              class="nav-search-input"
+              placeholder="Search backgrounds..."
+              bind:value={bgSearchQuery}
+            />
+            {#if bgSearchQuery}
+              <button class="nav-search-clear" title="Clear filter" on:click={() => (bgSearchQuery = '')}>✕</button>
+            {/if}
+          </div>
         </div>
 
         <div class="bg-list">
-          {#each backgrounds as bg (bg.id)}
-            {@const parts = splitFolderPath(bg.folder)}
-            <div
-              class="bg-item {bg.id === activeBg?.id ? 'active' : ''}"
-              role="button"
-              tabindex="0"
-              title="Click to select; right-click for options"
-              on:click={() => bgStore.selectBg(bg.id)}
-              on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && bgStore.selectBg(bg.id)}
-              on:contextmenu|preventDefault|stopPropagation={(e) => openBgContextMenu(e, bg)}
-            >
-              <div class="bg-item-row">
-                <div class="bg-item-titles" title={bg.folder}>
-                  {#if parts.subfolder}
-                    <span class="bg-subfolder-tag">{parts.subfolder}/</span>
-                  {/if}
-                  <span class="bg-folder" use:autoscroll>{parts.name || bg.folder || 'Untitled'}</span>
-                </div>
-                <div class="item-actions">
-                  <button
-                    class="icon-btn"
-                    title="Duplicate background"
-                    on:click|stopPropagation={() => bgStore.duplicateBackground(bg.id)}
-                  >⧉</button>
-                  <button
-                    class="icon-btn danger"
-                    title="Delete background"
-                    on:click|stopPropagation={() => bgStore.removeBackground(bg.id)}
-                  >✕</button>
-                </div>
-              </div>
-              <div class="bg-item-meta">
-                <span>{Object.keys(bg.states || {}).length} state{Object.keys(bg.states || {}).length === 1 ? '' : 's'}</span>
-                {#if bg.states?.default?.usePositions}
-                  <span class="chip-pos">Positions</span>
-                {/if}
-              </div>
+          {#if filteredBackgrounds.length === 0}
+            <div class="empty-nav-search">
+              <span>No backgrounds match "{bgSearchQuery}".</span>
+              <button class="mini-btn" on:click={() => (bgSearchQuery = '')}>Clear filter</button>
             </div>
-          {/each}
+          {:else}
+            {#each filteredBackgrounds as bg (bg.id)}
+              {@const parts = splitFolderPath(bg.folder)}
+              <div
+                class="bg-item {bg.id === activeBg?.id ? 'active' : ''}"
+                role="button"
+                tabindex="0"
+                title="Click to select; right-click for options"
+                on:click={() => bgStore.selectBg(bg.id)}
+                on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && bgStore.selectBg(bg.id)}
+                on:contextmenu|preventDefault|stopPropagation={(e) => openBgContextMenu(e, bg)}
+              >
+                <div class="bg-item-row">
+                  <div class="bg-item-titles" title={bg.folder}>
+                    {#if parts.subfolder}
+                      <span class="bg-subfolder-tag">{parts.subfolder}/</span>
+                    {/if}
+                    <span class="bg-folder" use:autoscroll>{parts.name || bg.folder || 'Untitled'}</span>
+                  </div>
+                  <div class="item-actions">
+                    <button
+                      class="icon-btn"
+                      title="Duplicate background"
+                      on:click|stopPropagation={() => bgStore.duplicateBackground(bg.id)}
+                    >⧉</button>
+                    <button
+                      class="icon-btn danger"
+                      title="Delete background"
+                      on:click|stopPropagation={() => bgStore.removeBackground(bg.id)}
+                    >✕</button>
+                  </div>
+                </div>
+                <div class="bg-item-meta">
+                  <span>{Object.keys(bg.states || {}).length} state{Object.keys(bg.states || {}).length === 1 ? '' : 's'}</span>
+                  {#if bg.states?.default?.usePositions}
+                    <span class="chip-pos">Positions</span>
+                  {/if}
+                </div>
+              </div>
+            {/each}
+          {/if}
         </div>
       </aside>
 
@@ -2667,6 +2745,12 @@
                   on:ended={() => (isPlayingAudio = false)}
                   on:pause={() => (isPlayingAudio = false)}
                   on:play={() => (isPlayingAudio = true)}
+                  on:error={() => {
+                    if (isPlayingAudio) {
+                      isPlayingAudio = false;
+                      notify(`Ambience audio "${resolvedVisual.ambience}" failed to load.`, 'warn');
+                    }
+                  }}
                 ></audio>
               </div>
             {/if}
@@ -3281,9 +3365,10 @@
 
 <style>
   .bg-maker-modal {
-    width: min(1320px, 96vw);
-    height: 92vh;
-    max-height: 92vh;
+    position: relative;
+    width: min(1560px, 98vw);
+    height: 93vh;
+    max-height: 93vh;
     padding: 16px 20px 14px 20px;
     display: flex;
     flex-direction: column;
@@ -3700,7 +3785,7 @@
 
   /* Left Column: Navigator */
   .bg-nav {
-    width: 210px;
+    width: 275px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
@@ -3748,6 +3833,53 @@
     padding: 4px 6px;
     font-size: 11px;
     white-space: nowrap;
+    text-align: center;
+  }
+
+  .nav-search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+  .nav-search-input {
+    width: 100%;
+    background: var(--input-bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 4px 22px 4px 8px;
+    color: var(--text);
+    font-size: 11px;
+    font-family: inherit;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.12s ease;
+  }
+  .nav-search-input:focus {
+    border-color: var(--accent);
+  }
+  .nav-search-clear {
+    position: absolute;
+    right: 4px;
+    background: none;
+    border: none;
+    color: var(--dim);
+    font-size: 10px;
+    cursor: pointer;
+    padding: 2px 4px;
+    line-height: 1;
+  }
+  .nav-search-clear:hover {
+    color: var(--text-strong);
+  }
+  .empty-nav-search {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 24px 12px;
+    color: var(--dim);
+    font-size: 11.5px;
     text-align: center;
   }
 
@@ -5232,5 +5364,54 @@
 
   .rename-dialog {
     max-width: 440px;
+  }
+
+  /* Importing Loading Overlay */
+  :global(.import-loading-overlay) {
+    position: absolute;
+    inset: 0;
+    background: rgba(10, 14, 20, 0.82);
+    backdrop-filter: blur(4px);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-lg);
+    animation: pop-in 0.15s ease;
+  }
+  :global(.import-loading-card) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    background: var(--panel);
+    border: 1px solid var(--accent);
+    box-shadow: 0 16px 44px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 60, 0, 0.25);
+    border-radius: var(--radius-lg);
+    padding: 24px 32px;
+    max-width: 440px;
+    text-align: center;
+  }
+  :global(.import-spinner) {
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(255, 255, 255, 0.15);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  :global(.import-loading-title) {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+  }
+  :global(.import-loading-msg) {
+    font-size: 11.5px;
+    color: var(--text);
+    font-family: var(--font-mono);
   }
 </style>
