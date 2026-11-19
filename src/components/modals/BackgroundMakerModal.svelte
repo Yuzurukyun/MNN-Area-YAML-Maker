@@ -3906,9 +3906,6 @@
           </div>
         </div>
         <div class="lightbox-head-right">
-          {#if repoInspectAsset.size}
-            <span class="repo-inspect-size-badge">{Math.round(repoInspectAsset.size / 1024)} KB</span>
-          {/if}
           <button class="modal-x" title="Close (Esc)" on:click={() => (showRepoAssetModal = false)}>✕</button>
         </div>
       </div>
@@ -3936,6 +3933,12 @@
               <div class="meta-row">
                 <span class="m-label">FROM FOLDER:</span>
                 <code class="m-val font-mono" title={getFromFolderPath(repoInspectAsset)}>{getFromFolderPath(repoInspectAsset)}</code>
+              </div>
+            {/if}
+            {#if repoInspectAsset.size}
+              <div class="meta-row">
+                <span class="m-label">SIZE:</span>
+                <code class="m-val font-mono">{repoInspectAsset.size >= 1048576 ? (repoInspectAsset.size / 1048576).toFixed(2) + ' MB' : Math.max(1, Math.round(repoInspectAsset.size / 1024)) + ' KB'}</code>
               </div>
             {/if}
           </div>
@@ -6195,9 +6198,10 @@
 
   /* Repository Asset Inspector Modal (Horizontal Split Layout) */
   .repo-inspect-modal {
-    max-width: 1040px;
-    width: 94vw;
-    max-height: 85vh;
+    max-width: 1200px;
+    width: 95vw;
+    height: min(86vh, 680px);
+    min-height: 520px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -6205,7 +6209,15 @@
     border-radius: var(--radius-lg, 8px);
     background: var(--panel);
     border: 1px solid var(--line);
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.75);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85);
+    position: relative;
+  }
+
+  /* Eliminate rogue glowing accent line top left */
+  .inspect-lightbox::before,
+  .repo-inspect-modal::before {
+    content: none !important;
+    display: none !important;
   }
 
   .repo-inspect-modal .lightbox-head {
@@ -6214,20 +6226,29 @@
     background: var(--panel2);
   }
 
-  .repo-inspect-size-badge {
-    font-size: 11px;
-    font-weight: 700;
+  .repo-inspect-modal .modal-x {
+    position: static;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    font-size: 15px;
+    cursor: pointer;
     color: var(--dim);
-    font-family: var(--font-mono);
-    padding: 2px 6px;
-    background: var(--input-bg);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-sm, 4px);
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .repo-inspect-modal .modal-x:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-strong, #fff);
   }
 
   .repo-inspect-body {
     display: grid;
-    grid-template-columns: 440px 1fr;
+    grid-template-columns: 480px 1fr;
+    flex: 1;
     min-height: 0;
     overflow: hidden;
   }
@@ -6235,18 +6256,18 @@
   .repo-inspect-media-col {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 14px 16px;
+    gap: 12px;
+    padding: 16px;
     border-right: 1px solid var(--line);
     background: color-mix(in srgb, var(--panel) 94%, #000);
     min-height: 0;
-    justify-content: flex-start;
+    overflow: hidden;
   }
 
   .repo-media-viewport {
+    flex: 1;
+    min-height: 250px;
     width: 100%;
-    aspect-ratio: 16 / 9;
-    max-height: 245px;
     background: #000;
     border: 1px solid var(--line2);
     border-radius: var(--radius);
@@ -6255,23 +6276,23 @@
     justify-content: center;
     overflow: hidden;
     position: relative;
-    flex-shrink: 0;
   }
 
   .repo-letterboxed-img {
     max-width: 100%;
     max-height: 100%;
-    width: 100%;
-    height: 100%;
-    object-fit: contain; /* Letterbox fill in viewport */
+    width: auto;
+    height: auto;
+    object-fit: contain; /* Flexible letterboxing for any image dimensions */
     display: block;
+    margin: auto;
   }
 
   .repo-media-meta {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    padding: 8px 12px;
+    padding: 10px 12px;
     background: var(--input-bg);
     border: 1px solid var(--line);
     border-radius: var(--radius);
@@ -6279,6 +6300,7 @@
     font-family: var(--font-mono);
     width: 100%;
     box-sizing: border-box;
+    flex-shrink: 0;
   }
 
   .repo-media-meta .meta-row {
@@ -6322,17 +6344,18 @@
   .repo-inspect-usages-col {
     display: flex;
     flex-direction: column;
-    padding: 14px 16px;
+    padding: 16px;
     min-height: 0;
     overflow: hidden;
-    gap: 10px;
+    gap: 12px;
   }
 
   .repo-usages-header {
     display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 8px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    flex-shrink: 0;
   }
 
   .repo-usages-title {
@@ -6344,7 +6367,7 @@
   }
 
   .repo-usages-hint {
-    font-size: 10px;
+    font-size: 11px;
     color: var(--dim);
   }
 
@@ -6404,7 +6427,8 @@
   }
 
   .repo-usages-table-wrap {
-    max-height: 340px;
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
     border: 1px solid var(--line);
     border-radius: var(--radius);

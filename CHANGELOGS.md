@@ -732,11 +732,12 @@
 - **"From Folder" Origin Path Tracking & Project Export (`src/lib/bgSchema.js`, `src/lib/bgStore.js`, `src/lib/assetDb.js`, `src/components/modals/BackgroundMakerModal.svelte`, `src/components/Header.svelte`):**
     - Added `sanitizeToRootFolder(path)`: strips personal PC user directories (`C:/Users/name/...`, `/home/name/...`, drive letters) and guarantees paths always start cleanly at the root project folder (e.g. `Ante Infinitum/background/WS Lambda/Manor Room 1`).
     - Exported to project file data: included `from_folder` in `background.json`, `assets` with `fromFolder` in `backgrounds-library.json`, and `P.bgAssets` in `areas-project.json`, enabling seamless restoration of source origins when sharing or re-opening project backups.
-- **Repository Asset Inspector Modal Proportional Layout Fix (`src/components/modals/BackgroundMakerModal.svelte`):**
-    - Replaced rigid `height: min(85vh, 720px)` with natural content height (`max-height: 85vh`), completely eliminating the 400px empty black void beneath the usages table when an asset has few references.
-    - Set 16:9 aspect ratio (`aspect-ratio: 16 / 9; max-height: 245px`) on `.repo-media-viewport`, allowing standard courtroom backgrounds to fill the frame naturally with zero vertical letterbox bars.
-    - Applied clean multiline wrapping (`word-break: break-all; line-height: 1.4; max-height: 52px; overflow-y: auto`) on `.m-val` in `.repo-media-meta`, ensuring long paths (e.g. `Ante Infinitum/background/WS Lambda/West Island/House/House Room 1 [Evening]`) display in full without premature ellipsis clipping.
-    - Removed redundant `USAGES:` row in metadata box to eliminate visual conflict with the dedicated usages table header.
+- **Repository Asset Inspector Modal UI Polish (`src/components/modals/BackgroundMakerModal.svelte`):**
+    - File size relocated to bottom left: moved file size indicator from the top-right header into `.repo-media-meta` as `SIZE:`, alongside `PATH:` and `FROM FOLDER:`, completely freeing up the top-right `✕` exit button from visual overlap or blocking.
+    - Expanded spacious modal bounds: increased modal width and height (`max-width: 1200px; width: 95vw; height: min(86vh, 680px); min-height: 520px;`), providing a spacious and comfortable inspection window.
+    - Glowing top-left accent line removed: suppressed `.modal::before` on `.repo-inspect-modal` and `.inspect-lightbox` (`content: none !important; display: none !important;`), eliminating the stray decorative orange accent line.
+    - Universal image letterboxing: removed hardcoded 16:9 ratio locks on `.repo-media-viewport` and applied `object-fit: contain` with `#000` background fill so images of any dimension (16:9, 4:3, square, 9:16 vertical portrait, 21:9 ultrawide) center and letterbox cleanly without distortion.
+    - Usages header column separation: updated `.repo-usages-header` to `flex-direction: column` with dedicated gap, stacking the accent title `// USED IN BACKGROUND NODES (N)` above the gray instruction hint to eliminate horizontal squeezing and line-wrapping.
 
 ### Verification
 
@@ -746,7 +747,7 @@
 - **Zero Forced Reflow on Mount:** Confirmed `use:autoscroll` reflow bypass eliminates 500 synchronous layout queries when mounting `BackgroundMakerModal.svelte`, ensuring instant modal opening.
 - Verified on real disk assets: tested against actual repository `base/` (6,343 files) — successfully extracted 140 backgrounds, imported 346 unique images and 175 ambient audios (521 total assets), and cleanly filtered out 5,602 non-background/non-ambient bloat files with 0 dropped images or sounds.
 - Live browser CDP tests verified:
-    - **Compact & Proportional Asset Inspector:** Verified modal wraps snugly to content height (414px high instead of 720px), eliminates empty black void, fills 16:9 viewport naturally, and displays full unclipped directory path ([verified_compact_proportional_inspector.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_compact_proportional_inspector.png)).
+    - **Polished Repository Asset Inspector Modal:** Verified modal renders with generous 1200×680px bounds, eliminates the stray top-left glowing line (`beforeContent: none`), positions file size cleanly in the bottom-left details box (`SIZE: 8 KB`), unblocks the top-right `✕` close button, cleanly letterboxes images with `object-fit: contain`, and stacks the usages title and hint vertically in a column ([verified_yuzu_polished_inspector.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_yuzu_polished_inspector.png)).
     - **Unified Auto-arrange Button:** Verified single cohesive button styled consistently with `Layouts ▾` and `Reachable ▾`, with `▶ Run Auto-arrange` inside dropdown menu.
     - **Field Header Emdash Spacing:** Verified `key — description` renders with clean non-collapsing spaces on both sides of the emdash.
     - **Post-Import Immediate Reactivity:** Verified that "Unused (N)" count and asset repository lists update reactively immediately upon completing import without reopening modal.
