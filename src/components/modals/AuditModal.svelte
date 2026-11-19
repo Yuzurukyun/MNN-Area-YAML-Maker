@@ -2,6 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   import { auditMap } from '../../lib/pathAudit.js';
   import { state, update, notify } from '../../lib/state.js';
+  import { autoscroll } from '../../lib/autoscroll.js';
 
   export let project;
   export let onFocusArea;
@@ -178,9 +179,9 @@
                     <div class="issue-row">
                       <div class="area-info">
                         <span class="id-badge">#{idx}</span>
-                        <span class="area-name">{a.area}</span>
+                        <span class="area-name" use:autoscroll>{a.area}</span>
                         {#if a.background}
-                          <span class="area-bg-chip">{a.background}</span>
+                          <span class="area-bg-chip" use:autoscroll>{a.background}</span>
                         {/if}
                       </div>
                       <button class="mini-btn focus-btn" title="Center camera on area" on:click={() => jumpTo(a)}>⌖ View Node</button>
@@ -213,9 +214,9 @@
                     <div class="issue-row">
                       <div class="area-info">
                         <span class="id-badge">#{idx}</span>
-                        <span class="area-name">{a.area}</span>
+                        <span class="area-name" use:autoscroll>{a.area}</span>
                         {#if a.background}
-                          <span class="area-bg-chip">{a.background}</span>
+                          <span class="area-bg-chip" use:autoscroll>{a.background}</span>
                         {/if}
                       </div>
                       <button class="mini-btn focus-btn" title="Center camera on area" on:click={() => jumpTo(a)}>⌖ View Node</button>
@@ -248,9 +249,9 @@
                     <div class="issue-row">
                       <div class="area-info">
                         <span class="id-badge">#{idx}</span>
-                        <span class="area-name">{a.area}</span>
+                        <span class="area-name" use:autoscroll>{a.area}</span>
                         {#if a.background}
-                          <span class="area-bg-chip">{a.background}</span>
+                          <span class="area-bg-chip" use:autoscroll>{a.background}</span>
                         {/if}
                       </div>
                       <button class="mini-btn focus-btn" title="Center camera on area" on:click={() => jumpTo(a)}>⌖ View Node</button>
@@ -283,9 +284,9 @@
                     <div class="issue-row">
                       <div class="area-info">
                         <span class="id-badge">#{idx}</span>
-                        <span class="area-name">{a.area}</span>
+                        <span class="area-name" use:autoscroll>{a.area}</span>
                         {#if a.background}
-                          <span class="area-bg-chip">{a.background}</span>
+                          <span class="area-bg-chip" use:autoscroll>{a.background}</span>
                         {/if}
                       </div>
                       <button class="mini-btn focus-btn" title="Center camera on area" on:click={() => jumpTo(a)}>⌖ View Node</button>

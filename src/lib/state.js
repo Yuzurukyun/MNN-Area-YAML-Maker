@@ -102,6 +102,7 @@ export const DEFAULT_SETTINGS = {
   sortInsideGroup: false,  // bool, default false (preserves custom internal group layout & shape)
   arrangeFitView: true,    // bool, default true (auto-fits camera after arrange)
   arrangeGroupsOnly: false,// bool, default false (only move groups, leaving loose areas untouched)
+  autoscrollLongLabels: false, // bool, default false ("autoscroll long labels when not focused")
 };
 
 function loadSettings() {

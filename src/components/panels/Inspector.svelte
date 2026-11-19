@@ -7,8 +7,11 @@
   import { onMount } from 'svelte';
   import { bgStore, getAreaBgUrl } from '../../lib/bgStore.js';
   import { resolveActiveVisual, normalizeBgPath, hasTimeVariants } from '../../lib/bgSchema.js';
+  import { autoscroll } from '../../lib/autoscroll.js';
 
   let open = { basics: true, links: true, access: false, behaviour: false, perms: false };
+  let inspectorMode = 'essentials'; // 'essentials' | 'full'
+  let previewOpen = true;
   let todPresetIdx = 0;
   let todPresetName = '';
   let armDelete = false;
@@ -211,11 +214,28 @@
   <div class="insp-head">
     <div class="insp-title">
       <span class="insp-id" title="Area ID (list index)">#{P.areas.indexOf(a)}</span>
-      <h2 title="Currently selected area">{a.area || 'Unnamed'}</h2>
+      <h2 title="Currently selected area" use:autoscroll>{a.area || 'Unnamed'}</h2>
     </div>
     <div class="hint" title="Template snapshot last applied to this area">
       {#if tpl}Template: <b style="color:var(--text)">{tpl.name}</b>{:else}No template assigned{/if}
     </div>
+
+    <!-- Tier Mode Toggle: Essentials vs Full Server Spec -->
+    <div class="insp-mode-pills" style="display:flex;gap:4px;margin-top:8px">
+      <button
+        class="mini-btn insp-tier-btn {inspectorMode === 'essentials' ? 'active-tier' : ''}"
+        style="flex:1;font-size:11px;padding:3px 6px"
+        title="Focused view: Name, Color, Preview, Background and Walkable Corridors"
+        on:click={() => (inspectorMode = 'essentials')}
+      >⚡ Essentials</button>
+      <button
+        class="mini-btn insp-tier-btn {inspectorMode === 'full' ? 'active-tier' : ''}"
+        style="flex:1;font-size:11px;padding:3px 6px"
+        title="Advanced view: Access locks, behaviour, and server permissions"
+        on:click={() => (inspectorMode = 'full')}
+      >🛠️ Full Server Spec</button>
+    </div>
+
     <div class="btn-row" style="margin:8px 0 0;align-items:center">
       <span class="hint" title="Filter inspector fields by importance group">Show fields</span>
       <select
@@ -268,7 +288,10 @@
       </div>
 
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:9px">
-        <span class="hint" title="Visual asset preview for this area">Visual Preview</span>
+        <button class="preview-toggle-btn" on:click={() => (previewOpen = !previewOpen)} title="Toggle visual preview panel">
+          <span class="chevron {previewOpen ? 'open' : ''}">▸</span>
+          <span class="hint" style="cursor:pointer">Visual Preview</span>
+        </button>
         <div style="display:flex;gap:4px">
           {#if a.image && currentBgUrl}
             <button
@@ -289,24 +312,26 @@
         </div>
       </div>
 
-      {#if (imageDisplayMode === 'node' && a.image) || (!currentBgUrl && a.image)}
-        <div class="node-image-preview" style="margin-top:6px;border-radius:5px;overflow:hidden;border:1px solid var(--line2);background:var(--input-bg);display:flex;align-items:center;justify-content:center;max-height:180px">
-          <img src={a.image} alt="Node preview" style="max-width:100%;max-height:180px;width:auto;height:auto;object-fit:contain;display:block" />
-        </div>
-      {:else if currentBgUrl}
-        <div class="node-image-preview" style="margin-top:6px;border-radius:5px;overflow:hidden;border:1px solid var(--line2);background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;max-height:180px;position:relative">
-          <img src={currentBgUrl} alt="Background scene" style="max-width:100%;max-height:180px;width:auto;height:auto;object-fit:contain;display:block" />
-          <div style="position:absolute;bottom:4px;right:6px;background:rgba(0,0,0,0.7);padding:1px 6px;border-radius:3px;font-size:9.5px;color:#fff">
-            Background: {a.background}
+      {#if previewOpen}
+        {#if (imageDisplayMode === 'node' && a.image) || (!currentBgUrl && a.image)}
+          <div class="node-image-preview" style="margin-top:6px;border-radius:5px;overflow:hidden;border:1px solid var(--line2);background:var(--input-bg);display:flex;align-items:center;justify-content:center;max-height:180px">
+            <img src={a.image} alt="Node preview" style="max-width:100%;max-height:180px;width:auto;height:auto;object-fit:contain;display:block" />
           </div>
-        </div>
-      {:else}
-        <div style="margin-top:5px;display:flex;gap:4px">
-          <button class="mini-btn" style="flex:1;padding:4px" on:click={() => iconInput.click()}>＋ Attach Node Icon</button>
-          {#if a.background}
-            <button class="mini-btn" style="padding:4px 8px" title="Configure in Background Maker" on:click={() => bgStore.openMaker(a.background)}>🖼 Open BG</button>
-          {/if}
-        </div>
+        {:else if currentBgUrl}
+          <div class="node-image-preview" style="margin-top:6px;border-radius:5px;overflow:hidden;border:1px solid var(--line2);background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;max-height:180px;position:relative">
+            <img src={currentBgUrl} alt="Background scene" style="max-width:100%;max-height:180px;width:auto;height:auto;object-fit:contain;display:block" />
+            <div style="position:absolute;bottom:4px;right:6px;background:rgba(0,0,0,0.7);padding:1px 6px;border-radius:3px;font-size:9.5px;color:#fff">
+              Background: {a.background}
+            </div>
+          </div>
+        {:else}
+          <div style="margin-top:5px;display:flex;gap:4px">
+            <button class="mini-btn" style="flex:1;padding:4px" on:click={() => iconInput.click()}>＋ Attach Node Icon</button>
+            {#if a.background}
+              <button class="mini-btn" style="padding:4px 8px" title="Configure in Background Maker" on:click={() => bgStore.openMaker(a.background)}>🖼 Open BG</button>
+            {/if}
+          </div>
+        {/if}
       {/if}
       <input type="file" accept="image/*" hidden bind:this={iconInput} on:change={onIconUpload} />
     </div>
@@ -456,7 +481,7 @@
     </details>
   {/if}
 
-  {#if showAccess}
+  {#if (inspectorMode === 'full' || accessMod > 0) && showAccess}
     <details class="sec" open={open.access} on:toggle={(e) => (open.access = e.target.open)}>
       <summary title="Locks, lobby, and privacy flags">
         <span class="sum-title">Access & locks</span>
@@ -470,7 +495,7 @@
     </details>
   {/if}
 
-  {#if showBeh}
+  {#if (inspectorMode === 'full' || behMod > 0) && showBeh}
     <details class="sec" open={open.behaviour} on:toggle={(e) => (open.behaviour = e.target.open)}>
       <summary title="Lights, weather, AFK timeout, and map transition visuals">
         <span class="sum-title">Behaviour</span>
@@ -503,7 +528,7 @@
     </details>
   {/if}
 
-  {#if showPerms}
+  {#if (inspectorMode === 'full' || permMod > 0) && showPerms}
     <details class="sec" open={open.perms} on:toggle={(e) => (open.perms = e.target.open)}>
       <summary title="Player command permissions in this area">
         <span class="sum-title">Permissions</span>

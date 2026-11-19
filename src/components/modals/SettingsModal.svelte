@@ -149,7 +149,23 @@
         </div>
       </div>
 
-      <!-- 4. Connection Line Style -->
+      <!-- 5. Autoscroll Long Labels -->
+      <div class="setting-item">
+        <label class="setting-header" style="cursor:pointer;margin-bottom:0">
+          <div style="display:flex;align-items:center;gap:8px">
+            <input
+              type="checkbox"
+              checked={$settings.autoscrollLongLabels}
+              on:change={(e) => updateSettings((s) => (s.autoscrollLongLabels = e.target.checked))}
+            />
+            <span class="setting-title" style="cursor:pointer">Autoscroll long labels when not focused</span>
+          </div>
+          {#if !$settings.autoscrollLongLabels}<span class="default-tag">Default (Hover only)</span>{/if}
+        </label>
+        <div class="hint" style="margin-top:6px;margin-left:24px">
+          Continuously scrolls overflowing area names and paths. When off, labels scroll smoothly on hover.
+        </div>
+      </div>
       <div class="setting-item">
         <div class="setting-header">
           <span class="setting-title">Connection line style</span>

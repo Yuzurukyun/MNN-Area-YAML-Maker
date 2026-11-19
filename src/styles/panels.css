@@ -268,6 +268,43 @@ main {
   border-bottom: 1px solid var(--line);
 }
 
+.insp-tier-btn {
+  background: var(--input-bg);
+  border: 1px solid var(--line);
+  color: var(--dim);
+  transition: all 0.15s ease;
+}
+.insp-tier-btn:hover {
+  border-color: var(--line2);
+  color: var(--text-strong);
+}
+.insp-tier-btn.active-tier {
+  background: var(--sel);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.preview-toggle-btn {
+  background: transparent;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  padding: 0;
+  color: inherit;
+}
+.preview-toggle-btn .chevron {
+  font-size: 10px;
+  color: var(--dim);
+  display: inline-block;
+  transition: transform 0.18s ease;
+}
+.preview-toggle-btn .chevron.open {
+  transform: rotate(90deg);
+}
+
 .swatch-bar {
   display: flex;
   align-items: center;
@@ -636,4 +673,51 @@ details.sec .body {
 .err-box ul,
 .warn-box ul {
   margin: 6px 0 6px 18px;
+}
+
+.insp-tier-btn {
+  border-color: var(--line);
+  color: var(--dim);
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.insp-tier-btn:hover {
+  color: var(--text-strong);
+  border-color: var(--line2);
+}
+
+.insp-tier-btn.active-tier {
+  background: var(--sel);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.preview-toggle-btn {
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  color: var(--dim);
+  transition: color 0.12s ease;
+}
+
+.preview-toggle-btn:hover {
+  color: var(--text-strong);
+  background: none !important;
+  border: none !important;
+}
+
+.preview-toggle-btn .chevron {
+  display: inline-block;
+  font-size: 10px;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.preview-toggle-btn .chevron.open {
+  transform: rotate(90deg);
 }

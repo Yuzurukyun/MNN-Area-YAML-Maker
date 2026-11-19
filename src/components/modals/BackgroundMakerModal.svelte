@@ -13,6 +13,7 @@
     normalizeAmbiencePath,
   } from '../../lib/bgSchema.js';
   import { bgStore, ensureUniqueBgFolder } from '../../lib/bgStore.js';
+  import { autoscroll } from '../../lib/autoscroll.js';
 
   const dispatch = createEventDispatcher();
 
@@ -33,6 +34,7 @@
   let activeTab = 'builder'; // 'builder' | 'json'
   let assetFilter = 'all'; // 'all' | 'image' | 'audio'
   let assetSearch = '';
+  let poolCollapsed = false;
 
   // Local drag-over indicator
   let isDraggingOverPool = false;
@@ -655,7 +657,7 @@
       <!-- Small font label below input boxes displaying full path -->
       <div class="path-strip-full" title="Computed full server asset path">
         <span class="full-path-tag">FULL PATH:</span>
-        <code class="full-path-text">base/background/{normalizeBgPath(activeBg?.folder) || 'Untitled'}/background.json</code>
+        <code class="full-path-text" use:autoscroll>base/background/{normalizeBgPath(activeBg?.folder) || 'Untitled'}/background.json</code>
         {#if isDuplicatePath}
           <span class="full-path-dup-alert">⚠ Will be disambiguated on blur or export</span>
         {/if}
@@ -703,7 +705,7 @@
                   {#if parts.subfolder}
                     <span class="bg-subfolder-tag">{parts.subfolder}/</span>
                   {/if}
-                  <span class="bg-folder">{parts.name || bg.folder || 'Untitled'}</span>
+                  <span class="bg-folder" use:autoscroll>{parts.name || bg.folder || 'Untitled'}</span>
                 </div>
                 <div class="item-actions">
                   <button
@@ -833,7 +835,7 @@
                   {:else}
                     <div class="no-thumb-box">🖼</div>
                   {/if}
-                  <span class="asset-filename" title={activeBgVal}>{activeBgVal}</span>
+                  <span class="asset-filename" title={activeBgVal} use:autoscroll>{activeBgVal}</span>
                 </div>
               {:else}
                 <div class="slot-content empty-drop">
@@ -865,7 +867,7 @@
                   {:else}
                     <div class="no-thumb-box">🌫</div>
                   {/if}
-                  <span class="asset-filename" title={activeFgVal}>{activeFgVal}</span>
+                  <span class="asset-filename" title={activeFgVal} use:autoscroll>{activeFgVal}</span>
                 </div>
               {:else}
                 <div class="slot-content empty-drop">
@@ -893,7 +895,7 @@
               {#if activeAmbienceVal}
                 <div class="slot-content has-asset">
                   <div class="no-thumb-box audio">🎵</div>
-                  <span class="asset-filename" title={activeAmbienceVal}>{activeAmbienceVal}</span>
+                  <span class="asset-filename" title={activeAmbienceVal} use:autoscroll>{activeAmbienceVal}</span>
                 </div>
               {:else}
                 <div class="slot-content empty-drop">
@@ -1187,6 +1189,13 @@
     >
       <div class="dock-bar">
         <div class="dock-left">
+          <button
+            class="mini-btn dock-toggle-btn"
+            title={poolCollapsed ? 'Expand Asset Pool' : 'Collapse Asset Pool'}
+            on:click={() => (poolCollapsed = !poolCollapsed)}
+          >
+            {poolCollapsed ? '▲' : '▼'}
+          </button>
           <span class="dock-title">ASSET REPOSITORY POOL ({assetPool.length})</span>
           <div class="filter-pills">
             <button class="filter-pill {assetFilter === 'all' ? 'active' : ''}" on:click={() => (assetFilter = 'all')}>All ({assetPool.length})</button>
@@ -1226,36 +1235,38 @@
         </div>
       </div>
 
-      <!-- Assets Grid / Carousel Strip -->
-      <div class="assets-strip">
-        {#if filteredAssets.length === 0}
-          <div class="dock-empty-msg">
-            <span>Drag & drop images (.webp, .png, .jpg) or audio (.opus, .mp3) here to build without re-uploading.</span>
-          </div>
-        {:else}
-          {#each filteredAssets as asset (asset.id)}
-            <div
-              class="asset-card"
-              role="button"
-              tabindex="0"
-              draggable="true"
-              title="Drag onto any slot: {asset.relPath} ({Math.round(asset.size / 1024)} KB)"
-              on:dragstart={(e) => onAssetDragStart(e, asset)}
-            >
-              {#if asset.type === 'image'}
-                <div class="card-thumb-wrap">
-                  <img src={asset.url} alt={asset.name} class="asset-img" />
-                </div>
-              {:else}
-                <div class="card-thumb-wrap audio">
-                  <span>🎵</span>
-                </div>
-              {/if}
-              <span class="asset-card-name">{asset.relPath || asset.name}</span>
+      {#if !poolCollapsed}
+        <!-- Assets Grid / Carousel Strip -->
+        <div class="assets-strip">
+          {#if filteredAssets.length === 0}
+            <div class="dock-empty-msg">
+              <span>Drag & drop images (.webp, .png, .jpg) or audio (.opus, .mp3) here to build without re-uploading.</span>
             </div>
-          {/each}
-        {/if}
-      </div>
+          {:else}
+            {#each filteredAssets as asset (asset.id)}
+              <div
+                class="asset-card"
+                role="button"
+                tabindex="0"
+                draggable="true"
+                title="Drag onto any slot: {asset.relPath} ({Math.round(asset.size / 1024)} KB)"
+                on:dragstart={(e) => onAssetDragStart(e, asset)}
+              >
+                {#if asset.type === 'image'}
+                  <div class="card-thumb-wrap">
+                    <img src={asset.url} alt={asset.name} class="asset-img" />
+                  </div>
+                {:else}
+                  <div class="card-thumb-wrap audio">
+                    <span>🎵</span>
+                  </div>
+                {/if}
+                <span class="asset-card-name" use:autoscroll>{asset.relPath || asset.name}</span>
+              </div>
+            {/each}
+          {/if}
+        </div>
+      {/if}
     </section>
   </div>
 </div>
@@ -2367,7 +2378,15 @@
   .dock-left {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
+  }
+
+  .dock-toggle-btn {
+    padding: 2px 6px;
+    font-size: 10px;
+    line-height: 1;
+    font-weight: 700;
+    cursor: pointer;
   }
 
   .dock-title {

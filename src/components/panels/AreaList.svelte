@@ -1,6 +1,7 @@
 <script>
   import { state, update, selectOnly, uiScale, refocusView, notify, centerCameraOn } from '../../lib/state.js';
   import { bgStore } from '../../lib/bgStore.js';
+  import { autoscroll } from '../../lib/autoscroll.js';
   import * as M from '../../lib/core.js';
 
   export let onAddArea;
@@ -319,7 +320,7 @@
             {/each}
           </select>
         {/if}
-        <span class="nm">{a.area || 'Unnamed'}</span>
+        <span class="nm" use:autoscroll>{a.area || 'Unnamed'}</span>
         {#if i > 0}
           <span class="row-actions">
             {#if !q}

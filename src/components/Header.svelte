@@ -230,11 +230,11 @@
           <button title="Preview, validate, copy, or download areas.yaml" on:click={() => { exportMenu = false; yamlOpen = true; }}>YAML — server config (areas.yaml)…</button>
           <button title="Download full project backup including positions, templates and backgrounds" on:click={exportJson}>JSON — project backup (areas-project.json)</button>
           <button title="Build, manage, and export background.json and asset packages (.zip)" on:click={() => { exportMenu = false; bgStore.openMaker(); }}>ZIP — background packages & assets (.zip)…</button>
-          <button title="Export high-resolution PNG image of the visible network map" on:click={() => { exportMenu = false; window.dispatchEvent(new CustomEvent('export-graph-screenshot')); }}>PNG — high-res map canvas image…</button>
           <div class="drop-hint">JSON saves full project data (nodes, positions, backgrounds). YAML is the server config. ZIP packages visual/audio assets.</div>
         </div>
       {/if}
     </span>
+    <button class="snapshot-header-btn" title="Export high-resolution PNG image of the visible map canvas" on:click={() => window.dispatchEvent(new CustomEvent('export-graph-screenshot'))}>📷</button>
     <span class="h-sep"></span>
     <button on:click={undo} disabled={!$historyState.canUndo} title="Undo last change (Ctrl+Z)">↩ Undo</button>
     <button on:click={redo} disabled={!$historyState.canRedo} title="Redo undone change (Ctrl+Shift+Z)">↪ Redo</button>

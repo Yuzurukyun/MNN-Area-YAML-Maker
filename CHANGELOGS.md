@@ -377,14 +377,39 @@
     - Supports dropping OS image files directly from the desktop onto any canvas node with automatic client-side thumbnail scaling.
     - Added visual drag-over feedback with dashed glowing accent outline (`.node.drag-over`).
 
+### UI Streamlining, Progressive Disclosure & Micro-Animations
+
+- **Long Label Auto-Scrolling (`src/lib/autoscroll.js`, `SettingsModal.svelte`, `AreaList.svelte`, `Inspector.svelte`, `AuditModal.svelte`, `BackgroundMakerModal.svelte`):**
+    - Created lightweight Svelte action `use:autoscroll` that detects overflowing labels (`scrollWidth > clientWidth + 1`) and smoothly scrolls text back and forth on hover with gentle pauses at boundaries.
+    - Added a user preference in `SettingsModal.svelte`: `Autoscroll long labels when not focused` (`autoscrollLongLabels: false` by default). When enabled, overflowing labels scroll continuously even without hover.
+    - Attached to area names in `AreaList.svelte`, area header in `Inspector.svelte`, audit report chips in `AuditModal.svelte`, and folder/file paths in `BackgroundMakerModal.svelte`. Music player remains strictly untouched.
+- **Compact Link Mode & View Filter Dropdowns (`src/components/graph/GraphToolbar.svelte`):**
+    - Replaced the 3 wide link tabs (`Reachable`, `Visible`, `Scream`) with a streamlined `[ 🔗 Reachable ▾ ]` dropdown menu showing descriptive role labels and active checkmarks.
+    - Clustered the 5 visibility checkboxes (`Focus mode`, `Isolate selection`, `Hide hub node`, `Hide <ALL> areas`, `<ALL> mesh connections`) into a single `👁 View ▾` dropdown equipped with a dynamic active-filter counter badge (`1`..`5`).
+    - Removed `📷 Snapshot` from `GraphToolbar.svelte` to keep canvas toolbar focused exclusively on navigation, layouts, and diagnostics.
+- **Standalone Header Camera Snapshot Button (`src/components/Header.svelte`, `src/styles/chrome.css`):**
+    - Relocated map canvas snapshot export to a standalone camera emoji button (`📷`) situated directly beside `Export ▾` in the main top header bar.
+    - Removed `PNG — high-res map canvas image…` from the `Export ▾` dropdown menu so the camera button serves as the single clear, accessible snapshot action.
+- **Inspector Progressive Disclosure (`src/components/panels/Inspector.svelte`, `src/styles/panels.css`):**
+    - Added a segmented tier selector: `[ ⚡ Essentials ]` vs `[ 🛠️ Full Server Spec ]`.
+    - In `⚡ Essentials` (default), advanced server spec sections (`Access & locks`, `Behaviour`, `Permissions`) are hidden unless an area has modified non-default values (`accessMod > 0 || behMod > 0 || permMod > 0`), keeping the inspector uncluttered for standard corridor mapping.
+    - Added a collapsible chevron toggle for `Visual Preview` (`previewOpen`).
+- **Foldable Asset Pool Dock & Micro-Animations (`BackgroundMakerModal.svelte`, `src/styles/base.css`, `src/styles/panels.css`):**
+    - Added a `▼` / `▲` collapse toggle button on the bottom Asset Repository Pool dock in Background Maker, collapsing the strip to expand vertical builder workspace.
+    - Added tactile `:active { transform: scale(0.975) translateY(0.5px); }` button micro-animations across all UI buttons.
+    - Smooth chevron rotation on preview collapse toggles and dragover slot highlights.
+
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **169 passed, 0 failed** (11 new assertions verifying `ensureUniqueBgFolder` collision suffixing, self-ID exclusion, `getReferencedAssetNames`, and safe IndexedDB Node fallback).
-- `npm run build:both`: rebuilt `export/yuzu_area_maker.html`, `export/yuzu_area_maker_nomusic.html`, and `docs/index.html` with 0 warnings.
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **169 passed, 0 failed**.
+- `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5119 KB), `export/yuzu_area_maker_nomusic.html` (466 KB), and `docs/index.html` (466 KB) with 0 warnings.
 - Live browser CDP tests verified:
-  - Header Export and Import menus display unified format labels.
-  - Network Audit modal displays untruncated pill tabs, count badges, notice search, and `⌖ View Node` navigation.
-  - Background Maker 3-part strip displays live duplicate warning (`⚠️ Duplicate Path`) and disambiguates on blur.
-  - Asset Repository Pool dock supports `Used` / `Unused` filtering and `🧹 Purge Unused Assets`.
-  - Dragging asset card onto canvas node assigns node icon with instant preview and toast notification.
-  - IndexedDB database `area_maker_assets_db` initializes and persists binary media across reloads.
+    - Standalone `📷` snapshot button in Header dispatches canvas screenshot export.
+    - `Export ▾` dropdown menu contains only YAML, JSON, and ZIP (no duplicate PNG).
+    - Link mode dropdown `[ 🔗 Reachable ▾ ]` switches layers and displays checkmarks.
+    - `[ 👁 View ▾ 1 ]` dropdown toggles visibility filters and displays active count badge.
+    - Inspector segmented toggle `[ ⚡ Essentials | 🛠️ Full Server Spec ]` progressively discloses server flags while retaining modified section pills.
+    - Visual preview chevron collapses and expands node/scene preview.
+    - `Autoscroll long labels when not focused` setting renders in Settings modal and drives continuous auto-scrolling when enabled, and hover-scrolling when false.
+    - Background Maker Asset Pool dock expands and collapses on `▼` / `▲` toggle.
+    - Music player left completely untouched.

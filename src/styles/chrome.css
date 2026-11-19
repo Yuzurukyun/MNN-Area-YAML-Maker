@@ -200,7 +200,26 @@ header select {
   flex: none;
 }
 
-/* ---------- Dropdown menus ---------- */
+.snapshot-header-btn {
+  background: var(--input-bg);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-size: 13px;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+.snapshot-header-btn:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+.snapshot-header-btn:active {
+  transform: scale(0.95);
+}
 .drop-wrap {
   position: relative;
   display: inline-block;

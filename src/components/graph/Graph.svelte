@@ -1324,7 +1324,6 @@
   onTogglePanTool={() => (panTool = !panTool)}
   onResetCamera={resetCameraSmooth}
   onCenterSelected={centerOnSelectedSmooth}
-  onExportScreenshot={exportMapVisual}
   onToggleFocus={toggleFocus}
   onSaveLayout={saveLayout}
   onApplyLayout={applyLayout}

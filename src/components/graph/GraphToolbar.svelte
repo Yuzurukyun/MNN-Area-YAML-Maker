@@ -15,7 +15,6 @@
   export let onTogglePanTool;
   export let onResetCamera = () => {};
   export let onCenterSelected = () => {};
-  export let onExportScreenshot = () => {};
   export let onToggleFocus;
   export let onSaveLayout;
   export let onApplyLayout;
@@ -29,6 +28,10 @@
   let layoutMenu = false;
   let layoutName = '';
   let arrangeMenuOpen = false;
+  let linkMenuOpen = false;
+  let viewMenuOpen = false;
+
+  $: activeViewCount = ($state.focus ? 1 : 0) + (inFocus ? 1 : 0) + (hideHub ? 1 : 0) + (hideAll ? 1 : 0) + (showAllMesh ? 1 : 0);
 
   function saveClick() {
     const name = layoutName;
@@ -37,41 +40,115 @@
   }
 </script>
 
-<svelte:window on:pointerdown={() => { layoutMenu = false; arrangeMenuOpen = false; }} />
+<svelte:window on:pointerdown={() => { layoutMenu = false; arrangeMenuOpen = false; linkMenuOpen = false; viewMenuOpen = false; }} />
 
 <div id="graphBar">
-  <div class="tab-group" title="Choose which link type to display and edit on the map">
-    {#each [
-      ['reachable', 'Reachable', 'Walkable connections (reachable_areas)'],
-      ['visible', 'Visible', 'Visible passages even if unreachable (visible_areas)'],
-      ['scream', 'Scream', 'Areas that can hear /scream (scream_range)'],
-    ] as [t, l, tip]}
-      <button class="tab {lt === t ? 'on' : ''}" title={tip} on:click={() => onSetTab(t)}>{l}</button>
-    {/each}
-  </div>
+  <span class="drop-wrap">
+    <button
+      class="mini-btn link-mode-btn"
+      title="Choose which link layer to display and edit on the map"
+      on:pointerdown|stopPropagation
+      on:click|stopPropagation={() => (linkMenuOpen = !linkMenuOpen)}
+    >
+      {#if lt === 'reachable'}🔗 Reachable
+      {:else if lt === 'visible'}👁️ Visible
+      {:else if lt === 'scream'}📢 Scream
+      {/if} ▾
+    </button>
+    {#if linkMenuOpen}
+      <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+      <div class="drop-menu link-mode-menu" on:pointerdown|stopPropagation on:click|stopPropagation>
+        <button class="link-opt {lt === 'reachable' ? 'active' : ''}" on:click={() => { onSetTab('reachable'); linkMenuOpen = false; }}>
+          <span class="link-opt-icon">🔗</span>
+          <div class="link-opt-text">
+            <b>Reachable</b>
+            <span class="link-opt-desc">Walkable connections (reachable_areas)</span>
+          </div>
+          {#if lt === 'reachable'}<span class="link-check">✓</span>{/if}
+        </button>
+        <button class="link-opt {lt === 'visible' ? 'active' : ''}" on:click={() => { onSetTab('visible'); linkMenuOpen = false; }}>
+          <span class="link-opt-icon">👁️</span>
+          <div class="link-opt-text">
+            <b>Visible</b>
+            <span class="link-opt-desc">Visible passages even if unreachable (visible_areas)</span>
+          </div>
+          {#if lt === 'visible'}<span class="link-check">✓</span>{/if}
+        </button>
+        <button class="link-opt {lt === 'scream' ? 'active' : ''}" on:click={() => { onSetTab('scream'); linkMenuOpen = false; }}>
+          <span class="link-opt-icon">📢</span>
+          <div class="link-opt-text">
+            <b>Scream</b>
+            <span class="link-opt-desc">Areas that hear shouts (scream_range)</span>
+          </div>
+          {#if lt === 'scream'}<span class="link-check">✓</span>{/if}
+        </button>
+      </div>
+    {/if}
+  </span>
 
-  <span class="sep"></span>
+  <span class="drop-wrap">
+    <button
+      class="mini-btn {activeViewCount > 0 ? 'active-opt' : ''}"
+      title="Map display and visibility filters (Focus, Isolate, Hub, Mesh)"
+      on:pointerdown|stopPropagation
+      on:click|stopPropagation={() => (viewMenuOpen = !viewMenuOpen)}
+    >
+      👁 View ▾
+      {#if activeViewCount > 0}
+        <span class="view-badge">{activeViewCount}</span>
+      {/if}
+    </button>
+    {#if viewMenuOpen}
+      <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+      <div class="drop-menu view-menu" on:pointerdown|stopPropagation on:click|stopPropagation>
+        <div class="view-menu-title">Display & Visibility</div>
 
-  <label class="tgl" style="padding:0" title="Dim unrelated areas when selecting a node">
-    <input type="checkbox" checked={$state.focus} on:change={(e) => update((s) => (s.focus = e.target.checked), { skipHistory: true })} />
-    <span>Focus</span>
-  </label>
-  <label class="tgl" style="padding:0" title="Hide everything except the selected area and its direct neighbours (Esc to exit)">
-    <input type="checkbox" checked={inFocus} on:change={onToggleFocus} />
-    <span>Isolate</span>
-  </label>
-  <label class="tgl" style="padding:0" title="Hide the hub node (Area 0) and lines touching it">
-    <input type="checkbox" checked={hideHub} on:change={(e) => onToggleHideHub(e.target.checked)} />
-    <span>Hide hub</span>
-  </label>
-  <label class="tgl" style="padding:0" title="Hide areas whose Reachable mode is ALL AREAS (except the hub)">
-    <input type="checkbox" checked={hideAll} on:change={(e) => onToggleHideAll(e.target.checked)} />
-    <span>Hide &lt;ALL&gt;</span>
-  </label>
-  <label class="tgl" style="padding:0" title="Draw individual lines from <ALL> areas to every node (off by default to keep the board readable)">
-    <input type="checkbox" checked={showAllMesh} on:change={(e) => onToggleAllMesh(e.target.checked)} />
-    <span>&lt;ALL&gt; mesh</span>
-  </label>
+        <label class="view-check-row" title="Dim unrelated areas when selecting a node">
+          <input
+            type="checkbox"
+            checked={$state.focus}
+            on:change={(e) => update((s) => (s.focus = e.target.checked), { skipHistory: true })}
+          />
+          <div class="check-text">
+            <b>Focus mode</b>
+            <span class="check-desc">Dim unrelated areas when node selected</span>
+          </div>
+        </label>
+
+        <label class="view-check-row" title="Hide everything except the selected area and its direct neighbours (Esc to exit)">
+          <input type="checkbox" checked={inFocus} on:change={onToggleFocus} />
+          <div class="check-text">
+            <b>Isolate selection</b>
+            <span class="check-desc">Show only selected area and neighbours</span>
+          </div>
+        </label>
+
+        <label class="view-check-row" title="Hide the hub node (Area 0) and lines touching it">
+          <input type="checkbox" checked={hideHub} on:change={(e) => onToggleHideHub(e.target.checked)} />
+          <div class="check-text">
+            <b>Hide hub node</b>
+            <span class="check-desc">Hide Area 0 and lines touching it</span>
+          </div>
+        </label>
+
+        <label class="view-check-row" title="Hide areas whose Reachable mode is ALL AREAS (except the hub)">
+          <input type="checkbox" checked={hideAll} on:change={(e) => onToggleHideAll(e.target.checked)} />
+          <div class="check-text">
+            <b>Hide &lt;ALL&gt; areas</b>
+            <span class="check-desc">Hide areas connected to all rooms</span>
+          </div>
+        </label>
+
+        <label class="view-check-row" title="Draw individual lines from <ALL> areas to every node (off by default to keep the board readable)">
+          <input type="checkbox" checked={showAllMesh} on:change={(e) => onToggleAllMesh(e.target.checked)} />
+          <div class="check-text">
+            <b>&lt;ALL&gt; mesh connections</b>
+            <span class="check-desc">Draw individual lines to every room</span>
+          </div>
+        </label>
+      </div>
+    {/if}
+  </span>
 
   <div class="sp"></div>
 
@@ -83,9 +160,6 @@
   </button>
   <button class="mini-btn" title="Center camera on selected area without changing zoom (C)" on:click={onCenterSelected}>
     ⌖ Center
-  </button>
-  <button class="mini-btn" title="Export high-resolution screenshot of the visible map (PNG)" on:click={onExportScreenshot}>
-    📷 Snapshot
   </button>
 
   <span class="drop-wrap">
@@ -194,6 +268,122 @@
 </div>
 
 <style>
+  .link-mode-btn {
+    font-weight: 600;
+    color: var(--text-strong);
+  }
+  .link-mode-menu {
+    left: 0;
+    width: 260px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .link-opt {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 8px;
+    border-radius: var(--radius);
+    background: transparent;
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.1s ease;
+  }
+  .link-opt:hover {
+    background: var(--hover);
+  }
+  .link-opt.active {
+    background: var(--sel);
+    border-color: var(--accent);
+  }
+  .link-opt-icon {
+    font-size: 14px;
+    flex: none;
+  }
+  .link-opt-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    line-height: 1.2;
+  }
+  .link-opt-text b {
+    font-size: 12px;
+    color: var(--text-strong);
+  }
+  .link-opt-desc {
+    font-size: 10px;
+    color: var(--dim);
+  }
+  .link-check {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .view-badge {
+    display: inline-block;
+    padding: 1px 5px;
+    font-size: 9px;
+    font-weight: 700;
+    border-radius: 9px;
+    background: var(--accent);
+    color: #fff;
+    margin-left: 4px;
+    line-height: 1.2;
+  }
+  .view-menu {
+    left: 0;
+    width: 270px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .view-menu-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--dim);
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 4px;
+    margin-bottom: 2px;
+  }
+  .view-check-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: var(--radius);
+    transition: background 0.1s ease;
+  }
+  .view-check-row:hover {
+    background: var(--hover);
+  }
+  .view-check-row input {
+    margin-top: 2px;
+    flex: none;
+    cursor: pointer;
+  }
+  .view-check-row .check-text {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    line-height: 1.25;
+  }
+  .view-check-row b {
+    font-size: 11.5px;
+    color: var(--text-strong);
+  }
+  .view-check-row .check-desc {
+    font-size: 10px;
+    color: var(--dim);
+  }
   .arrange-wrap {
     display: inline-flex;
     align-items: center;
@@ -275,12 +465,6 @@
     border-top: 1px solid var(--line);
     padding-top: 6px;
     margin-top: 2px;
-  }
-  .sep {
-    width: 1px;
-    height: 18px;
-    background: var(--line);
-    margin: 0 2px;
   }
   .layout-menu {
     right: 0;
