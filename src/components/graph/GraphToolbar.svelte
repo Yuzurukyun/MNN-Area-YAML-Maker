@@ -189,22 +189,21 @@
     title="Reorder area IDs so group members hold consecutive IDs (useful for /zone_area)"
   >Sort IDs</button>
 
-  <span class="drop-wrap arrange-wrap">
+  <span class="drop-wrap">
     <button
-      class="mini-btn arrange-btn"
-      title="Automatically arrange areas and groups (click ▾ for options)"
-      on:click={onArrange}
-    >Auto-arrange</button>
-    <button
-      class="mini-btn arrange-caret {$settings.sortInsideGroup || $settings.arrangeGroupsOnly ? 'active-opt' : ''}"
-      title="Auto-arrange options (group sorting, camera fit)"
+      class="mini-btn {$settings.sortInsideGroup || $settings.arrangeGroupsOnly ? 'active-opt' : ''}"
+      title="Auto-arrange areas and groups (click ▾ for options)"
       on:pointerdown|stopPropagation
       on:click|stopPropagation={() => (arrangeMenuOpen = !arrangeMenuOpen)}
-    >▾</button>
+    >Auto-arrange ▾</button>
 
     {#if arrangeMenuOpen}
       <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
       <div class="drop-menu arrange-menu" on:pointerdown|stopPropagation on:click|stopPropagation>
+        <button class="primary mini-btn" style="width:100%;margin-bottom:6px" on:click={() => { arrangeMenuOpen = false; onArrange(); }}>
+          ▶ Run Auto-arrange
+        </button>
+
         <div class="arrange-menu-title">Auto-arrange Options</div>
 
         <label class="arrange-check-row" title="Sort nodes inside groups into a grid. Off preserves custom internal layout & shape.">
@@ -384,28 +383,13 @@
     font-size: 10px;
     color: var(--dim);
   }
-  .arrange-wrap {
-    display: inline-flex;
-    align-items: center;
-  }
   .toolbar-sep {
     color: var(--line2);
     user-select: none;
     font-size: 11px;
     margin: 0 2px;
   }
-  .arrange-btn {
-    border-top-right-radius: 0 !important;
-    border-bottom-right-radius: 0 !important;
-    border-right: none !important;
-  }
-  .arrange-caret {
-    border-top-left-radius: 0 !important;
-    border-bottom-left-radius: 0 !important;
-    padding: 0 6px !important;
-    font-size: 10px !important;
-  }
-  .arrange-caret.active-opt {
+  .mini-btn.active-opt {
     color: var(--accent);
     border-color: var(--accent);
     background: var(--sel);

@@ -80,7 +80,7 @@ Each area has three link types, switched cleanly via the dropdown above the map:
 - **Hide hub / Hide `<ALL>`:** Temporarily declutter the board without changing any data.
 - **Groups:** Right-click the canvas → **Add group here**. Areas whose centers sit inside a group rectangle move with it. Right-click a group to **Select all areas in zone**, **Copy Zone YAML**, or change its color. **Sort IDs** reorders your area list so members of each group hold consecutive IDs (useful for `/zone_area`).
 - **Layouts ▾:** Save snapshots of node positions, groups, and corkboard images so you can experiment safely.
-- **Auto-arrange:** Deterministically arranges the Hub on the left, connected clusters in radial islands, and standalone areas underneath, then fits the view.
+- **Auto-arrange ▾:** Deterministically arranges the Hub on the left, connected clusters in radial islands, and standalone areas underneath, then fits the view. Click the dropdown to configure group sorting options (`Sort nodes inside groups`, `Only arrange top-level groups`) and trigger `▶ Run Auto-arrange`.
 
 ---
 
@@ -124,8 +124,9 @@ MNN uses exact lowercase identifiers for courtroom camera angles. The editor sta
 ### Asset Repository Dock & Inspector
 - **Asset Pool (Bottom Dock):** Drag-and-drop images (`.webp`, `.png`, `.jpg`) and audio (`.opus`, `.mp3`, `.ogg`) into the pool to build backgrounds without re-uploading.
 - **Repository Asset Inspector:** Click any asset card to open the horizontal split inspector:
-  - **Left Side:** Letterboxed high-res preview canvas, file path, dimensions, and total usage count.
+  - **Left Side:** Letterboxed high-res preview canvas, file path, source folder origin, dimensions, and total usage count.
   - **Right Side:** Global asset rename input (propagates across all background nodes simultaneously) and comprehensive **Usages Table** showing background name, camera position, slot badge, export alias, and a **Go to ↗** jump button.
+  - **Source Folder Tracking:** For unused assets or assets imported from PC folder trees, the inspector displays where the asset originated from. This metadata is strictly for your local convenience and is never exported.
 
 ### Live Stage Monitor & Ambience Audio Player
 - **Interactive Composite Monitor:** Real-time preview of combined background backdrop and foreground desk overlay.

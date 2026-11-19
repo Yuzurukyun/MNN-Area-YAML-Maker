@@ -186,6 +186,7 @@ async function initAssetPoolFromDb() {
             name: rec.name,
             relPath: rec.relPath,
             fullRelPath: rec.fullRelPath || rec.relPath,
+            fromFolder: rec.fromFolder || (rec.fullRelPath && rec.fullRelPath.includes('/') ? rec.fullRelPath.slice(0, rec.fullRelPath.lastIndexOf('/')) : ''),
             type: rec.type,
             size: rec.size,
             lastModified: rec.lastModified,
@@ -763,11 +764,18 @@ export const bgStore = {
         console.warn('[bgStore] URL.createObjectURL error:', origName, err);
       }
 
+      const rawP = item.path || '';
+      let fromFolder = '';
+      if (rawP.includes('/')) {
+        fromFolder = rawP.slice(0, rawP.lastIndexOf('/'));
+      }
+
       const entry = {
         id: 'ast_' + Math.random().toString(36).slice(2, 9),
         name: candidate,
         relPath: isAudio ? cleanRel : candidate,
         fullRelPath: item.path,
+        fromFolder,
         type: isAudio ? 'audio' : 'image',
         size: item.size,
         lastModified: item.file?.lastModified || Date.now(),

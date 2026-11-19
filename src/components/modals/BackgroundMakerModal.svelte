@@ -2036,10 +2036,21 @@
     notify(`Applied "${cleanFolder}" to Area #${$state.project.areas.indexOf(selectedArea)}`);
   }
 
-  // Referenced and unused asset counts (cached in bgStore)
-  $: referencedAssetInfo = bgStore.getReferencedAssetInfo();
-  $: referencedAssetNames = referencedAssetInfo.keys;
-  $: usedAssetsCount = assetPool.filter((a) => referencedAssetInfo.isReferenced(a)).length;
+  // Helper to extract source folder path if an asset originated from a folder/PC structure
+  function getFromFolderPath(asset) {
+    if (!asset) return '';
+    if (asset.fromFolder) return asset.fromFolder;
+    const raw = asset.fullRelPath || asset.relPath || '';
+    if (raw && raw.includes('/')) {
+      return raw.slice(0, raw.lastIndexOf('/'));
+    }
+    return '';
+  }
+
+  // Referenced and unused asset counts (re-evaluated whenever storeState or assetPool updates)
+  $: referencedAssetInfo = (storeState, bgStore.getReferencedAssetInfo());
+  $: referencedAssetNames = referencedAssetInfo?.keys || new Set();
+  $: usedAssetsCount = referencedAssetInfo ? assetPool.filter((a) => referencedAssetInfo.isReferenced(a)).length : 0;
   $: unusedAssetCount = Math.max(0, assetPool.length - usedAssetsCount);
 
   // Filtered assets in pool
@@ -2460,7 +2471,7 @@
           <!-- Backgrounds Search / Filter Input -->
           <div class="nav-search-box">
             <input
-              type="search"
+              type="text"
               class="nav-search-input"
               placeholder="Search backgrounds..."
               bind:value={bgSearchQuery}
@@ -3303,7 +3314,7 @@
                 role="button"
                 tabindex="0"
                 draggable="true"
-                title="Click to view & edit in Lightbox, drag onto any slot, double-click to rename: {asset.relPath} ({Math.round(asset.size / 1024)} KB)"
+                title="Click to view & edit in Lightbox, drag onto any slot, double-click to rename: {asset.relPath} ({Math.round(asset.size / 1024)} KB){getFromFolderPath(asset) ? ` [from: ${getFromFolderPath(asset)}]` : ''}"
                 on:dragstart={(e) => onAssetDragStart(e, asset)}
                 on:dragend={onAssetDragEnd}
                 on:contextmenu|preventDefault|stopPropagation={(e) => openAssetContextMenu(e, asset)}
@@ -3858,6 +3869,9 @@
       </div>
       <div class="lightbox-meta">
         <span>Path: <code>{inspectModalAsset.relPath || inspectModalAsset.name}</code></span>
+        {#if getFromFolderPath(inspectModalAsset)}
+          <span>From folder: <code>{getFromFolderPath(inspectModalAsset)}</code></span>
+        {/if}
         {#if inspectModalAsset.size}
           <span>Size: <code>{Math.round(inspectModalAsset.size / 1024)} KB</code></span>
         {/if}
@@ -3921,6 +3935,12 @@
               <span class="m-label">PATH:</span>
               <code class="m-val text-truncate" title={repoInspectAsset.relPath || repoInspectAsset.name}>{repoInspectAsset.relPath || repoInspectAsset.name}</code>
             </div>
+            {#if getFromFolderPath(repoInspectAsset)}
+              <div class="meta-row">
+                <span class="m-label">FROM FOLDER:</span>
+                <code class="m-val text-truncate" title={getFromFolderPath(repoInspectAsset)}>{getFromFolderPath(repoInspectAsset)}</code>
+              </div>
+            {/if}
             <div class="meta-row">
               <span class="m-label">USAGES:</span>
               <span class="m-val-highlight">{repoAssetUsages.length} reference{repoAssetUsages.length === 1 ? '' : 's'}</span>
@@ -3940,6 +3960,12 @@
           {#if repoAssetUsages.length === 0}
             <div class="repo-usages-empty">
               <span>This asset is not currently referenced in any background node. It can be assigned to slots or safely purged.</span>
+              {#if getFromFolderPath(repoInspectAsset)}
+                <div class="repo-unused-source-hint">
+                  <span class="hint-label">Source folder on import:</span>
+                  <code class="font-mono">{getFromFolderPath(repoInspectAsset)}</code>
+                </div>
+              {/if}
             </div>
           {:else}
             <div class="repo-usages-table-wrap">
@@ -4568,6 +4594,11 @@
     outline: none;
     box-sizing: border-box;
     transition: border-color 0.12s ease;
+  }
+  .nav-search-input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+    display: none;
   }
   .nav-search-input:focus {
     border-color: var(--accent);
@@ -6302,14 +6333,42 @@
 
   .repo-usages-empty {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
     font-size: 12px;
     color: var(--dim);
     font-style: italic;
     padding: 24px 16px;
     border: 1px dashed var(--line);
     border-radius: var(--radius);
+    text-align: center;
+  }
+
+  .repo-unused-source-hint {
+    margin-top: 4px;
+    padding: 6px 12px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-style: normal;
+  }
+
+  .repo-unused-source-hint .hint-label {
+    font-size: 10px;
+    color: var(--dim);
+    font-family: inherit;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .repo-unused-source-hint code {
+    font-size: 11px;
+    color: var(--accent);
+    word-break: break-all;
   }
 
   .repo-usages-table-wrap {

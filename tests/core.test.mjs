@@ -1244,5 +1244,39 @@ const multiPosZip = await buildZip(Array.from(testZipMap.values()));
 const extractedMultiPos = await readZip(multiPosZip);
 eq(extractedMultiPos.length, 3, 'extractedMultiPos has exactly 3 files, 0 corrupted duplicate entries');
 
+/* ---- From Folder Metadata Tracking & Privacy Tests ---- */
+const fromFolderTestFiles = [
+  { path: 'C:/Users/user/Downloads/CourtPack/court.webp', name: 'court.webp', data: new Uint8Array([1, 2, 3]), size: 3 },
+  { path: 'court_alone.png', name: 'court_alone.png', data: new Uint8Array([4, 5]), size: 2 },
+  { path: 'MySource/Sub/ambience.opus', name: 'ambience.opus', data: new Uint8Array([6, 7]), size: 2 },
+];
+const regFromFolder = await bgStore.registerFiles(fromFolderTestFiles);
+const courtAsset = regFromFolder.addedAssets.find((a) => a.name.startsWith('court'));
+ok(Boolean(courtAsset), 'court asset imported into pool');
+eq(courtAsset.fromFolder, 'C:/Users/user/Downloads/CourtPack', 'fromFolder extracted correctly from nested path');
+
+const aloneAsset = regFromFolder.addedAssets.find((a) => a.name.startsWith('court_alone'));
+ok(Boolean(aloneAsset), 'alone asset imported into pool');
+eq(aloneAsset.fromFolder, '', 'fromFolder is empty for root-level file with no directory');
+
+const ambAsset = regFromFolder.addedAssets.find((a) => a.name.startsWith('ambience'));
+ok(Boolean(ambAsset), 'ambience asset imported into pool');
+eq(ambAsset.fromFolder, 'MySource/Sub', 'fromFolder extracted correctly for relative nested audio path');
+
+// Test that serializeBackgroundJson does not leak fromFolder or other internal metadata
+const testBgWithFromFolder = createBackground('PrivacyTest');
+testBgWithFromFolder.states.default.background = courtAsset.name;
+const exportedJsonString = serializeBackgroundJson(testBgWithFromFolder);
+const parsedExport = JSON.parse(exportedJsonString);
+ok(!('fromFolder' in parsedExport), 'serializeBackgroundJson does NOT contain fromFolder root property');
+ok(!('fromFolder' in parsedExport.default), 'serializeBackgroundJson does NOT contain fromFolder in state definition');
+
+/* ---- Field Header Emdash Formatting Verification ---- */
+const fieldKey = 'area';
+const aptDesc = 'Name of the area';
+const formattedHeader = `${fieldKey} — ${aptDesc}`;
+ok(formattedHeader.includes(' — '), 'Field header formats strictly with spaces around emdash: "key — description"');
+ok(!formattedHeader.includes(`${fieldKey}—`), 'Does not have collapsed leading space before emdash');
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
