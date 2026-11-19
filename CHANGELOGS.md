@@ -679,12 +679,22 @@
     - Clicking anywhere on the canvas viewport (or hovering to reveal the `⛶ Click to expand` pill) opens an expanded high-resolution popup maintaining exact aspect ratios (`16:9`, `4:3`, custom) with backdrop and desk overlays.
     - Includes interactive Time of Day toggles (`☀ Day`, `🌆 Evening`, `🌙 Night`), full scene metadata, and one-click Escape/scrim dismissal.
 
+### Embed Image & Social Card Update
+
+- **OpenGraph & Twitter Card Branding (`scripts/generate-og-image.html`, `index.html`, `public/og-image.png`, `docs/og-image.png`, `export/og-image.png`):**
+    - Updated version badge to `v2.1.0` and author badge to `Made by Yuzuru`.
+    - Added a prominent `"made by Yuzuru"` bottom footer badge next to the canonical URL.
+    - Updated card headline and feature pills to highlight both the **Visual Node Graph** and the **Background.json Maker** with **Positions.ini Converter**.
+    - Updated HTML meta tags, OpenGraph descriptions, and Twitter Card metadata in `index.html` to reflect `v2.1.0` capabilities.
+    - Re-rendered pixel-perfect 1200×630 embed preview (`og-image.png`) across `public/`, `docs/`, and `export/`.
+
 ### Verification
 
 - `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **302 passed, 0 failed** (all assertions covering `getReferencedAssetInfo` alias/URL tracking, used vs unused asset disambiguation, ambience auto-switching, volume slider clamping [0, 1] and 0.30 default, resilient root directory import with images and audio retention, bloat filtering of `characters/`, `animations/`, `configs/`, `sounds/music/`, case-insensitive root repository import with `Base/` and `sounds/ambience/`, empty courtroom position foreground resolution, INI parser witness foreground retention, arbitrary root detection `MM/`, single-folder roots with ONLY `background` or ONLY `sounds`, clean room folder extraction, `clearAllBackgrounds()` zero-reset, INI parsing, courtroom position mapping with Witness default, duplicate asset collision disambiguation, audio server fallback, slot alias preservation, camera position duplication, slot clearing on purge, and state duplication).
 - `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5229 KB), `export/yuzu_area_maker_nomusic.html` (576 KB), and `docs/index.html` (576 KB) with 0 warnings and 0 errors.
 - Verified on real disk assets: tested against actual repository `base/` (6,343 files) — successfully extracted 140 backgrounds, imported 346 unique images and 175 ambient audios (521 total assets), and cleanly filtered out 5,602 non-background/non-ambient bloat files with 0 dropped images or sounds.
 - Live browser CDP tests verified:
+    - **Embed OG-Image & "Made by Yuzuru" Footer Badge:** Verified 1200×630 embed preview generation with "made by Yuzuru" footer badge, v2.1.0 version tag, and Background.json Maker pitch ([verified_updated_embed_og_image.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_updated_embed_og_image.png)).
     - **Horizontal Split Layout & Solid Sticky Table Header:** Verified two-column split in `repo-inspect-modal` with letterboxed preview on left and usages listing on right. Confirmed `.repo-usages-table th` has solid opaque background (`rgb(21, 21, 27)`) and sticky position without text bleed-through ([verified_repo_asset_horizontal_split_modal.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_repo_asset_horizontal_split_modal.png)).
     - **Fullscreen Live Stage Monitor Popup:** Clicking the Live Stage Monitor canvas opened the fullscreen popup with high-resolution canvas, TOD pills, aspect ratio, and clean Escape dismissal ([verified_fullscreen_stage_monitor.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_fullscreen_stage_monitor.png)).
     - **Volume Slider & Default Ear-Protection Setting:** Initial volume slider loaded at `0.30` (30%) with `🔉` icon and audio volume synced to `0.3` ([verified_ambience_volume_slider_and_controls.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_ambience_volume_slider_and_controls.png)).
