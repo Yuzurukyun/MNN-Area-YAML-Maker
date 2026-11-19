@@ -1604,6 +1604,8 @@
             } catch {
               file.customRelativePath = fullRel;
             }
+            file.customRelativePath = fullRel;
+            file.path = fullRel;
             files.push(file);
             resolve();
           }, () => resolve());

@@ -1020,6 +1020,22 @@ const hasBeachWaves = regCase.addedAssets.some((a) => a.name === 'beach_waves.op
 ok(hasBeachPng, 'beach.png imported into pool despite case differences');
 ok(hasBeachWaves, 'beach_waves.opus imported into pool from sounds/ambience/');
 
+// Test root folder containing background and sounds (including images and sounds/wsl audio)
+const bgAndSoundsFiles = [
+  { path: 'RootPack/background/Manor/positions.ini', name: 'positions.ini', data: new TextEncoder().encode('[wit]\nback=manor.png\nambient_sfx=wsl/manor_amb.opus\n') },
+  { path: 'RootPack/background/Manor/manor.png', name: 'manor.png', data: new Uint8Array(28), size: 28 },
+  { path: 'RootPack/sounds/wsl/manor_amb.opus', name: 'manor_amb.opus', data: new Uint8Array(45), size: 45 },
+  { path: 'RootPack/sounds/music/theme.mp3', name: 'theme.mp3', data: new Uint8Array(90), size: 90 },
+  { path: 'RootPack/characters/apollo/talk.gif', name: 'talk.gif', data: new Uint8Array(50), size: 50 },
+];
+const regBgAndSounds = await bgStore.registerFiles(bgAndSoundsFiles);
+eq(regBgAndSounds.importedBackgrounds.length, 1, 'imported 1 background from RootPack');
+eq(regBgAndSounds.importedBackgrounds[0].folder, 'Manor', 'imported background folder is Manor');
+ok(regBgAndSounds.addedAssets.some((a) => a.name === 'manor.png'), 'manor.png image was imported into pool');
+ok(regBgAndSounds.addedAssets.some((a) => a.name === 'manor_amb.opus'), 'manor_amb.opus from sounds/wsl/ was imported into pool');
+ok(!regBgAndSounds.addedAssets.some((a) => a.name === 'theme.mp3'), 'sounds/music/theme.mp3 was filtered out (bloat)');
+ok(!regBgAndSounds.addedAssets.some((a) => a.name === 'talk.gif'), 'characters/apollo/talk.gif was filtered out (bloat)');
+
 // Test clearAllBackgrounds()
 const defaultReset = bgStore.clearAllBackgrounds();
 eq(bgStore.get().backgrounds.length, 1, 'clearAllBackgrounds resets to 1 background');

@@ -544,12 +544,12 @@ export const bgStore = {
           path: cleanP,
           name: filename,
           data: f.data,
-          size: f.data.length,
+          size: typeof f.size === 'number' ? f.size : (f.data ? f.data.length : 0),
           type: getMimeType(filename),
           file: null,
         });
       } else {
-        const fullRel = (f.webkitRelativePath || f.customRelativePath || f.name || '').replace(/\\/g, '/').replace(/^\/+/, '');
+        const fullRel = (f.webkitRelativePath || f.customRelativePath || f.path || f.name || '').replace(/\\/g, '/').replace(/^\/+/, '');
         const filename = f.name || fullRel.split('/').pop();
         rawFileItems.push({
           path: fullRel,
@@ -566,77 +566,43 @@ export const bgStore = {
 
     // Detect whether import contains a root asset repository folder structure
     // (identified by standard root directories: 'background', 'characters', 'sounds', 'animations', 'configs')
-    function detectRootPrefix(filePaths) {
-      const prefixMap = new Map(); // prefix -> Set of child dir names
+    const hasRootRepositoryStructure = rawFileItems.some((f) => {
+      const lower = f.path.replace(/\\/g, '/').toLowerCase();
+      return /(?:^|\/)(?:backgrounds?|characters?|sounds?|animations?|configs?)\//i.test(lower);
+    });
 
-      for (const rawPath of filePaths) {
-        const parts = rawPath.replace(/\\/g, '/').replace(/^\/+/, '').split('/');
-        if (parts.length > 1) {
-          // Check prefix "" (first segment is a top-level directory)
-          const topDir = parts[0].toLowerCase();
-          if (!prefixMap.has('')) prefixMap.set('', new Set());
-          prefixMap.get('').add(topDir);
-
-          // Check prefix "parts[0]/" (second segment is a directory, e.g. base/ or MM/)
-          if (parts.length > 2) {
-            const p1 = parts[0] + '/';
-            const subDir1 = parts[1].toLowerCase();
-            if (!prefixMap.has(p1)) prefixMap.set(p1, new Set());
-            prefixMap.get(p1).add(subDir1);
-          }
-
-          // Check prefix "parts[0]/parts[1]/" (third segment, e.g. archive_folder/base/)
-          if (parts.length > 3) {
-            const p2 = parts[0] + '/' + parts[1] + '/';
-            const subDir2 = parts[2].toLowerCase();
-            if (!prefixMap.has(p2)) prefixMap.set(p2, new Set());
-            prefixMap.get(p2).add(subDir2);
-          }
-        }
-      }
-
-      const rootFolderNames = ['background', 'backgrounds', 'characters', 'sounds', 'animations', 'configs'];
-
-      // Evaluate candidate prefixes from longest (most specific) to shortest
-      const prefixes = Array.from(prefixMap.keys()).sort((a, b) => b.length - a.length);
-      for (const prefix of prefixes) {
-        const children = prefixMap.get(prefix);
-        const hasBackground = children.has('background') || children.has('backgrounds');
-        const hasSounds = children.has('sounds') || children.has('sound');
-        const hasCharacters = children.has('characters') || children.has('character');
-        const hasAnimations = children.has('animations') || children.has('animation');
-        const hasConfigs = children.has('configs') || children.has('config');
-
-        // Root folder indicator:
-        // A root folder contains any of the standard asset repository folders:
-        // 'background', 'sounds', 'characters', 'animations', 'configs'.
-        // Does NOT require all 5 - a root folder may only contain 'background' or only 'sounds'.
-        if (hasBackground || hasSounds || hasCharacters || hasAnimations || hasConfigs) {
-          return prefix;
-        }
-      }
-
-      return null;
-    }
-
-    const rootPrefix = detectRootPrefix(rawFileItems.map((f) => f.path));
-
-    // When a root asset repository folder is imported, only accept 'background' and 'sounds/ambient',
-    // ignoring non-background assets (characters, animations, configs, non-ambient sounds) to prevent bloat.
-    if (rootPrefix !== null) {
+    if (hasRootRepositoryStructure) {
       onProgress?.('Root asset repository folder detected. Accepting background/ and sounds/ambient/ only...');
       const filtered = [];
       let skippedCount = 0;
-      const lowerRootPrefix = rootPrefix ? rootPrefix.toLowerCase() : '';
 
       for (const item of rawFileItems) {
         const cleanP = item.path.replace(/\\/g, '/').replace(/^\/+/, '');
-        const lowerCleanP = cleanP.toLowerCase();
+        const lowerP = cleanP.toLowerCase();
+        const lowerName = item.name.toLowerCase();
 
-        // Case-insensitive check: does this file belong under rootPrefix?
-        if (lowerRootPrefix && !lowerCleanP.startsWith(lowerRootPrefix)) {
-          // If outside rootPrefix, only keep if it's a library json or standalone config
-          if (item.name.toLowerCase().endsWith('.json') || item.name.toLowerCase().endsWith('.ini')) {
+        // 1. Skip operating system metadata junk
+        if (lowerName === 'thumbs.db' || lowerName === '.ds_store' || lowerName.startsWith('._')) {
+          skippedCount++;
+          continue;
+        }
+
+        // 2. Anything inside background/ or backgrounds/ is ALWAYS kept (images, audio, configs)
+        if (/(?:^|\/)backgrounds?\//i.test(lowerP)) {
+          filtered.push(item);
+          continue;
+        }
+
+        // 3. Audio inside sounds/ or sound/
+        if (/(?:^|\/)sounds?\//i.test(lowerP)) {
+          // Bloat audio folders: music, general, sfx, voices, blips
+          const isBloatAudio = /(?:^|\/)sounds?\/(?:music|general|sfx|voices?|blips?)\//i.test(lowerP);
+          if (isBloatAudio) {
+            skippedCount++;
+            continue;
+          }
+          const isAudio = item.type.startsWith('audio/') || /\.(opus|mp3|ogg|wav|m4a|flac)$/i.test(lowerName);
+          if (isAudio) {
             filtered.push(item);
           } else {
             skippedCount++;
@@ -644,26 +610,22 @@ export const bgStore = {
           continue;
         }
 
-        const relToRoot = lowerRootPrefix ? cleanP.slice(rootPrefix.length).replace(/^\/+/, '') : cleanP;
-        const lowerRel = relToRoot.toLowerCase();
+        // 4. Bloat folders outside background and sounds (characters, animations, configs, movies)
+        if (/(?:^|\/)(?:characters?|animations?|configs?|movies?|videos?)\//i.test(lowerP)) {
+          skippedCount++;
+          continue;
+        }
 
-        // Check for ambient/background sounds:
-        // Strictly accept sounds/ambient/, sounds/ambience/, sound/ambient/, sound/ambience/
-        const isAmbientAudio =
-          lowerRel.startsWith('sounds/ambient/') ||
-          lowerRel.startsWith('sounds/ambience/') ||
-          lowerRel.startsWith('sound/ambient/') ||
-          lowerRel.startsWith('sound/ambience/');
+        // 5. Configs, library JSONs, or standalone assets
+        if (lowerName.endsWith('.json') || lowerName.endsWith('.ini')) {
+          filtered.push(item);
+          continue;
+        }
 
-        // ONLY accept background/, ambient sounds, and root configs/library JSONs
-        if (
-          lowerRel.startsWith('background/') ||
-          lowerRel.startsWith('backgrounds/') ||
-          isAmbientAudio ||
-          lowerRel === 'backgrounds-library.json' ||
-          (lowerRel.endsWith('.json') && !lowerRel.includes('/')) ||
-          (lowerRel.endsWith('.ini') && !lowerRel.includes('/'))
-        ) {
+        // 6. Non-bloat images or audio (e.g. standalone assets)
+        const isImage = item.type.startsWith('image/') || /\.(png|webp|jpg|jpeg|gif|svg|avif)$/i.test(lowerName);
+        const isAudio = item.type.startsWith('audio/') || /\.(opus|mp3|ogg|wav|m4a|flac)$/i.test(lowerName);
+        if (isImage || isAudio) {
           filtered.push(item);
         } else {
           skippedCount++;
@@ -686,10 +648,9 @@ export const bgStore = {
       const bgMatch = p.match(/^(?:.*\/)?backgrounds?\/(.*)$/i);
       if (bgMatch) {
         p = bgMatch[1];
-      } else if (rootPrefix !== null && rootPrefix && p.toLowerCase().startsWith(rootPrefix.toLowerCase())) {
-        p = p.slice(rootPrefix.length).replace(/^\/+/, '');
       } else {
-        p = p.replace(/^(\.\/)?(base\/)?/i, '');
+        // Strip arbitrary root folder prefix if path starts with <root>/sounds/
+        p = p.replace(/^[^/]+\/(?:sounds?\/)/i, 'sounds/');
       }
       const slash = p.lastIndexOf('/');
       if (slash === -1) return '';
@@ -782,7 +743,14 @@ export const bgStore = {
       } else if (item.data) {
         blob = typeof Blob !== 'undefined' ? new Blob([item.data], { type: item.type }) : null;
       }
-      const url = blob && typeof URL !== 'undefined' ? URL.createObjectURL(blob) : '';
+      let url = '';
+      try {
+        if (blob && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+          url = URL.createObjectURL(blob);
+        }
+      } catch (err) {
+        console.warn('[bgStore] URL.createObjectURL error:', origName, err);
+      }
 
       const entry = {
         id: 'ast_' + Math.random().toString(36).slice(2, 9),
