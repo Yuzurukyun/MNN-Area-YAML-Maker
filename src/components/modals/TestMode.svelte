@@ -98,19 +98,7 @@
     {#if current}
       <div class="test-panes">
         <div class="test-left">
-          <div class="test-here-row">
-            <div class="test-here">You are in</div>
-            {#if currentBgUrl}
-              <button
-                type="button"
-                class="test-inline-toggle"
-                on:click={togglePreview}
-                title="Toggle live background preview"
-              >
-                {showPreview ? 'Hide visual' : 'Show visual'}
-              </button>
-            {/if}
-          </div>
+          <div class="test-here">You are in</div>
           <div class="test-name">
             {idxOf(P, current)} — {current.area}
             {#if idxOf(P, current) === 0}<span class="tag hub">HUB</span>{/if}
@@ -230,31 +218,13 @@
     display: flex;
     flex-direction: column;
   }
-  .test-here-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 4px;
-    flex: none;
-  }
   .test-here {
+    flex: none;
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--muted);
-  }
-  .test-inline-toggle {
-    font-size: 10px;
-    background: none;
-    border: none;
-    padding: 0;
-    color: var(--dim);
-    cursor: pointer;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-  }
-  .test-inline-toggle:hover {
-    color: var(--accent);
+    margin-bottom: 4px;
   }
   .test-name {
     flex: none;
