@@ -45,9 +45,16 @@ async function toUint8Array(data) {
 export async function buildZip(files) {
   const entries = [];
   let localHeadersSize = 0;
+  const seenPaths = new Set();
 
   for (const file of files) {
     const rawPath = (file.path || file.name || 'file').replace(/\\/g, '/').replace(/^\/+/, '');
+    const lower = rawPath.toLowerCase();
+    if (seenPaths.has(lower)) {
+      continue;
+    }
+    seenPaths.add(lower);
+
     const nameBytes = encoder.encode(rawPath);
     const dataBytes = await toUint8Array(file.data);
     const crc = computeCrc32(dataBytes);

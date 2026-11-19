@@ -1189,5 +1189,60 @@ ok(refInfo.isReferenced(usedAsset1), 'usedAsset1 (stand.webp) is recognized as r
 ok(refInfo.isReferenced(usedAsset2), 'usedAsset2 (stand_1.webp from assetSources) is recognized as referenced (NOT unused)');
 ok(!refInfo.isReferenced(unusedAsset), 'unusedAsset is correctly identified as not referenced');
 
+/* ---- Export Package & Library Deduplication and Asset Accuracy Tests ---- */
+// 1. buildZip deduplicates duplicate paths defensively
+const dupZipBytes = await buildZip([
+  { path: 'room/rain_front.webp', data: new Uint8Array([1, 2, 3]) },
+  { path: 'room/rain_front.webp', data: new Uint8Array([1, 2, 3]) },
+  { path: 'room/rain_front.webp', data: new Uint8Array([1, 2, 3]) },
+  { path: 'room/witnessempty.webp', data: new Uint8Array([4, 5]) },
+  { path: 'room/witnessempty.webp', data: new Uint8Array([4, 5]) },
+]);
+const unzippedDups = await readZip(dupZipBytes);
+eq(unzippedDups.length, 2, 'buildZip deduplicates repeated paths: exactly 2 unique files extracted');
+ok(unzippedDups.some(f => f.path === 'room/rain_front.webp'), 'rain_front.webp extracted once');
+ok(unzippedDups.some(f => f.path === 'room/witnessempty.webp'), 'witnessempty.webp extracted once');
+
+// 2. findAsset accuracy across collision disambiguated backgrounds
+const assetManor = bgStore.findAsset('cloudy_back.webp', 'image', importedManor);
+const assetOther = bgStore.findAsset('cloudy_back.webp', 'image', importedOther);
+ok(Boolean(assetManor), 'findAsset finds asset for importedManor');
+ok(Boolean(assetOther), 'findAsset finds asset for importedOther');
+eq(assetManor.size, 4, 'importedManor resolves to its own 4-byte cloudy_back.webp asset');
+eq(assetOther.size, 10, 'importedOther resolves to its own 10-byte cloudy_back_1.webp asset (no cross-room corruption)');
+
+// 3. Multi-position background package export deduplication
+const multiPosBg = createBackground('MultiPosRoom');
+multiPosBg.states.default.usePositions = true;
+multiPosBg.states.default.positions = {
+  wit: createPosition('wit', { background: 'room.webp', foreground: 'desk.webp' }),
+  def: createPosition('def', { background: 'room.webp', foreground: 'desk.webp' }),
+  pro: createPosition('pro', { background: 'room.webp', foreground: 'desk.webp' }),
+  jud: createPosition('jud', { background: 'room.webp', foreground: 'desk.webp' }),
+  hld: createPosition('hld', { background: 'room.webp', foreground: 'desk.webp' }),
+};
+
+// Simulate zip collection for multiPosBg
+const testZipMap = new Map();
+const bgJsonPath = 'base/background/MultiPosRoom/background.json';
+testZipMap.set(bgJsonPath.toLowerCase(), { path: bgJsonPath, data: '{"test":1}' });
+
+const refImgs = new Set();
+for (const pos of Object.values(multiPosBg.states.default.positions)) {
+  if (pos.background) refImgs.add(pos.background);
+  if (pos.foreground) refImgs.add(pos.foreground);
+}
+eq(refImgs.size, 2, 'referencedImages Set deduplicates 5 positions into exactly 2 unique image names');
+
+for (const img of refImgs) {
+  const p = `base/background/MultiPosRoom/${img}`;
+  testZipMap.set(p.toLowerCase(), { path: p, data: new Uint8Array([10, 20]) });
+}
+eq(testZipMap.size, 3, 'testZipMap has exactly 3 entries (background.json + 1 room.webp + 1 desk.webp, zero duplicates)');
+
+const multiPosZip = await buildZip(Array.from(testZipMap.values()));
+const extractedMultiPos = await readZip(multiPosZip);
+eq(extractedMultiPos.length, 3, 'extractedMultiPos has exactly 3 files, 0 corrupted duplicate entries');
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

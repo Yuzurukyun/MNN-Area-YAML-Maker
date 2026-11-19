@@ -398,45 +398,41 @@ export const bgStore = {
     }, 1000);
   },
 
-  async exportAllZip(filename = 'mnn_backgrounds_library.zip') {
-    const filesToZip = [];
+  async exportAllZip(filename = 'mnn_backgrounds_library.zip', onProgress = null) {
+    onProgress?.('Initializing full library export...');
+    const zipFilesMap = new Map();
 
     // Root library json
-    filesToZip.push({
+    zipFilesMap.set('backgrounds-library.json', {
       path: 'backgrounds-library.json',
       data: this.exportLibraryJson(),
     });
 
-    const referencedImages = []; // Array<{ exportName, sourceName, folder }>
-    const referencedAudios = []; // Array<{ exportName, sourceName }>
+    const totalBgs = backgrounds.length;
+    let bgIndex = 0;
 
     for (const bg of backgrounds) {
+      bgIndex++;
       const folder = normalizeBgPath(bg.folder) || 'Background';
+      if (totalBgs > 3 && (bgIndex % 5 === 0 || bgIndex === totalBgs)) {
+        onProgress?.(`Collecting assets for background ${bgIndex} of ${totalBgs} (${folder})...`);
+      }
+
       const jsonStr = serializeBackgroundJson(bg);
-      filesToZip.push({
-        path: `base/background/${folder}/background.json`,
+      const bgJsonPath = `base/background/${folder}/background.json`;
+      zipFilesMap.set(bgJsonPath.toLowerCase(), {
+        path: bgJsonPath,
         data: jsonStr,
       });
 
+      const referencedImages = new Set();
+      const referencedAudios = new Set();
+
       function collectAssets(obj) {
         if (!obj) return;
-        if (obj.background) {
-          const exportName = obj.background;
-          const sourceName = bg.assetSources?.[exportName] || exportName;
-          referencedImages.push({ exportName, sourceName, folder });
-        }
-        if (obj.foreground) {
-          const exportName = obj.foreground;
-          const sourceName = bg.assetSources?.[exportName] || exportName;
-          referencedImages.push({ exportName, sourceName, folder });
-        }
-        if (obj.ambience) {
-          const normAmb = normalizeAmbiencePath(obj.ambience);
-          const exportName = normAmb;
-          const ambBase = normAmb.split('/').pop();
-          const sourceName = bg.assetSources?.[exportName] || bg.assetSources?.[ambBase] || exportName;
-          referencedAudios.push({ exportName, sourceName });
-        }
+        if (obj.background) referencedImages.add(obj.background);
+        if (obj.foreground) referencedImages.add(obj.foreground);
+        if (obj.ambience) referencedAudios.add(normalizeAmbiencePath(obj.ambience));
       }
 
       for (const st of Object.values(bg.states || {})) {
@@ -453,33 +449,36 @@ export const bgStore = {
           }
         }
       }
-    }
 
-    // Attach asset data if available in asset pool
-    for (const item of referencedImages) {
-      if (!item.exportName) continue;
-      const matched = assetPool.find((a) => a.type === 'image' && (a.name === item.sourceName || a.relPath === item.sourceName || a.name === item.exportName || a.relPath === item.exportName));
-      if (matched && matched.file) {
-        filesToZip.push({
-          path: `base/background/${item.folder}/${item.exportName}`,
-          data: matched.file,
-        });
+      // Attach referenced images for this background
+      for (const imgName of referencedImages) {
+        if (!imgName) continue;
+        const matched = this.findAsset(imgName, 'image', bg);
+        if (matched && matched.file) {
+          const entryPath = `base/background/${folder}/${imgName}`;
+          zipFilesMap.set(entryPath.toLowerCase(), {
+            path: entryPath,
+            data: matched.file,
+          });
+        }
+      }
+
+      // Attach referenced audio for this background
+      for (const audName of referencedAudios) {
+        if (!audName) continue;
+        const matched = this.findAsset(audName, 'audio', bg);
+        if (matched && matched.file) {
+          const entryPath = `base/sounds/ambient/${audName}`;
+          zipFilesMap.set(entryPath.toLowerCase(), {
+            path: entryPath,
+            data: matched.file,
+          });
+        }
       }
     }
 
-    for (const item of referencedAudios) {
-      if (!item.exportName) continue;
-      const audBase = item.exportName.split('/').pop();
-      const matched = assetPool.find((a) => a.type === 'audio' && (a.relPath === item.sourceName || a.name === item.sourceName || a.name === item.sourceName.split('/').pop() || a.relPath === item.exportName || a.name === audBase));
-      if (matched && matched.file) {
-        filesToZip.push({
-          path: `base/sounds/ambient/${item.exportName}`,
-          data: matched.file,
-        });
-      }
-    }
-
-    const zipBytes = await buildZip(filesToZip);
+    onProgress?.(`Compressing ${zipFilesMap.size} files into ZIP archive...`);
+    const zipBytes = await buildZip(Array.from(zipFilesMap.values()));
     downloadZipBlob(zipBytes, filename);
   },
 
@@ -1090,20 +1089,104 @@ export const bgStore = {
     notify();
   },
 
+  // Finds the most specific pool asset matching a background scene slot
+  findAsset(nameOrPath, type = 'image', bg = null) {
+    if (!nameOrPath) return null;
+    const clean = nameOrPath.split('/').pop().toLowerCase();
+    const targetBg = bg || (backgrounds.find((b) => b.id === selectedBgId) || backgrounds[0]);
+
+    if (type === 'audio') {
+      const normPath = normalizeAmbiencePath(nameOrPath).toLowerCase();
+      const mappedAudio = targetBg?.assetSources?.[nameOrPath] || targetBg?.assetSources?.[clean] || nameOrPath;
+      const mappedClean = mappedAudio.split('/').pop().toLowerCase();
+
+      // 1. Direct match on mapped audio in pool
+      const matchMapped = assetPool.find((a) => {
+        if (a.type !== 'audio') return false;
+        const aName = a.name.toLowerCase();
+        const aRel = normalizeAmbiencePath(a.relPath || a.name).toLowerCase();
+        return (
+          a.name === mappedAudio ||
+          a.id === mappedAudio ||
+          aName === mappedClean ||
+          aRel === normPath
+        );
+      });
+      if (matchMapped) return matchMapped;
+
+      // 2. Audio match by filename or fullRelPath
+      const matchAudio = assetPool.find((a) => {
+        if (a.type !== 'audio') return false;
+        const aName = a.name.toLowerCase();
+        const aRel = normalizeAmbiencePath(a.relPath || a.name).toLowerCase();
+        return (
+          aName === clean ||
+          aRel === normPath ||
+          a.fullRelPath?.toLowerCase().endsWith(mappedClean) ||
+          a.fullRelPath?.toLowerCase().endsWith(clean)
+        );
+      });
+      return matchAudio || null;
+    }
+
+    // IMAGE handling
+    // 1. Check explicit alias mapping in targetBg.assetSources
+    if (targetBg?.assetSources) {
+      const mapped = targetBg.assetSources[nameOrPath] || targetBg.assetSources[clean];
+      if (mapped) {
+        const matchMapped = assetPool.find((a) => {
+          if (type && a.type !== type) return false;
+          return a.name.toLowerCase() === mapped.toLowerCase() || a.id === mapped || a.relPath === mapped;
+        });
+        if (matchMapped) return matchMapped;
+      }
+    }
+
+    // 2. Check if asset in pool was imported from targetBg's directory
+    if (targetBg?.folder) {
+      const normBgFolder = normalizeBgPath(targetBg.folder).toLowerCase();
+      const matchInFolder = assetPool.find((a) => {
+        if (type && a.type !== type) return false;
+        if (!a.fullRelPath) return false;
+        const normAstPath = normalizeBgPath(a.fullRelPath).toLowerCase();
+        return (
+          (normAstPath.startsWith(`${normBgFolder}/`) || normAstPath.includes(`/${normBgFolder}/`)) &&
+          (normAstPath.endsWith(`/${clean}`) || a.name.toLowerCase() === clean)
+        );
+      });
+      if (matchInFolder) return matchInFolder;
+    }
+
+    // 3. Fallback: match by candidate/pool filename or relative path
+    const match = assetPool.find((a) => {
+      if (type && a.type !== type) return false;
+      const aLower = a.name.toLowerCase();
+      return (
+        aLower === clean ||
+        aLower === nameOrPath.toLowerCase() ||
+        a.relPath?.toLowerCase() === nameOrPath.toLowerCase() ||
+        a.fullRelPath?.toLowerCase() === nameOrPath.toLowerCase()
+      );
+    });
+    return match || null;
+  },
+
   // Export Background Folder ZIP (includes background.json + used assets)
-  async exportZip(bgId) {
+  async exportZip(bgId, onProgress = null) {
     const bg = backgrounds.find((b) => b.id === bgId) || backgrounds[0];
     if (!bg) return;
 
     const folder = normalizeBgPath(bg.folder) || 'Background';
-    const jsonStr = serializeBackgroundJson(bg);
+    onProgress?.(`Collecting assets for "${folder}"...`);
 
-    const filesToZip = [
-      {
-        path: `base/background/${folder}/background.json`,
-        data: jsonStr,
-      },
-    ];
+    const jsonStr = serializeBackgroundJson(bg);
+    const zipFilesMap = new Map();
+
+    const bgJsonPath = `base/background/${folder}/background.json`;
+    zipFilesMap.set(bgJsonPath.toLowerCase(), {
+      path: bgJsonPath,
+      data: jsonStr,
+    });
 
     // Find all referenced filenames in this background
     const referencedImages = new Set();
@@ -1131,14 +1214,14 @@ export const bgStore = {
       }
     }
 
-    // Attach asset data if available in asset pool, mapping through bg.assetSources if present
+    // Attach asset data if available in asset pool, mapping through findAsset
     for (const imgName of referencedImages) {
       if (!imgName) continue;
-      const sourceName = bg.assetSources?.[imgName] || imgName;
-      const matched = assetPool.find((a) => a.type === 'image' && (a.name === sourceName || a.relPath === sourceName || a.name === imgName || a.relPath === imgName));
+      const matched = this.findAsset(imgName, 'image', bg);
       if (matched && matched.file) {
-        filesToZip.push({
-          path: `base/background/${folder}/${imgName}`,
+        const entryPath = `base/background/${folder}/${imgName}`;
+        zipFilesMap.set(entryPath.toLowerCase(), {
+          path: entryPath,
           data: matched.file,
         });
       }
@@ -1146,18 +1229,18 @@ export const bgStore = {
 
     for (const audName of referencedAudios) {
       if (!audName) continue;
-      const audBase = audName.split('/').pop();
-      const sourceName = bg.assetSources?.[audName] || bg.assetSources?.[audBase] || audName;
-      const matched = assetPool.find((a) => a.type === 'audio' && (a.relPath === sourceName || a.name === sourceName || a.name === sourceName.split('/').pop() || a.relPath === audName || a.name === audBase));
+      const matched = this.findAsset(audName, 'audio', bg);
       if (matched && matched.file) {
-        filesToZip.push({
-          path: `base/sounds/ambient/${audName}`,
+        const entryPath = `base/sounds/ambient/${audName}`;
+        zipFilesMap.set(entryPath.toLowerCase(), {
+          path: entryPath,
           data: matched.file,
         });
       }
     }
 
-    const zipBytes = await buildZip(filesToZip);
+    onProgress?.(`Compressing ${zipFilesMap.size} files into ZIP archive...`);
+    const zipBytes = await buildZip(Array.from(zipFilesMap.values()));
     const downloadName = `${folder.replace(/[\/\\?%*:|"<>]/g, '_')}_package.zip`;
     downloadZipBlob(zipBytes, downloadName);
   },
@@ -1170,71 +1253,14 @@ export const bgStore = {
     }
 
     const targetBg = bg || (backgrounds.find((b) => b.id === selectedBgId) || backgrounds[0]);
-    const clean = nameOrPath.split('/').pop().toLowerCase();
+    const matched = this.findAsset(nameOrPath, type, targetBg);
+    if (matched && matched.url) return matched.url;
 
-    // 1. Audio handling: Match by filename or normalized path in pool, fallback to server path
     if (type === 'audio') {
-      const normPath = normalizeAmbiencePath(nameOrPath).toLowerCase();
-      const mappedAudio = targetBg?.assetSources?.[nameOrPath] || targetBg?.assetSources?.[clean] || nameOrPath;
-      const mappedClean = mappedAudio.split('/').pop().toLowerCase();
-
-      const matchAudio = assetPool.find((a) => {
-        if (a.type !== 'audio') return false;
-        const aName = a.name.toLowerCase();
-        const aRel = normalizeAmbiencePath(a.relPath || a.name).toLowerCase();
-        return (
-          a.name === mappedAudio ||
-          aName === mappedClean ||
-          aRel === normPath ||
-          a.fullRelPath?.toLowerCase().endsWith(mappedClean)
-        );
-      });
-      if (matchAudio) return matchAudio.url;
-
-      // Fallback: server sound path
       const cleanAmbience = normalizeAmbiencePath(nameOrPath);
       return `base/sounds/ambient/${cleanAmbience}`;
     }
-
-    // 2. Image handling: Check explicit alias mapping in targetBg.assetSources
-    if (targetBg?.assetSources) {
-      const mapped = targetBg.assetSources[nameOrPath] || targetBg.assetSources[clean];
-      if (mapped) {
-        const matchMapped = assetPool.find((a) => {
-          if (type && a.type !== type) return false;
-          return a.name.toLowerCase() === mapped.toLowerCase() || a.id === mapped || a.relPath === mapped;
-        });
-        if (matchMapped) return matchMapped.url;
-      }
-    }
-
-    // 3. Check if asset in pool was imported from targetBg's directory
-    if (targetBg?.folder) {
-      const normBgFolder = normalizeBgPath(targetBg.folder).toLowerCase();
-      const matchInFolder = assetPool.find((a) => {
-        if (type && a.type !== type) return false;
-        if (!a.fullRelPath) return false;
-        const normAstPath = normalizeBgPath(a.fullRelPath).toLowerCase();
-        return (
-          (normAstPath.startsWith(`${normBgFolder}/`) || normAstPath.includes(`/${normBgFolder}/`)) &&
-          (normAstPath.endsWith(`/${clean}`) || a.name.toLowerCase() === clean)
-        );
-      });
-      if (matchInFolder) return matchInFolder.url;
-    }
-
-    // 4. Match by candidate/pool filename or relative path
-    const match = assetPool.find((a) => {
-      if (type && a.type !== type) return false;
-      const aLower = a.name.toLowerCase();
-      return (
-        aLower === clean ||
-        aLower === nameOrPath.toLowerCase() ||
-        a.relPath?.toLowerCase() === nameOrPath.toLowerCase() ||
-        a.fullRelPath?.toLowerCase() === nameOrPath.toLowerCase()
-      );
-    });
-    return match ? match.url : '';
+    return '';
   },
 
   /**

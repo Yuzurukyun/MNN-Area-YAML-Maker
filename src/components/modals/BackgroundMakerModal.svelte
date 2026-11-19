@@ -75,6 +75,10 @@
   let isImporting = false;
   let importProgressText = '';
 
+  // Exporting loading state
+  let isExporting = false;
+  let exportProgressText = '';
+
   // Background list search / filter
   let bgSearchQuery = '';
   $: filteredBackgrounds = bgSearchQuery.trim()
@@ -738,7 +742,7 @@
       {
         label: 'Export Package (.zip)',
         icon: '📦',
-        run: () => bgStore.exportZip(bg.id),
+        run: () => handleExportZip(bg.id),
       },
       { separator: true },
       {
@@ -1732,6 +1736,39 @@
     }
   }
 
+  async function handleExportZip(bgId) {
+    const targetId = bgId || activeBg?.id;
+    if (!targetId) return;
+    const target = backgrounds.find((b) => b.id === targetId) || activeBg;
+    isExporting = true;
+    exportProgressText = `Packaging "${target?.folder || 'Scene'}"...`;
+    try {
+      await bgStore.exportZip(targetId, (msg) => { exportProgressText = msg; });
+      notify('Exported package ZIP successfully.', 'ok');
+    } catch (err) {
+      console.error('Export ZIP error:', err);
+      notify('Failed to export package ZIP: ' + (err.message || err), 'error');
+    } finally {
+      isExporting = false;
+      exportProgressText = '';
+    }
+  }
+
+  async function handleExportAllZip() {
+    isExporting = true;
+    exportProgressText = 'Packaging all backgrounds & assets...';
+    try {
+      await bgStore.exportAllZip('mnn_backgrounds_library.zip', (msg) => { exportProgressText = msg; });
+      notify('Exported full library package ZIP successfully.', 'ok');
+    } catch (err) {
+      console.error('Export all ZIP error:', err);
+      notify('Failed to export library ZIP: ' + (err.message || err), 'error');
+    } finally {
+      isExporting = false;
+      exportProgressText = '';
+    }
+  }
+
   function onModalDragOver(e) {
     e.preventDefault();
     if (!draggedAsset && e.dataTransfer?.types?.includes('Files')) {
@@ -2074,6 +2111,27 @@
       </div>
     {/if}
 
+    <!-- Exporting Progress Overlay -->
+    {#if isExporting}
+      <div
+        class="import-loading-overlay"
+        role="dialog"
+        tabindex="-1"
+        aria-modal="true"
+        aria-label="Export progress"
+        aria-live="polite"
+        on:pointerdown|stopPropagation
+        on:click|stopPropagation
+        on:keydown|stopPropagation
+      >
+        <div class="import-loading-card">
+          <div class="import-spinner"></div>
+          <div class="import-loading-title">EXPORTING PACKAGE (.ZIP)</div>
+          <div class="import-loading-msg">{exportProgressText || 'Compressing background.json & assets... please wait'}</div>
+        </div>
+      </div>
+    {/if}
+
     <!-- ROW 1: Title Bar with Blinking Caret -->
     <div class="maker-title-row">
       <h2 class="maker-title">
@@ -2149,7 +2207,7 @@
         <button
           class="mini-btn"
           title="Export complete package ZIP containing background.json, images and sounds"
-          on:click={() => bgStore.exportZip(activeBg.id)}
+          on:click={() => handleExportZip(activeBg?.id)}
         >
           📦 Export Package (.zip)
         </button>
@@ -2173,7 +2231,7 @@
               </button>
               <button
                 title="Download comprehensive ZIP package with all background.json files and assets"
-                on:click={() => { libraryMenuOpen = false; bgStore.exportAllZip(); }}
+                on:click={() => { libraryMenuOpen = false; handleExportAllZip(); }}
               >
                 📦 Export All Backgrounds & Assets (.zip)
               </button>
