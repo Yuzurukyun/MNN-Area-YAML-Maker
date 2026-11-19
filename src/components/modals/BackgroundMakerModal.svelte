@@ -23,7 +23,18 @@
   });
 
   onMount(() => {
-    return () => unsub();
+    if (audioEl) {
+      audioEl.volume = ambienceVolume;
+    }
+    return () => {
+      unsub();
+      if (audioEl) {
+        audioEl.pause();
+        audioEl.removeAttribute('src');
+      }
+      isPlayingAudio = false;
+      ambiencePreviewActive = false;
+    };
   });
 
   $: backgrounds = storeState.backgrounds;
@@ -945,9 +956,51 @@
     if (typeof h === 'number' && h > 0) stageAspectH = h;
   }
 
-  // Audio preview element
+  // Audio preview element & playback synchronization
   let audioEl;
   let isPlayingAudio = false;
+  let ambiencePreviewActive = false; // Tracks whether user activated ambience preview
+  let currentLoadedAmbience = null;
+  let isSwitchingAmbience = false;
+
+  // Ambience volume (default 0.30 to not hurt people's ears)
+  const SAVED_VOL_KEY = 'yuzu_mnn_bg_ambience_volume';
+  let ambienceVolume = 0.30;
+  try {
+    const savedVol = typeof localStorage !== 'undefined' ? localStorage.getItem(SAVED_VOL_KEY) : null;
+    if (savedVol !== null) {
+      const parsed = parseFloat(savedVol);
+      if (!isNaN(parsed) && parsed >= 0 && parsed <= 1) {
+        ambienceVolume = parsed;
+      }
+    }
+  } catch {}
+  let prevUnmuteVolume = ambienceVolume > 0 ? ambienceVolume : 0.30;
+
+  function onVolumeChange(e) {
+    const val = parseFloat(e.target.value);
+    if (!isNaN(val)) {
+      ambienceVolume = Math.max(0, Math.min(1, val));
+      if (ambienceVolume > 0) prevUnmuteVolume = ambienceVolume;
+      if (audioEl) audioEl.volume = ambienceVolume;
+      try {
+        if (typeof localStorage !== 'undefined') localStorage.setItem(SAVED_VOL_KEY, String(ambienceVolume));
+      } catch {}
+    }
+  }
+
+  function toggleMute() {
+    if (ambienceVolume > 0) {
+      prevUnmuteVolume = ambienceVolume;
+      ambienceVolume = 0;
+    } else {
+      ambienceVolume = prevUnmuteVolume > 0 ? prevUnmuteVolume : 0.30;
+    }
+    if (audioEl) audioEl.volume = ambienceVolume;
+    try {
+      if (typeof localStorage !== 'undefined') localStorage.setItem(SAVED_VOL_KEY, String(ambienceVolume));
+    } catch {}
+  }
 
   // JSON string & Indent configuration
   let jsonIndent = 4;
@@ -1825,23 +1878,96 @@
   }
 
   // Audio Playback
-  function toggleAudio() {
+  async function toggleAudio() {
     if (!audioEl) return;
     if (isPlayingAudio) {
+      ambiencePreviewActive = false;
       audioEl.pause();
       isPlayingAudio = false;
     } else {
-      if (!resolvedAmbienceUrl) {
-        notify(`No audio source found for "${resolvedVisual.ambience || 'ambience'}". Ensure file is in pool or server directory.`, 'warn');
+      ambiencePreviewActive = true;
+      if (!resolvedVisual.ambience) {
+        notify('No ambience audio configured for this position/state.', 'warn');
         return;
       }
-      audioEl.play().then(() => {
+      if (!resolvedAmbienceUrl) {
+        notify(`No audio source found for "${resolvedVisual.ambience}". Ensure file is in pool or server directory.`, 'warn');
+        return;
+      }
+      isSwitchingAmbience = true;
+      try {
+        audioEl.volume = ambienceVolume;
+        if (audioEl.src !== resolvedAmbienceUrl) {
+          audioEl.src = resolvedAmbienceUrl;
+          audioEl.currentTime = 0;
+        }
+        currentLoadedAmbience = resolvedVisual.ambience;
+        await audioEl.play();
         isPlayingAudio = true;
-      }).catch((err) => {
+      } catch (err) {
         console.warn('Audio play error:', err);
         isPlayingAudio = false;
         notify(`Could not play audio "${resolvedVisual.ambience}" (${err.message || 'file not found'}).`, 'warn');
-      });
+      } finally {
+        isSwitchingAmbience = false;
+      }
+    }
+  }
+
+  // Detect when an ambience is different from the last one to change the ambience without stopping or pausing unless it's empty
+  $: syncAmbienceOnVisualChange(resolvedVisual?.ambience, resolvedAmbienceUrl);
+
+  function syncAmbienceOnVisualChange(newAmbienceName, newAmbienceUrl) {
+    const cleanTrack = (newAmbienceName || '').trim();
+
+    if (!audioEl) {
+      currentLoadedAmbience = cleanTrack;
+      return;
+    }
+
+    // If track has not changed, keep playing smoothly without stutter or pause
+    if (cleanTrack === currentLoadedAmbience) {
+      return;
+    }
+
+    currentLoadedAmbience = cleanTrack;
+
+    // Unless it's empty: pause audio without discarding preview intent
+    if (!cleanTrack) {
+      if (audioEl) {
+        audioEl.pause();
+      }
+      isPlayingAudio = false;
+      return;
+    }
+
+    // New non-empty track: update audio source and unpause/play if preview is active
+    if (newAmbienceUrl) {
+      audioEl.volume = ambienceVolume;
+      if (audioEl.src !== newAmbienceUrl) {
+        audioEl.src = newAmbienceUrl;
+        audioEl.currentTime = 0;
+      }
+      if (ambiencePreviewActive) {
+        isSwitchingAmbience = true;
+        audioEl.play().then(() => {
+          isPlayingAudio = true;
+        }).catch((err) => {
+          console.warn('Audio play error on switch:', err);
+          isPlayingAudio = false;
+          notify(`Could not play audio "${cleanTrack}" (${err.message || 'file not found'}).`, 'warn');
+        }).finally(() => {
+          isSwitchingAmbience = false;
+        });
+      }
+    } else {
+      if (audioEl) {
+        audioEl.pause();
+      }
+      isPlayingAudio = false;
+      if (ambiencePreviewActive) {
+        notify(`No audio source found for "${cleanTrack}". Ensure file is in pool or server directory.`, 'warn');
+      }
     }
   }
 
@@ -2933,28 +3059,70 @@
               </div>
             </div>
 
-            <!-- Ambience Player -->
-            {#if resolvedVisual.ambience}
-              <div class="audio-ctrl-box">
-                <button class="play-btn {isPlayingAudio ? 'playing' : ''}" on:click={toggleAudio}>
+            <!-- Ambience Player & Volume Controls -->
+            <div class="audio-ctrl-box">
+              {#if resolvedVisual.ambience}
+                <button
+                  class="play-btn {isPlayingAudio ? 'playing' : ''}"
+                  on:click={toggleAudio}
+                  title={isPlayingAudio ? 'Pause ambience audio' : 'Play ambience audio preview'}
+                >
                   {isPlayingAudio ? '⏸ Pause' : '▶ Play Ambience'}
                 </button>
-                <audio
-                  bind:this={audioEl}
-                  src={resolvedAmbienceUrl}
-                  loop
-                  on:ended={() => (isPlayingAudio = false)}
-                  on:pause={() => (isPlayingAudio = false)}
-                  on:play={() => (isPlayingAudio = true)}
-                  on:error={() => {
-                    if (isPlayingAudio) {
-                      isPlayingAudio = false;
-                      notify(`Ambience audio "${resolvedVisual.ambience}" failed to load.`, 'warn');
-                    }
-                  }}
-                ></audio>
+              {:else}
+                <button
+                  class="play-btn disabled"
+                  disabled
+                  title="No ambience audio configured for active position/state"
+                >
+                  🔇 No Ambience
+                </button>
+              {/if}
+
+              <div class="ambience-volume-row" title="Ambience volume: {Math.round(ambienceVolume * 100)}%">
+                <button
+                  type="button"
+                  class="vol-icon-btn"
+                  on:click={toggleMute}
+                  title={ambienceVolume === 0 ? 'Unmute ambience' : 'Mute ambience'}
+                >
+                  {ambienceVolume === 0 ? '🔇' : (ambienceVolume < 0.5 ? '🔉' : '🔊')}
+                </button>
+                <input
+                  type="range"
+                  class="ambience-volume-slider"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  bind:value={ambienceVolume}
+                  on:input={onVolumeChange}
+                  aria-label="Ambience volume"
+                />
+                <span class="vol-label">{Math.round(ambienceVolume * 100)}%</span>
               </div>
-            {/if}
+
+              <!-- Persistent audio element for smooth switching -->
+              <audio
+                bind:this={audioEl}
+                loop
+                on:ended={() => (isPlayingAudio = false)}
+                on:pause={() => {
+                  if (!isSwitchingAmbience) {
+                    isPlayingAudio = false;
+                  }
+                }}
+                on:play={() => {
+                  isPlayingAudio = true;
+                }}
+                on:error={() => {
+                  if (isPlayingAudio && !isSwitchingAmbience) {
+                    isPlayingAudio = false;
+                    notify(`Ambience audio "${resolvedVisual?.ambience || 'ambience'}" failed to load.`, 'warn');
+                  }
+                }}
+                style="display: none;"
+              ></audio>
+            </div>
           </div>
         </div>
       </aside>
@@ -5248,7 +5416,8 @@
 
   .audio-ctrl-box {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    gap: 6px;
   }
   .play-btn {
     width: 100%;
@@ -5257,12 +5426,64 @@
     color: var(--accent);
     font-size: 11px;
     font-weight: 700;
-    padding: 5px;
+    padding: 6px;
     border-radius: var(--radius);
     cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .play-btn:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--accent) 20%, transparent);
   }
   .play-btn.playing {
     background: color-mix(in srgb, var(--accent) 30%, transparent);
+    border-color: var(--accent);
+  }
+  .play-btn.disabled,
+  .play-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: var(--line);
+    color: var(--dim);
+    background: transparent;
+  }
+  .ambience-volume-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--input-bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 4px 8px;
+  }
+  .vol-icon-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    color: var(--dim);
+    user-select: none;
+  }
+  .vol-icon-btn:hover {
+    color: var(--text-strong);
+    transform: scale(1.1);
+  }
+  .ambience-volume-slider {
+    flex: 1;
+    height: 4px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+  .vol-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--dim);
+    font-family: var(--font-mono);
+    min-width: 28px;
+    text-align: right;
   }
 
   /* Bottom Dock */

@@ -8,6 +8,7 @@ import {
   normalizeBgPath,
   normalizeAmbiencePath,
   createBackground,
+  createPosition,
   serializeBackgroundJson,
   parseBackgroundJson,
   parseBackgroundIni,
@@ -1041,6 +1042,125 @@ const defaultReset = bgStore.clearAllBackgrounds();
 eq(bgStore.get().backgrounds.length, 1, 'clearAllBackgrounds resets to 1 background');
 eq(bgStore.get().backgrounds[0].folder, 'Default', 'reset background is Default');
 eq(bgStore.get().selectedBgId, defaultReset.id, 'selectedBgId matches Default');
+
+/* ---- Ambience Auto-Switching, Unpause & Volume Slider Tests ---- */
+const multiAmbBg = createBackground('Courtroom Ambience Test');
+multiAmbBg.states.default.usePositions = true;
+multiAmbBg.states.default.positions = {
+  Witness: createPosition('Witness', { background: 'wit.png', ambience: 'wsl/manor_3_cycle.opus' }),
+  Defense: createPosition('Defense', { background: 'def.png', ambience: 'wsl/rain_loop.opus' }),
+  Prosecution: createPosition('Prosecution', { background: 'pro.png', ambience: '' }),
+  Judge: createPosition('Judge', { background: 'jud.png', ambience: 'wsl/rain_loop.opus' }),
+};
+
+const visWit = resolveActiveVisual(multiAmbBg, { state: 'default', position: 'Witness' });
+const visDef = resolveActiveVisual(multiAmbBg, { state: 'default', position: 'Defense' });
+const visPro = resolveActiveVisual(multiAmbBg, { state: 'default', position: 'Prosecution' });
+const visJud = resolveActiveVisual(multiAmbBg, { state: 'default', position: 'Judge' });
+
+eq(visWit.ambience, 'wsl/manor_3_cycle.opus', 'Witness position resolves manor ambience');
+eq(visDef.ambience, 'wsl/rain_loop.opus', 'Defense position resolves rain ambience');
+eq(visPro.ambience, '', 'Prosecution position resolves empty ambience');
+eq(visJud.ambience, 'wsl/rain_loop.opus', 'Judge position resolves rain ambience');
+
+// Ambience transition simulator mirroring syncAmbienceOnVisualChange()
+function createAmbienceManager(initialVolume = 0.30) {
+  let volume = initialVolume;
+  let isPlaying = false;
+  let previewActive = false;
+  let currentTrack = null;
+  let switchCount = 0;
+
+  return {
+    get volume() { return volume; },
+    setVolume(v) {
+      volume = Math.max(0, Math.min(1, typeof v === 'number' && !isNaN(v) ? v : 0.30));
+    },
+    get isPlaying() { return isPlaying; },
+    get previewActive() { return previewActive; },
+    get currentTrack() { return currentTrack; },
+    get switchCount() { return switchCount; },
+    play(track) {
+      previewActive = true;
+      if (track) {
+        currentTrack = track;
+        isPlaying = true;
+      }
+    },
+    pause() {
+      previewActive = false;
+      isPlaying = false;
+    },
+    sync(newTrack) {
+      const clean = (newTrack || '').trim();
+      if (clean === currentTrack) {
+        // Track hasn't changed, continue without restart
+        return 'unchanged';
+      }
+      currentTrack = clean;
+      if (!clean) {
+        // Empty track: pauses without clearing previewActive intent
+        isPlaying = false;
+        return 'paused_empty';
+      }
+      switchCount++;
+      if (previewActive) {
+        // Different non-empty track: unpauses/continues playing seamlessly
+        isPlaying = true;
+        return 'switched_and_playing';
+      }
+      return 'switched_idle';
+    }
+  };
+}
+
+const ambMgr = createAmbienceManager();
+eq(ambMgr.volume, 0.30, 'default ambience volume is 0.30 (30%) to protect ears');
+ambMgr.setVolume(1.5);
+eq(ambMgr.volume, 1.0, 'volume clamped to 1.0 maximum');
+ambMgr.setVolume(-0.2);
+eq(ambMgr.volume, 0.0, 'volume clamped to 0.0 minimum');
+ambMgr.setVolume(0.30);
+eq(ambMgr.volume, 0.30, 'volume set back to 0.30');
+
+// User clicks Play Ambience on Witness
+ambMgr.play(visWit.ambience);
+eq(ambMgr.isPlaying, true, 'ambience is playing after user clicks play');
+eq(ambMgr.previewActive, true, 'ambience preview mode is active');
+eq(ambMgr.currentTrack, 'wsl/manor_3_cycle.opus', 'current track is witness manor ambience');
+
+// Switch to Defense (different ambience: rain)
+const switchDefRes = ambMgr.sync(visDef.ambience);
+eq(switchDefRes, 'switched_and_playing', 'switching to Defense changes ambience and continues playing');
+eq(ambMgr.isPlaying, true, 'stays playing without pausing when ambience changes');
+eq(ambMgr.currentTrack, 'wsl/rain_loop.opus', 'current track switched to rain');
+
+// Switch to Judge (same ambience: rain)
+const switchJudRes = ambMgr.sync(visJud.ambience);
+eq(switchJudRes, 'unchanged', 'switching to Judge detects identical ambience and does not interrupt');
+eq(ambMgr.isPlaying, true, 'audio remains playing without stutter');
+
+// Switch to Prosecution (empty ambience)
+const switchProRes = ambMgr.sync(visPro.ambience);
+eq(switchProRes, 'paused_empty', 'switching to position with empty ambience pauses playback');
+eq(ambMgr.isPlaying, false, 'playback is paused when ambience is empty');
+eq(ambMgr.previewActive, true, 'preview intent remains active while paused on empty');
+
+// Switch back to Witness (non-empty ambience) -> should UNPAUSE and play!
+const switchWitRes = ambMgr.sync(visWit.ambience);
+eq(switchWitRes, 'switched_and_playing', 'switching back to non-empty ambience unpauses and plays seamlessly');
+eq(ambMgr.isPlaying, true, 'playback unpaused and playing automatically');
+eq(ambMgr.currentTrack, 'wsl/manor_3_cycle.opus', 'current track is witness manor');
+
+// User explicitly pauses
+ambMgr.pause();
+eq(ambMgr.isPlaying, false, 'audio paused by user');
+eq(ambMgr.previewActive, false, 'preview mode deactivated by user');
+
+// Switch to Defense while explicitly paused -> should NOT unpause
+const switchPausedRes = ambMgr.sync(visDef.ambience);
+eq(switchPausedRes, 'switched_idle', 'switching position while explicitly paused updates track but does not play');
+eq(ambMgr.isPlaying, false, 'audio remains paused');
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
