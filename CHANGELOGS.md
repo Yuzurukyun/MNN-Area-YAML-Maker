@@ -596,7 +596,7 @@
 
 - **Root Asset Repository Folder Detection & Bloat Filtering (`src/lib/bgStore.js`, `src/lib/bgSchema.js`):**
     - Identified that `base` is merely a conventional name for the root asset repository and could be named anything (e.g. `MM`, `NN`, custom mod name).
-    - Added `detectRootPrefix(filePaths)`: detects when an import contains a root asset repository by scanning for standard root directories (`background`, `characters`, `sounds`, `animations`, `configs`).
+    - Added `detectRootPrefix(filePaths)`: detects when an import contains a root asset repository by scanning for standard root directories (`background`, `characters`, `sounds`, `animations`, `configs`). Does NOT require all 5 directories to match: accurately identifies root folders that only contain `background` or even only contain `sounds`.
     - When a root repository import is detected, automatically accepts only `background/` (and `backgrounds/`) and `sounds/ambient/` files, filtering out bloat directories (`characters/`, `animations/`, `configs/`, `sounds/music/`, `sounds/sfx/`, etc.) from being imported into memory or storage.
     - Preserves non-root imports (e.g. standalone background folders or ZIPs) without aggressive filtering.
     - Updated `normalizeBgPath` and `normalizeAmbiencePath` to strip arbitrary root prefixes cleanly (e.g. `MM/background/...` -> clean room folder, `MM/sounds/ambient/...` -> clean relative audio loop path).
@@ -607,7 +607,7 @@
 
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **253 passed, 0 failed** (all assertions covering arbitrary root detection `MM/`, bloat filtering of `characters/`, `animations/`, `configs/`, and non-ambient sounds, clean room folder extraction, `clearAllBackgrounds()` zero-reset, INI parsing, courtroom position mapping with Witness default, duplicate asset collision disambiguation, audio server fallback, slot alias preservation, camera position duplication, slot clearing on purge, and state duplication).
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **257 passed, 0 failed** (all assertions covering arbitrary root detection `MM/`, single-folder roots with ONLY `background` or ONLY `sounds`, bloat filtering of `characters/`, `animations/`, `configs/`, and non-ambient sounds, clean room folder extraction, `clearAllBackgrounds()` zero-reset, INI parsing, courtroom position mapping with Witness default, duplicate asset collision disambiguation, audio server fallback, slot alias preservation, camera position duplication, slot clearing on purge, and state duplication).
 - `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5209 KB), `export/yuzu_area_maker_nomusic.html` (556 KB), and `docs/index.html` (556 KB) with 0 warnings and 0 errors.
 - Live browser CDP tests verified:
     - **Root Asset Repository Import & Bloat Filtering:** Dropped an `MM/` root asset repository containing `background/`, `sounds/ambient/`, `characters/`, `animations/`, `configs/`, and `sounds/music/`. The background `WS Lambda/Manor Room 1` and ambient loop `wsl/birds.opus` were accepted while all 4 bloat files were filtered out completely ([verified_root_folder_bloat_filtered.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_root_folder_bloat_filtered.png)).

@@ -602,23 +602,16 @@ export const bgStore = {
       for (const prefix of prefixes) {
         const children = prefixMap.get(prefix);
         const hasBackground = children.has('background') || children.has('backgrounds');
-        const hasCharacters = children.has('characters');
         const hasSounds = children.has('sounds');
+        const hasCharacters = children.has('characters');
         const hasAnimations = children.has('animations');
         const hasConfigs = children.has('configs');
-        const count = rootFolderNames.filter((r) => children.has(r)).length;
 
-        // Meets root folder criteria:
-        // - has background and at least one other standard root folder
-        // - or has characters / animations / configs (unmistakable root folder)
-        // - or has at least 2 standard root folder names
-        if (
-          (hasBackground && (hasCharacters || hasSounds || hasAnimations || hasConfigs)) ||
-          hasCharacters ||
-          hasAnimations ||
-          hasConfigs ||
-          count >= 2
-        ) {
+        // Root folder indicator:
+        // A root folder contains any of the standard asset repository folders:
+        // 'background', 'sounds', 'characters', 'animations', 'configs'.
+        // Does NOT require all 5 - a root folder may only contain 'background' or only 'sounds'.
+        if (hasBackground || hasSounds || hasCharacters || hasAnimations || hasConfigs) {
           return prefix;
         }
       }

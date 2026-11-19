@@ -974,6 +974,27 @@ ok(!hasCrossExam, 'sounds/music/cross_exam.mp3 was ignored (bloat filtered)');
 ok(!hasPhoenixTalk, 'characters/phoenix/talk.gif was ignored (bloat filtered)');
 ok(!hasTakeThat, 'animations/take_that.gif was ignored (bloat filtered)');
 
+// Test root folder with ONLY background/ (e.g. NN/background)
+const onlyBgRootFiles = [
+  { path: 'NN/background/Library/background.json', name: 'background.json', data: new TextEncoder().encode(JSON.stringify({ default: { background: 'book.png' } })) },
+  { path: 'NN/background/Library/book.png', name: 'book.png', data: new Uint8Array(8), size: 8 },
+];
+const regOnlyBg = await bgStore.registerFiles(onlyBgRootFiles);
+const importedLib = regOnlyBg.importedBackgrounds.find((b) => b.folder === 'Library');
+ok(Boolean(importedLib), 'root folder with ONLY background/ detected and imported with clean folder "Library"');
+
+// Test root folder with ONLY sounds/ (e.g. AudioOnly/sounds)
+const onlySoundsRootFiles = [
+  { path: 'AudioOnly/sounds/ambient/nature_loop.opus', name: 'nature_loop.opus', data: new Uint8Array(14), size: 14 },
+  { path: 'AudioOnly/sounds/music/battle_theme.mp3', name: 'battle_theme.mp3', data: new Uint8Array(40), size: 40 },
+];
+const regOnlySounds = await bgStore.registerFiles(onlySoundsRootFiles);
+const hasNatureLoop = regOnlySounds.addedAssets.some((a) => a.name === 'nature_loop.opus');
+const hasBattleTheme = regOnlySounds.addedAssets.some((a) => a.name === 'battle_theme.mp3');
+ok(hasNatureLoop, 'root folder with ONLY sounds/ accepted sounds/ambient/nature_loop.opus');
+ok(!hasBattleTheme, 'root folder with ONLY sounds/ filtered sounds/music/battle_theme.mp3');
+eq(regOnlySounds.importedBackgrounds.length, 0, 'sounds-only import creates no fake backgrounds');
+
 // Test clearAllBackgrounds()
 const defaultReset = bgStore.clearAllBackgrounds();
 eq(bgStore.get().backgrounds.length, 1, 'clearAllBackgrounds resets to 1 background');
