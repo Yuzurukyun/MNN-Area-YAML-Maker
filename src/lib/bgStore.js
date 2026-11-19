@@ -1231,11 +1231,13 @@ export const bgStore = {
       const normBgFolder = normalizeBgPath(targetBg.folder).toLowerCase();
       const matchInFolder = assetPool.find((a) => {
         if (type && a.type !== type) return false;
-        if (!a.fullRelPath) return false;
-        const normAstPath = normalizeBgPath(a.fullRelPath).toLowerCase();
+        const aFolder = (a.fromFolder || '').toLowerCase();
+        const aFull = (a.fullRelPath || a.relPath || '').toLowerCase();
+        const aName = a.name.toLowerCase();
+        const normAstPath = normalizeBgPath(aFull).toLowerCase();
         return (
-          (normAstPath.startsWith(`${normBgFolder}/`) || normAstPath.includes(`/${normBgFolder}/`)) &&
-          (normAstPath.endsWith(`/${clean}`) || a.name.toLowerCase() === clean)
+          (aFolder.includes(normBgFolder) || normAstPath.startsWith(`${normBgFolder}/`) || normAstPath.includes(`/${normBgFolder}/`)) &&
+          (normAstPath.endsWith(`/${clean}`) || aName === clean)
         );
       });
       if (matchInFolder) return matchInFolder;
@@ -1542,19 +1544,114 @@ export function getAreaBgUrl(bgFolder, customStoreState) {
     return bgFolder;
   }
   const currentStore = customStoreState || getStoreState();
-  const norm = normalizeBgPath(bgFolder).toLowerCase();
-  const matched = (currentStore.backgrounds || []).find(
-    (b) => b.folder.toLowerCase() === norm
-  );
+  const rawNorm = normalizeBgPath(bgFolder).toLowerCase();
+  const rawClean = bgFolder.trim().toLowerCase();
+
+  // 1. Match against registered background definitions
+  const matched = (currentStore.backgrounds || []).find((b) => {
+    const bNorm = normalizeBgPath(b.folder).toLowerCase();
+    const bRaw = (b.folder || '').trim().toLowerCase();
+    return bNorm === rawNorm || bRaw === rawClean || bNorm.endsWith(`/${rawNorm}`) || rawNorm.endsWith(`/${bNorm}`);
+  });
+
   if (matched) {
-    const visual = resolveActiveVisual(matched, { state: 'default', tod: 'day' });
-    if (visual && visual.background) {
-      const url = bgStore.getAssetUrl(visual.background, 'image', matched);
+    // 1a. Try active visual for default or current position/state
+    const visual = resolveActiveVisual(matched, { state: 'default', position: matched.activePosition || 'wit', tod: 'day' });
+    const img1 = visual?.background || visual?.foreground;
+    if (img1) {
+      const url = bgStore.getAssetUrl(img1, 'image', matched);
       if (url) return url;
     }
+
+    // 1b. Try any state, position, or TOD variant in matched definition
+    for (const st of Object.values(matched.states || {})) {
+      if (!st) continue;
+      if (st.background) {
+        const u = bgStore.getAssetUrl(st.background, 'image', matched);
+        if (u) return u;
+      }
+      if (st.foreground) {
+        const u = bgStore.getAssetUrl(st.foreground, 'image', matched);
+        if (u) return u;
+      }
+      if (st.positions) {
+        for (const pos of Object.values(st.positions)) {
+          if (!pos) continue;
+          if (pos.background) {
+            const u = bgStore.getAssetUrl(pos.background, 'image', matched);
+            if (u) return u;
+          }
+          if (pos.foreground) {
+            const u = bgStore.getAssetUrl(pos.foreground, 'image', matched);
+            if (u) return u;
+          }
+          if (pos.time_variants) {
+            for (const tv of Object.values(pos.time_variants)) {
+              if (!tv) continue;
+              if (tv.background) {
+                const u = bgStore.getAssetUrl(tv.background, 'image', matched);
+                if (u) return u;
+              }
+              if (tv.foreground) {
+                const u = bgStore.getAssetUrl(tv.foreground, 'image', matched);
+                if (u) return u;
+              }
+            }
+          }
+        }
+      }
+      if (st.time_variants) {
+        for (const tv of Object.values(st.time_variants)) {
+          if (!tv) continue;
+          if (tv.background) {
+            const u = bgStore.getAssetUrl(tv.background, 'image', matched);
+            if (u) return u;
+          }
+          if (tv.foreground) {
+            const u = bgStore.getAssetUrl(tv.foreground, 'image', matched);
+            if (u) return u;
+          }
+        }
+      }
+    }
+
+    // 1c. Try mapped aliases in assetSources
+    if (matched.assetSources) {
+      for (const rawName of Object.values(matched.assetSources)) {
+        if (rawName && typeof rawName === 'string' && rawName.match(/\.(png|webp|jpg|jpeg|gif|svg|avif)$/i)) {
+          const u = bgStore.getAssetUrl(rawName, 'image', matched);
+          if (u) return u;
+        }
+      }
+    }
   }
-  // Fallback: match by last segment filename in asset pool
-  const last = bgFolder.split('/').pop();
+
+  // 2. Match against asset pool by directory path or fromFolder
+  const pool = currentStore.assetPool || [];
+  const poolMatch = pool.find((a) => {
+    if (a.type !== 'image') return false;
+    const aFrom = (a.fromFolder || '').toLowerCase();
+    const aRel = (a.relPath || '').toLowerCase();
+    const aFull = (a.fullRelPath || '').toLowerCase();
+    return (
+      aFrom.includes(rawNorm) ||
+      aRel.includes(rawNorm) ||
+      aFull.includes(rawNorm) ||
+      (aFrom.length > 3 && rawNorm.includes(aFrom))
+    );
+  });
+  if (poolMatch && poolMatch.url) return poolMatch.url;
+
+  // 3. Fallback: match by last segment filename in asset pool
+  const last = bgFolder.split('/').pop().toLowerCase();
+  const lastMatch = pool.find((a) => {
+    if (a.type !== 'image') return false;
+    const aName = a.name.toLowerCase();
+    const aBase = aName.replace(/\.[^/.]+$/, '');
+    return aName === last || aBase === last || a.relPath?.toLowerCase().endsWith(`/${last}`);
+  });
+  if (lastMatch && lastMatch.url) return lastMatch.url;
+
   return bgStore.getAssetUrl(last, 'image');
 }
 
@@ -1565,15 +1662,15 @@ if (typeof window !== 'undefined') {
 /**
  * Resolves the visual image URL to display on the node card on the graph canvas.
  * If area.imageMode === 'scene', returns the resolved background scene URL if available.
- * Otherwise returns the custom node avatar (area.image).
+ * Otherwise returns the custom node avatar (area.image) or background scene fallback.
  */
 export function resolveNodeImageUrl(area, customStoreState) {
   if (!area) return '';
-  const mode = area.imageMode || (area.image ? 'node' : '');
+  const sceneUrl = getAreaBgUrl(area.background, customStoreState);
+  const mode = area.imageMode || (area.image ? 'node' : (sceneUrl ? 'scene' : ''));
   if (mode === 'scene') {
-    const sceneUrl = getAreaBgUrl(area.background, customStoreState);
     if (sceneUrl) return sceneUrl;
     return area.image || '';
   }
-  return area.image || '';
+  return area.image || sceneUrl || '';
 }

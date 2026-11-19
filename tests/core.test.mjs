@@ -20,7 +20,7 @@ import {
   extractBgTemplateStructure,
   applyBgTemplate,
 } from '../src/lib/bgSchema.js';
-import { resolveNodeImageUrl, bgStore, ensureUniqueBgFolder } from '../src/lib/bgStore.js';
+import { resolveNodeImageUrl, getAreaBgUrl, bgStore, ensureUniqueBgFolder } from '../src/lib/bgStore.js';
 import { dbSaveAssets, dbLoadAllAssets, dbDeleteAssets, dbClearAssets } from '../src/lib/assetDb.js';
 import { buildZip, readZip } from '../src/lib/zip.js';
 
@@ -564,12 +564,29 @@ ok(!hasTimeVariants(noTvBg), 'standard background without time variants returns 
 ok(!hasTimeVariants(null), 'null bg returns false');
 ok(!hasTimeVariants({}), 'empty object returns false');
 
-// Test resolveNodeImageUrl
+// Test resolveNodeImageUrl & getAreaBgUrl
 const iconArea = { image: 'data:image/png;base64,icon', imageMode: 'node', background: 'plain.png' };
 eq(resolveNodeImageUrl(iconArea), 'data:image/png;base64,icon', 'node mode returns icon dataUrl');
 const sceneArea = { image: 'data:image/png;base64,icon', imageMode: 'scene', background: 'plain.png' };
-// Since plain.png is not in assetPool, fallback is image or empty
 ok(typeof resolveNodeImageUrl(sceneArea) === 'string', 'scene mode resolves valid string');
+
+// Test courtroom background with position foreground resolution in getAreaBgUrl
+const courtBgForUrl = createBackground('Court/DemoRoom');
+courtBgForUrl.states.default.usePositions = true;
+courtBgForUrl.states.default.positions = {
+  wit: { background: '', foreground: 'court_stand.webp' }
+};
+const mockStoreWithCourt = {
+  backgrounds: [courtBgForUrl],
+  assetPool: [
+    { name: 'court_stand.webp', relPath: 'Court/DemoRoom/court_stand.webp', type: 'image', url: 'blob:court-stand-preview' }
+  ]
+};
+eq(getAreaBgUrl('Court/DemoRoom', mockStoreWithCourt), 'blob:court-stand-preview', 'getAreaBgUrl resolves foreground image from courtroom positions');
+const areaWithCourtBg = { area: 'Court', background: 'Court/DemoRoom', image: 'data:icon', imageMode: 'scene' };
+eq(resolveNodeImageUrl(areaWithCourtBg, mockStoreWithCourt), 'blob:court-stand-preview', 'resolveNodeImageUrl returns courtroom scene preview when imageMode is scene');
+const areaWithCourtBgNoIcon = { area: 'Court', background: 'Court/DemoRoom', image: '', imageMode: '' };
+eq(resolveNodeImageUrl(areaWithCourtBgNoIcon, mockStoreWithCourt), 'blob:court-stand-preview', 'resolveNodeImageUrl automatically falls back to scene preview when no icon is assigned');
 
 // Test ZIP archive builder
 const zipBuf = await buildZip([

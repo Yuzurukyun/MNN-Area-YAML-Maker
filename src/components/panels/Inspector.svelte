@@ -304,10 +304,18 @@
               title="Show background scene on canvas and inspector"
               on:click={() => setImageMode('scene')}
             >Scene</button>
+          {:else if currentBgUrl && !a.image}
+            <button
+              class="mini-btn {imageDisplayMode === 'scene' ? 'active-filter' : ''}"
+              title="Using background scene as node avatar on canvas"
+              on:click={() => setImageMode('scene')}
+            >Scene</button>
           {/if}
           {#if a.image}
             <button class="mini-btn" title="Replace area icon" on:click={() => iconInput.click()}>Replace</button>
             <button class="mini-btn" title="Remove area icon" on:click={() => withArea((s, ar) => { ar.image = ''; ar.imageMode = 'scene'; })}>✕</button>
+          {:else}
+            <button class="mini-btn" title="Attach custom area icon" on:click={() => iconInput.click()}>＋ Attach Icon</button>
           {/if}
         </div>
       </div>
