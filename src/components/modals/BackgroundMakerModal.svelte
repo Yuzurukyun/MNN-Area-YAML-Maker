@@ -100,6 +100,24 @@
     }
   }
 
+  // Clear all backgrounds confirmation modal state
+  let showClearBgsConfirmModal = false;
+  let clearBgsAlsoPurgeAssets = false;
+
+  async function executeClearAllBackgrounds() {
+    showClearBgsConfirmModal = false;
+    const count = backgrounds.length;
+    bgStore.clearAllBackgrounds();
+    bgSearchQuery = '';
+    if (clearBgsAlsoPurgeAssets && assetPool.length > 0) {
+      const astCount = assetPool.length;
+      await bgStore.clearAllAssets(false);
+      notify(`Cleared all ${count} background(s) and purged ${astCount} asset(s). Started fresh from zero.`, 'info');
+    } else {
+      notify(`Cleared all ${count} background(s). Reset to clean Default background.`, 'info');
+    }
+  }
+
   // Context Menu State
   let bgContextMenu = null; // { x, y, title, items: Array<{ label, icon, run, disabled, danger, separator }> }
 
@@ -565,6 +583,15 @@
         danger: true,
         disabled: backgrounds.length <= 1,
         run: () => removeBackground(bg.id),
+      },
+      {
+        label: 'Clear All Backgrounds…',
+        icon: '🗑️',
+        danger: true,
+        run: () => {
+          clearBgsAlsoPurgeAssets = false;
+          showClearBgsConfirmModal = true;
+        },
       },
     ], `BACKGROUND: ${bg.folder}`);
   }
@@ -1710,6 +1737,7 @@
       else if (inspectModalAsset) { inspectModalAsset = null; e.stopPropagation(); }
       else if (showRenameModal) { showRenameModal = false; e.stopPropagation(); }
       else if (showPurgeConfirmModal) { showPurgeConfirmModal = false; e.stopPropagation(); }
+      else if (showClearBgsConfirmModal) { showClearBgsConfirmModal = false; e.stopPropagation(); }
       else if (showAddTodModal) { showAddTodModal = false; e.stopPropagation(); }
       else if (showAddStateModal) { showAddStateModal = false; e.stopPropagation(); }
       else if (showAddPositionModal) { showAddPositionModal = false; e.stopPropagation(); }
@@ -1883,6 +1911,18 @@
                   🗑 Purge All Assets ({assetPool.length})
                 </button>
               {/if}
+              <div class="menu-divider"></div>
+              <button
+                class="danger-item"
+                title="Clear all {backgrounds.length} backgrounds from library and start fresh from zero"
+                on:click={() => {
+                  libraryMenuOpen = false;
+                  clearBgsAlsoPurgeAssets = false;
+                  showClearBgsConfirmModal = true;
+                }}
+              >
+                🗑 Clear All Backgrounds ({backgrounds.length})
+              </button>
             </div>
           {/if}
         </span>
@@ -2015,6 +2055,13 @@
         <div class="nav-head">
           <div class="nav-head-title-row">
             <span class="nav-title">BACKGROUNDS ({filteredBackgrounds.length}{filteredBackgrounds.length !== backgrounds.length ? ` / ${backgrounds.length}` : ''})</span>
+            <button
+              class="nav-clear-bgs-btn"
+              title="Clear all backgrounds from library (start from zero)"
+              on:click={() => { clearBgsAlsoPurgeAssets = false; showClearBgsConfirmModal = true; }}
+            >
+              Clear All
+            </button>
           </div>
           <div class="nav-head-actions">
             <button
@@ -3235,6 +3282,53 @@
   </div>
 {/if}
 
+<!-- Clear All Backgrounds Confirmation Modal -->
+{#if showClearBgsConfirmModal}
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+  <div
+    class="modal-bg submodal-scrim"
+    role="presentation"
+    on:mousedown={onScrimMouseDown}
+    on:click={(e) => handleScrimClose(e, () => (showClearBgsConfirmModal = false))}
+  >
+    <div
+      class="modal submodal-card purge-confirm-dialog"
+      role="dialog"
+      tabindex="-1"
+      aria-modal="true"
+      aria-label="Clear All Backgrounds Confirmation"
+      on:mousedown|stopPropagation
+      on:click|stopPropagation
+    >
+      <button class="modal-x" title="Close (Esc)" on:click={() => (showClearBgsConfirmModal = false)}>✕</button>
+
+      <h3>🗑 Clear All Backgrounds</h3>
+      <div class="purge-warning-box">
+        <div class="purge-warning-badge">⚠️ Destructive Action</div>
+        <div class="purge-warning-text">
+          This will permanently remove <b>all {backgrounds.length} background definition(s)</b> and reset the library to a clean <b>Default</b> background (starting from zero).
+        </div>
+        {#if assetPool.length > 0}
+          <label class="clear-bgs-asset-opt">
+            <input type="checkbox" bind:checked={clearBgsAlsoPurgeAssets} />
+            <span>Also clear all {assetPool.length} asset(s) from Asset Repository Pool</span>
+          </label>
+        {/if}
+      </div>
+
+      <div class="submodal-actions">
+        <button on:click={() => (showClearBgsConfirmModal = false)}>Cancel</button>
+        <button
+          class="primary danger-btn"
+          on:click={executeClearAllBackgrounds}
+        >
+          🗑 Yes, Clear All ({backgrounds.length})
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
 <!-- Context Menu Overlay -->
 {#if bgContextMenu}
   <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
@@ -3638,6 +3732,22 @@
     line-height: 1.45;
     color: var(--text);
   }
+  .clear-bgs-asset-opt {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text);
+    margin-top: 6px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(239, 68, 68, 0.3);
+    cursor: pointer;
+    user-select: none;
+  }
+  .clear-bgs-asset-opt input[type="checkbox"] {
+    cursor: pointer;
+    accent-color: var(--accent);
+  }
   .purge-info-box {
     display: flex;
     flex-direction: column;
@@ -3818,6 +3928,25 @@
     color: var(--dim);
     white-space: nowrap;
     text-transform: uppercase;
+  }
+
+  .nav-clear-bgs-btn {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--dim);
+    background: transparent;
+    border: 1px solid transparent;
+    padding: 1px 6px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    transition: all 0.12s ease;
+  }
+  .nav-clear-bgs-btn:hover {
+    color: var(--accent);
+    border-color: rgba(255, 60, 0, 0.35);
+    background: rgba(255, 60, 0, 0.1);
   }
 
   .nav-head-actions {

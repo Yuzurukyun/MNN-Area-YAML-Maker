@@ -307,6 +307,16 @@ export const bgStore = {
     }
     notify();
   },
+  clearAllBackgrounds() {
+    const defaultBg = createBackground('Default');
+    backgrounds = [defaultBg];
+    selectedBgId = defaultBg.id;
+    try {
+      localStorage.removeItem(LS_KEY);
+    } catch {}
+    notify();
+    return defaultBg;
+  },
   updateActiveBg(updater) {
     const idx = backgrounds.findIndex((b) => b.id === selectedBgId);
     if (idx === -1) return;
@@ -482,7 +492,7 @@ export const bgStore = {
     if (!files || files.length === 0) return { importedBackgrounds: [], addedAssets: [] };
 
     const decoder = new TextDecoder();
-    const rawFileItems = [];
+    let rawFileItems = [];
 
     // Helper: Normalize file list from either FileList, File[], or { path, data }[]
     const fileList = Array.from(files);
@@ -554,12 +564,127 @@ export const bgStore = {
 
     if (rawFileItems.length === 0) return { importedBackgrounds: [], addedAssets: [] };
 
+    // Detect whether import contains a root asset repository folder structure
+    // (identified by standard root directories: 'background', 'characters', 'sounds', 'animations', 'configs')
+    function detectRootPrefix(filePaths) {
+      const prefixMap = new Map(); // prefix -> Set of child dir names
+
+      for (const rawPath of filePaths) {
+        const parts = rawPath.replace(/\\/g, '/').replace(/^\/+/, '').split('/');
+        if (parts.length > 1) {
+          // Check prefix "" (first segment is a top-level directory)
+          const topDir = parts[0].toLowerCase();
+          if (!prefixMap.has('')) prefixMap.set('', new Set());
+          prefixMap.get('').add(topDir);
+
+          // Check prefix "parts[0]/" (second segment is a directory, e.g. base/ or MM/)
+          if (parts.length > 2) {
+            const p1 = parts[0] + '/';
+            const subDir1 = parts[1].toLowerCase();
+            if (!prefixMap.has(p1)) prefixMap.set(p1, new Set());
+            prefixMap.get(p1).add(subDir1);
+          }
+
+          // Check prefix "parts[0]/parts[1]/" (third segment, e.g. archive_folder/base/)
+          if (parts.length > 3) {
+            const p2 = parts[0] + '/' + parts[1] + '/';
+            const subDir2 = parts[2].toLowerCase();
+            if (!prefixMap.has(p2)) prefixMap.set(p2, new Set());
+            prefixMap.get(p2).add(subDir2);
+          }
+        }
+      }
+
+      const rootFolderNames = ['background', 'backgrounds', 'characters', 'sounds', 'animations', 'configs'];
+
+      // Evaluate candidate prefixes from longest (most specific) to shortest
+      const prefixes = Array.from(prefixMap.keys()).sort((a, b) => b.length - a.length);
+      for (const prefix of prefixes) {
+        const children = prefixMap.get(prefix);
+        const hasBackground = children.has('background') || children.has('backgrounds');
+        const hasCharacters = children.has('characters');
+        const hasSounds = children.has('sounds');
+        const hasAnimations = children.has('animations');
+        const hasConfigs = children.has('configs');
+        const count = rootFolderNames.filter((r) => children.has(r)).length;
+
+        // Meets root folder criteria:
+        // - has background and at least one other standard root folder
+        // - or has characters / animations / configs (unmistakable root folder)
+        // - or has at least 2 standard root folder names
+        if (
+          (hasBackground && (hasCharacters || hasSounds || hasAnimations || hasConfigs)) ||
+          hasCharacters ||
+          hasAnimations ||
+          hasConfigs ||
+          count >= 2
+        ) {
+          return prefix;
+        }
+      }
+
+      return null;
+    }
+
+    const rootPrefix = detectRootPrefix(rawFileItems.map((f) => f.path));
+
+    // When a root asset repository folder is imported, only accept 'background' and 'sounds/ambient',
+    // ignoring non-background assets (characters, animations, configs, non-ambient sounds) to prevent bloat.
+    if (rootPrefix !== null) {
+      onProgress?.('Root asset repository folder detected. Accepting background/ and sounds/ambient/ only...');
+      const filtered = [];
+      let skippedCount = 0;
+
+      for (const item of rawFileItems) {
+        const cleanP = item.path.replace(/\\/g, '/').replace(/^\/+/, '');
+        if (rootPrefix && !cleanP.startsWith(rootPrefix)) {
+          // If outside rootPrefix, only keep if it's a library json or standalone config
+          if (item.name.toLowerCase().endsWith('.json') || item.name.toLowerCase().endsWith('.ini')) {
+            filtered.push(item);
+          } else {
+            skippedCount++;
+          }
+          continue;
+        }
+
+        const relToRoot = rootPrefix ? cleanP.slice(rootPrefix.length).replace(/^\/+/, '') : cleanP;
+        const lowerRel = relToRoot.toLowerCase();
+
+        // ONLY accept background/ and sounds/ambient/
+        if (
+          lowerRel.startsWith('background/') ||
+          lowerRel.startsWith('backgrounds/') ||
+          lowerRel.startsWith('sounds/ambient/') ||
+          lowerRel === 'backgrounds-library.json' ||
+          (lowerRel.endsWith('.json') && !lowerRel.includes('/'))
+        ) {
+          filtered.push(item);
+        } else {
+          skippedCount++;
+        }
+      }
+
+      rawFileItems = filtered;
+      if (skippedCount > 0) {
+        console.log(`[bgStore] Filtered out ${skippedCount} non-background / non-ambient files from root asset folder.`);
+      }
+    }
+
     // Separate library JSONs, directory configs (.json / .ini), and assets
     const libraryJsonFiles = [];
     const dirMap = new Map(); // folderPath -> { configs: [], assets: [] }
 
     function getCleanDir(fullPath) {
-      let p = fullPath.replace(/^(\.\/)?(base\/)?background\//i, '').replace(/^(\.\/)?base\//i, '');
+      let p = fullPath.replace(/\\/g, '/').replace(/^\/+/, '');
+      // Strip everything up to and including background/ (e.g. "base/background/", "MM/background/", "background/")
+      const bgMatch = p.match(/^(?:.*\/)?backgrounds?\/(.*)$/i);
+      if (bgMatch) {
+        p = bgMatch[1];
+      } else if (rootPrefix !== null && rootPrefix && p.startsWith(rootPrefix)) {
+        p = p.slice(rootPrefix.length).replace(/^\/+/, '');
+      } else {
+        p = p.replace(/^(\.\/)?(base\/)?/i, '');
+      }
       const slash = p.lastIndexOf('/');
       if (slash === -1) return '';
       return p.slice(0, slash);
@@ -1048,7 +1173,7 @@ export const bgStore = {
         if (!a.fullRelPath) return false;
         const normAstPath = normalizeBgPath(a.fullRelPath).toLowerCase();
         return (
-          normAstPath.startsWith(`${normBgFolder}/`) &&
+          (normAstPath.startsWith(`${normBgFolder}/`) || normAstPath.includes(`/${normBgFolder}/`)) &&
           (normAstPath.endsWith(`/${clean}`) || a.name.toLowerCase() === clean)
         );
       });

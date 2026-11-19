@@ -5,13 +5,16 @@
 
 /**
  * Normalizes a user-input or folder path:
- * Strips leading/trailing slashes, and removes leading "base/background/" or "background/" if present.
+ * Strips leading/trailing slashes, and removes leading root/background prefixes
+ * (e.g. "base/background/", "MM/background/", "background/").
  */
 export function normalizeBgPath(input) {
   if (!input || typeof input !== 'string') return '';
   let s = input.trim().replace(/\\/g, '/');
-  // strip leading base/background/ or background/
-  s = s.replace(/^(\.\/)?(base\/)?background\//i, '');
+  // strip leading any-root/background/ or background/
+  s = s.replace(/^(?:.*\/)?backgrounds?\//i, '');
+  // strip leading ./, base/
+  s = s.replace(/^(\.\/)?(base\/)?/i, '');
   // strip leading/trailing slashes
   s = s.replace(/^\/+/, '').replace(/\/+$/, '');
   return s;
@@ -19,11 +22,12 @@ export function normalizeBgPath(input) {
 
 /**
  * Normalizes an ambience sound path relative to sounds/ambient/
+ * Handles root prefixes like "base/sounds/ambient/", "MM/sounds/ambient/", or "sounds/ambient/".
  */
 export function normalizeAmbiencePath(input) {
   if (!input || typeof input !== 'string') return '';
   let s = input.trim().replace(/\\/g, '/');
-  s = s.replace(/^(\.\/)?(base\/)?sounds\/ambient\//i, '');
+  s = s.replace(/^(?:.*\/)?sounds\/ambient\//i, '');
   s = s.replace(/^\/+/, '');
   return s;
 }

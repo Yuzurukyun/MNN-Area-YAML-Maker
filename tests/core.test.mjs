@@ -949,5 +949,36 @@ const soundFiles = [
 const regSounds = await bgStore.registerFiles(soundFiles);
 eq(regSounds.importedBackgrounds.length, 0, 'standalone sounds directory does not create fake backgrounds');
 
+// Test Root Asset Repository Folder Detection & Bloat Filtering (e.g. MM/ root)
+const rootRepoFiles = [
+  { path: 'MM/background/Court/background.json', name: 'background.json', data: new TextEncoder().encode(JSON.stringify({ default: { background: 'court.webp' } })) },
+  { path: 'MM/background/Court/court.webp', name: 'court.webp', data: new Uint8Array(12), size: 12 },
+  { path: 'MM/sounds/ambient/rain_loop.opus', name: 'rain_loop.opus', data: new Uint8Array(15), size: 15 },
+  // Non-background bloat files that MUST be ignored
+  { path: 'MM/sounds/music/cross_exam.mp3', name: 'cross_exam.mp3', data: new Uint8Array(30), size: 30 },
+  { path: 'MM/characters/phoenix/talk.gif', name: 'talk.gif', data: new Uint8Array(25), size: 25 },
+  { path: 'MM/animations/take_that.gif', name: 'take_that.gif', data: new Uint8Array(22), size: 22 },
+  { path: 'MM/configs/theme.json', name: 'theme.json', data: new TextEncoder().encode('{}') },
+];
+const regRoot = await bgStore.registerFiles(rootRepoFiles);
+const importedCourt = regRoot.importedBackgrounds.find((b) => b.folder === 'Court');
+ok(Boolean(importedCourt), 'court background imported with clean folder "Court" from MM/ root');
+const hasCourtWebp = regRoot.addedAssets.some((a) => a.name === 'court.webp');
+const hasRainLoop = regRoot.addedAssets.some((a) => a.name === 'rain_loop.opus');
+const hasCrossExam = regRoot.addedAssets.some((a) => a.name === 'cross_exam.mp3');
+const hasPhoenixTalk = regRoot.addedAssets.some((a) => a.name === 'talk.gif');
+const hasTakeThat = regRoot.addedAssets.some((a) => a.name === 'take_that.gif');
+ok(hasCourtWebp, 'court.webp from background/ accepted');
+ok(hasRainLoop, 'rain_loop.opus from sounds/ambient/ accepted');
+ok(!hasCrossExam, 'sounds/music/cross_exam.mp3 was ignored (bloat filtered)');
+ok(!hasPhoenixTalk, 'characters/phoenix/talk.gif was ignored (bloat filtered)');
+ok(!hasTakeThat, 'animations/take_that.gif was ignored (bloat filtered)');
+
+// Test clearAllBackgrounds()
+const defaultReset = bgStore.clearAllBackgrounds();
+eq(bgStore.get().backgrounds.length, 1, 'clearAllBackgrounds resets to 1 background');
+eq(bgStore.get().backgrounds[0].folder, 'Default', 'reset background is Default');
+eq(bgStore.get().selectedBgId, defaultReset.id, 'selectedBgId matches Default');
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

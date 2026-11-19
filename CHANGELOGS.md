@@ -592,16 +592,29 @@
         - Standalone sound directories (e.g. `sounds/ambient/` or `sounds/`) are excluded from auto-creating fake backgrounds.
         - Added user-facing toast warnings on audio playback errors or missing files.
 
+### Root Asset Repository Detection & Bloat Filtering, and Clear All Backgrounds (Reset to Zero)
+
+- **Root Asset Repository Folder Detection & Bloat Filtering (`src/lib/bgStore.js`, `src/lib/bgSchema.js`):**
+    - Identified that `base` is merely a conventional name for the root asset repository and could be named anything (e.g. `MM`, `NN`, custom mod name).
+    - Added `detectRootPrefix(filePaths)`: detects when an import contains a root asset repository by scanning for standard root directories (`background`, `characters`, `sounds`, `animations`, `configs`).
+    - When a root repository import is detected, automatically accepts only `background/` (and `backgrounds/`) and `sounds/ambient/` files, filtering out bloat directories (`characters/`, `animations/`, `configs/`, `sounds/music/`, `sounds/sfx/`, etc.) from being imported into memory or storage.
+    - Preserves non-root imports (e.g. standalone background folders or ZIPs) without aggressive filtering.
+    - Updated `normalizeBgPath` and `normalizeAmbiencePath` to strip arbitrary root prefixes cleanly (e.g. `MM/background/...` -> clean room folder, `MM/sounds/ambient/...` -> clean relative audio loop path).
+- **Clear All Backgrounds / Reset to Zero (`src/lib/bgStore.js`, `src/components/modals/BackgroundMakerModal.svelte`):**
+    - Added `bgStore.clearAllBackgrounds()` to reset the background library to a single blank `Default` background, clear local storage persistence, and reset active visual state.
+    - Added a `Clear All` button on the `.nav-head-title-row` in the Backgrounds sidebar header, an entry in `📚 Library ▾`, and an option in the Background item right-click context menu.
+    - Added a dedicated confirmation submodal (`showClearBgsConfirmModal`) with an optional checkbox to also purge all assets from the Asset Repository Pool, full Escape key dismissal, and backdrop scrim drag-out protection.
+
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **244 passed, 0 failed** (all assertions covering INI parsing, courtroom position mapping with Witness default, single scene INI, cross-room duplicate asset collision disambiguation and distinct URL resolution, audio server fallback, standalone sound directory skipping, slot alias preservation, camera position duplication, slot clearing on purge, and state duplication).
-- `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5204 KB), `export/yuzu_area_maker_nomusic.html` (551 KB), and `docs/index.html` (551 KB) with 0 warnings and 0 errors.
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **253 passed, 0 failed** (all assertions covering arbitrary root detection `MM/`, bloat filtering of `characters/`, `animations/`, `configs/`, and non-ambient sounds, clean room folder extraction, `clearAllBackgrounds()` zero-reset, INI parsing, courtroom position mapping with Witness default, duplicate asset collision disambiguation, audio server fallback, slot alias preservation, camera position duplication, slot clearing on purge, and state duplication).
+- `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5209 KB), `export/yuzu_area_maker_nomusic.html` (556 KB), and `docs/index.html` (556 KB) with 0 warnings and 0 errors.
 - Live browser CDP tests verified:
+    - **Root Asset Repository Import & Bloat Filtering:** Dropped an `MM/` root asset repository containing `background/`, `sounds/ambient/`, `characters/`, `animations/`, `configs/`, and `sounds/music/`. The background `WS Lambda/Manor Room 1` and ambient loop `wsl/birds.opus` were accepted while all 4 bloat files were filtered out completely ([verified_root_folder_bloat_filtered.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_root_folder_bloat_filtered.png)).
+    - **Clear All Backgrounds Confirmation Modal:** Clicking `Clear All` in the Backgrounds sidebar title row opened the styled confirmation modal with destructive action warning badge and option to also purge asset repository pool ([verified_clear_all_backgrounds_modal.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_clear_all_backgrounds_modal.png)).
+    - **Reset to Zero State:** Confirming clear reset the background list to a single clean `Default` background, cleared visual slots, and displayed a confirmation toast notification ([verified_cleared_zero_state.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_cleared_zero_state.png)).
     - **Wider Modal & Nav Sidebar:** Modal expanded to `1552px` wide and `.bg-nav` sidebar to `275px`, displaying complex series subfolder paths and titles cleanly without clipping ([verified_wider_modal_and_search.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_wider_modal_and_search.png)).
     - **Background List Search & Instant Filter:** Typing in `.bg-nav-search` filters the background list dynamically and updates counts ([verified_wider_modal_and_search.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_wider_modal_and_search.png)).
     - **Clean Subfolder Dropdown Filtering:** Background scene folders containing config or positions are excluded from `knownSubfolders`, only showing true parent series directories in `Folders (N)` ([verified_filtered_subfolders_dropdown.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_filtered_subfolders_dropdown.png)).
-    - **No Black Screen / Disambiguated Asset Resolution:** Verified that backgrounds with shared filenames (`witnessempty.webp`) resolve their own distinct blob URLs and do not show a black or blank screen.
-    - **Ambience Audio Fallback:** Ambience paths like `wsl/generic_room_day.opus` resolve to `base/sounds/ambient/wsl/generic_room_day.opus` when not in pool, with playback error notifications if audio cannot be played.
-    - **Import Progress Overlay:** Importing displays a dedicated centered status card with spinning indicator and real-time step messaging ([verified_import_loading_overlay.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_import_loading_overlay.png)).
     - Music player left completely untouched.
     - Verified strictly on branch `v2.1.0-dev`.
