@@ -1309,5 +1309,41 @@ const formattedHeader = `${fieldKey} — ${aptDesc}`;
 ok(formattedHeader.includes(' — '), 'Field header formats strictly with spaces around emdash: "key — description"');
 ok(!formattedHeader.includes(`${fieldKey}—`), 'Does not have collapsed leading space before emdash');
 
+/* ---- Test Mode Background Live Preview & Toggle Logic ---- */
+const courtBg = createBackground('CourtroomWalk', {
+  states: {
+    default: { background: courtAsset.name },
+  },
+});
+bgStore.loadBackgrounds([courtBg], { replace: false });
+
+const areaWithBg = {
+  id: 'area-walk-1',
+  area: 'Courtroom Walk',
+  background: 'CourtroomWalk',
+  image: '',
+};
+const areaWithCustomIconOnly = {
+  id: 'area-walk-2',
+  area: 'Garden',
+  background: '',
+  image: 'data:image/png;base64,custom-garden',
+};
+const areaWithNone = {
+  id: 'area-walk-3',
+  area: 'Empty Room',
+  background: '',
+  image: '',
+};
+
+const resolvedWalkBg1 = getAreaBgUrl(areaWithBg.background, bgStore.get()) || areaWithBg.image || '';
+ok(Boolean(resolvedWalkBg1), 'Test Mode resolves background scene preview for area with background maker node');
+
+const resolvedWalkBg2 = getAreaBgUrl(areaWithCustomIconOnly.background, bgStore.get()) || areaWithCustomIconOnly.image || '';
+eq(resolvedWalkBg2, 'data:image/png;base64,custom-garden', 'Test Mode falls back to custom node image if area has no background maker node');
+
+const resolvedWalkBg3 = getAreaBgUrl(areaWithNone.background, bgStore.get()) || areaWithNone.image || '';
+eq(resolvedWalkBg3, '', 'Test Mode yields empty string when area has neither background maker node nor image');
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
