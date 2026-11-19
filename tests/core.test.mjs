@@ -1162,5 +1162,27 @@ const switchPausedRes = ambMgr.sync(visDef.ambience);
 eq(switchPausedRes, 'switched_idle', 'switching position while explicitly paused updates track but does not play');
 eq(ambMgr.isPlaying, false, 'audio remains paused');
 
+/* ---- getReferencedAssetInfo & Used/Unused Disambiguation Tests ---- */
+const testRefBg = createBackground('WS Lambda/Blackout');
+testRefBg.states.default.usePositions = true;
+testRefBg.states.default.positions = {
+  Witness: createPosition('Witness', { foreground: 'stand.webp' }),
+};
+testRefBg.assetSources = {
+  'stand.webp': 'stand_1.webp'
+};
+
+const refInfo = bgStore.getReferencedAssetInfo([testRefBg]);
+ok(refInfo.keys.has('stand.webp'), 'referenced keys includes export alias stand.webp');
+ok(refInfo.keys.has('stand_1.webp'), 'referenced keys includes mapped asset stand_1.webp');
+
+const usedAsset1 = { id: 'ast_1', name: 'stand.webp', relPath: 'stand.webp', fullRelPath: 'base/background/ai/stand.webp' };
+const usedAsset2 = { id: 'ast_2', name: 'stand_1.webp', relPath: 'stand_1.webp', fullRelPath: 'base/background/WS Lambda/Blackout/stand_1.webp' };
+const unusedAsset = { id: 'ast_3', name: 'completely_unused.webp', relPath: 'unused.webp', fullRelPath: 'base/background/nowhere/unused.webp' };
+
+ok(refInfo.isReferenced(usedAsset1), 'usedAsset1 (stand.webp) is recognized as referenced');
+ok(refInfo.isReferenced(usedAsset2), 'usedAsset2 (stand_1.webp from assetSources) is recognized as referenced (NOT unused)');
+ok(!refInfo.isReferenced(unusedAsset), 'unusedAsset is correctly identified as not referenced');
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

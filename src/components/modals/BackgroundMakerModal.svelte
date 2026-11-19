@@ -322,6 +322,7 @@
 
   // Repository Asset Inspector Modal State (for bottom dock assets)
   let showRepoAssetModal = false;
+  let showStageFullscreenModal = false;
   let repoInspectAsset = null;
   let repoInspectGlobalName = '';
   let repoAssetUsages = [];
@@ -1985,13 +1986,14 @@
   }
 
   // Referenced and unused asset counts
-  $: referencedAssetNames = bgStore.getReferencedAssetNames(backgrounds);
-  $: usedAssetsCount = assetPool.filter((a) => referencedAssetNames.has(a.name) || referencedAssetNames.has(a.relPath) || referencedAssetNames.has(a.fullRelPath)).length;
+  $: referencedAssetInfo = bgStore.getReferencedAssetInfo(backgrounds);
+  $: referencedAssetNames = referencedAssetInfo.keys;
+  $: usedAssetsCount = assetPool.filter((a) => referencedAssetInfo.isReferenced(a)).length;
   $: unusedAssetCount = Math.max(0, assetPool.length - usedAssetsCount);
 
   // Filtered assets in pool
   $: filteredAssets = assetPool.filter((a) => {
-    const isUsed = referencedAssetNames.has(a.name) || referencedAssetNames.has(a.relPath) || referencedAssetNames.has(a.fullRelPath);
+    const isUsed = referencedAssetInfo.isReferenced(a);
     if (assetFilter === 'used' && !isUsed) return false;
     if (assetFilter === 'unused' && isUsed) return false;
     if (assetFilter === 'image' && a.type !== 'image') return false;
@@ -2015,6 +2017,7 @@
       if (bgContextMenu) { closeContextMenu(); e.stopPropagation(); }
       else if (inspectModalAsset) { inspectModalAsset = null; e.stopPropagation(); }
       else if (showRepoAssetModal) { showRepoAssetModal = false; e.stopPropagation(); }
+      else if (showStageFullscreenModal) { showStageFullscreenModal = false; e.stopPropagation(); }
       else if (showRenameModal) { showRenameModal = false; e.stopPropagation(); }
       else if (showPurgeConfirmModal) { showPurgeConfirmModal = false; e.stopPropagation(); }
       else if (showClearBgsConfirmModal) { showClearBgsConfirmModal = false; e.stopPropagation(); }
@@ -2988,11 +2991,12 @@
           </div>
 
           <!-- Scaled Canvas Viewport with letterboxing (black bars) -->
-          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
           <div
             class="canvas-viewport"
             style="--stage-aspect:{stageAspectW} / {stageAspectH}"
-            title="Live Stage Preview. Right-click for options (aspect ratio fit, inspect, copy JSON)"
+            title="Live Stage Preview. Click to expand full screen; right-click for options"
+            on:click={() => (showStageFullscreenModal = true)}
             on:contextmenu|preventDefault|stopPropagation={openStageContextMenu}
           >
             {#if resolvedBgUrl}
@@ -3020,6 +3024,10 @@
                 style="object-fit:{stageFitMode}"
               />
             {/if}
+
+            <div class="stage-expand-hint" title="Click to view full screen">
+              <span>⛶ Click to expand</span>
+            </div>
           </div>
 
           <!-- Stage Controls -->
@@ -3807,65 +3815,149 @@
             </div>
           </div>
         </div>
-        <button class="modal-x" title="Close (Esc)" on:click={() => (showRepoAssetModal = false)}>✕</button>
-      </div>
-
-      <div class="lightbox-body">
-        {#if repoInspectAsset.type === 'image' || (repoInspectAsset.name && repoInspectAsset.name.match(/\.(png|webp|jpg|jpeg|gif|svg|avif)$/i))}
-          <img src={repoInspectAsset.url} alt={repoInspectAsset.name} class="lightbox-img" />
-        {:else}
-          <div class="lightbox-audio-player">
-            <span class="lightbox-audio-icon">🎵</span>
-            <audio src={repoInspectAsset.url} controls autoplay></audio>
-          </div>
-        {/if}
-      </div>
-
-      <div class="lightbox-meta">
-        <span>Path: <code>{repoInspectAsset.relPath || repoInspectAsset.name}</code></span>
-        {#if repoInspectAsset.size}
-          <span>Size: <code>{Math.round(repoInspectAsset.size / 1024)} KB</code></span>
-        {/if}
-        <span>Usages: <strong>{repoAssetUsages.length}</strong></span>
-      </div>
-
-      <!-- Used In Backgrounds List -->
-      <div class="repo-usages-panel">
-        <div class="repo-usages-title">
-          <span>// USED IN BACKGROUND NODES ({repoAssetUsages.length})</span>
-          <span class="repo-usages-hint">Click any row to jump directly to that background in the editor</span>
+        <div class="lightbox-head-right">
+          {#if repoInspectAsset.size}
+            <span class="repo-inspect-size-badge">{Math.round(repoInspectAsset.size / 1024)} KB</span>
+          {/if}
+          <button class="modal-x" title="Close (Esc)" on:click={() => (showRepoAssetModal = false)}>✕</button>
         </div>
-        {#if repoAssetUsages.length === 0}
-          <div class="repo-usages-empty">
-            <span>This asset is not currently referenced in any background node. It can be assigned to slots or safely purged.</span>
+      </div>
+
+      <!-- Horizontal Split Body: Left Letterboxed Preview, Right Usages Listing -->
+      <div class="repo-inspect-body">
+        <!-- Left Column: Letterboxed Media Viewport -->
+        <div class="repo-inspect-media-col">
+          <div class="repo-media-viewport">
+            {#if repoInspectAsset.type === 'image' || (repoInspectAsset.name && repoInspectAsset.name.match(/\.(png|webp|jpg|jpeg|gif|svg|avif)$/i))}
+              <img src={repoInspectAsset.url} alt={repoInspectAsset.name} class="repo-letterboxed-img" />
+            {:else}
+              <div class="lightbox-audio-player">
+                <span class="lightbox-audio-icon">🎵</span>
+                <audio src={repoInspectAsset.url} controls autoplay></audio>
+              </div>
+            {/if}
           </div>
-        {:else}
-          <div class="repo-usages-table-wrap">
-            <table class="repo-usages-table">
-              <thead>
-                <tr>
-                  <th>Background Node</th>
-                  <th>Camera / State</th>
-                  <th>Slot Type</th>
-                  <th>Export Alias</th>
-                  <th style="width: 70px;">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {#each repoAssetUsages as u}
-                  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-                  <tr class="usage-row" on:click={() => navigateToUsage(u)}>
-                    <td class="usage-node font-mono">{u.bgFolder}</td>
-                    <td class="usage-pos">{u.position || u.state || 'default'}{u.tod ? ` [${u.tod}]` : ''}</td>
-                    <td class="usage-slot"><span class="usage-badge {u.slotType.toLowerCase()}">{u.slotType}</span></td>
-                    <td class="usage-alias font-mono"><code>{u.exportName}</code></td>
-                    <td><button class="mini-btn-table" on:click|stopPropagation={() => navigateToUsage(u)}>Go to ↗</button></td>
+          <div class="repo-media-meta">
+            <div class="meta-row">
+              <span class="m-label">PATH:</span>
+              <code class="m-val text-truncate" title={repoInspectAsset.relPath || repoInspectAsset.name}>{repoInspectAsset.relPath || repoInspectAsset.name}</code>
+            </div>
+            <div class="meta-row">
+              <span class="m-label">USAGES:</span>
+              <span class="m-val-highlight">{repoAssetUsages.length} reference{repoAssetUsages.length === 1 ? '' : 's'}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Usages Listing Table -->
+        <div class="repo-inspect-usages-col">
+          <div class="repo-usages-header">
+            <div class="repo-usages-title">
+              <span>// USED IN BACKGROUND NODES ({repoAssetUsages.length})</span>
+            </div>
+            <span class="repo-usages-hint">Click any row to jump directly to that background in the editor</span>
+          </div>
+
+          {#if repoAssetUsages.length === 0}
+            <div class="repo-usages-empty">
+              <span>This asset is not currently referenced in any background node. It can be assigned to slots or safely purged.</span>
+            </div>
+          {:else}
+            <div class="repo-usages-table-wrap">
+              <table class="repo-usages-table">
+                <thead>
+                  <tr>
+                    <th>Background Node</th>
+                    <th>Camera / State</th>
+                    <th>Slot Type</th>
+                    <th>Export Alias</th>
+                    <th style="width: 75px; text-align: center;">Action</th>
                   </tr>
-                {/each}
-              </tbody>
-            </table>
-          </div>
-        {/if}
+                </thead>
+                <tbody>
+                  {#each repoAssetUsages as u}
+                    <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+                    <tr class="usage-row" on:click={() => navigateToUsage(u)}>
+                      <td class="usage-node font-mono" title={u.bgFolder}>{u.bgFolder}</td>
+                      <td class="usage-pos">{u.position || u.state || 'default'}{u.tod ? ` [${u.tod}]` : ''}</td>
+                      <td class="usage-slot"><span class="usage-badge {u.slotType.toLowerCase()}">{u.slotType}</span></td>
+                      <td class="usage-alias font-mono"><code>{u.exportName}</code></td>
+                      <td style="text-align: center;"><button class="mini-btn-table" on:click|stopPropagation={() => navigateToUsage(u)}>Go to ↗</button></td>
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            </div>
+          {/if}
+        </div>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Fullscreen Live Stage Monitor Modal -->
+{#if showStageFullscreenModal}
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+  <div
+    class="modal-bg submodal-scrim stage-fullscreen-scrim"
+    on:mousedown={onScrimMouseDown}
+    on:click={(e) => handleScrimClose(e, () => (showStageFullscreenModal = false))}
+  >
+    <div class="modal submodal-card stage-fullscreen-modal" on:mousedown|stopPropagation on:click|stopPropagation>
+      <div class="lightbox-head">
+        <div class="lightbox-head-left">
+          <span class="lightbox-badge" style="background: #10b981; color: #fff;">LIVE STAGE MONITOR</span>
+          <span class="stage-fs-title font-mono">{activeBg?.folder || 'Scene'} — {usePositions ? (activePosKey || 'Witness') : activeStateKey} [{stageTod}]</span>
+        </div>
+        <button class="modal-x" title="Close (Esc)" on:click={() => (showStageFullscreenModal = false)}>✕</button>
+      </div>
+
+      <div class="stage-fs-body">
+        <div
+          class="stage-fs-canvas"
+          style="--stage-aspect:{stageAspectW} / {stageAspectH};"
+        >
+          {#if resolvedBgUrl}
+            <img
+              draggable="false"
+              src={resolvedBgUrl}
+              alt="Background"
+              class="stage-bg-layer"
+              style="object-fit:{stageFitMode}"
+            />
+          {:else}
+            <div class="stage-fallback">
+              <span class="stage-msg">No image assigned</span>
+              <span class="stage-sub">{resolvedVisual.background || 'None'}</span>
+            </div>
+          {/if}
+
+          {#if resolvedFgUrl}
+            <img
+              draggable="false"
+              src={resolvedFgUrl}
+              alt="Foreground"
+              class="stage-fg-layer"
+              style="object-fit:{stageFitMode}"
+            />
+          {/if}
+        </div>
+      </div>
+
+      <div class="stage-fs-footer">
+        <div class="stage-fs-tod-pills">
+          <span class="ctrl-label">Time of Day:</span>
+          <button class="tod-pill {stageTod === 'day' ? 'active' : ''}" on:click={() => (stageTod = 'day')}>☀ Day</button>
+          <button class="tod-pill {stageTod === 'evening' ? 'active' : ''}" on:click={() => (stageTod = 'evening')}>🌆 Evening</button>
+          <button class="tod-pill {stageTod === 'night' ? 'active' : ''}" on:click={() => (stageTod = 'night')}>🌙 Night</button>
+        </div>
+        <div class="stage-fs-meta">
+          <span>Ratio: <code>{stageAspectW}:{stageAspectH}</code></span>
+          <span>BG: <code>{resolvedVisual.background || '—'}</code></span>
+          <span>FG: <code>{resolvedVisual.foreground || '—'}</code></span>
+          <span>Ambience: <code>{resolvedVisual.ambience || '—'}</code></span>
+        </div>
+        <button class="btn btn-secondary" on:click={() => (showStageFullscreenModal = false)}>Close (Esc)</button>
       </div>
     </div>
   </div>
@@ -5310,6 +5402,27 @@
     align-items: center;
     justify-content: center;
     transition: aspect-ratio 0.15s ease;
+    cursor: pointer;
+  }
+
+  .stage-expand-hint {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    background: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    font-size: 9.5px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 3px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .canvas-viewport:hover .stage-expand-hint {
+    opacity: 1;
   }
 
   .stage-bg-layer {
@@ -5958,31 +6071,127 @@
     color: var(--text);
   }
 
-  /* Repository Asset Inspector Modal (Bottom Dock) */
+  /* Repository Asset Inspector Modal (Horizontal Split Layout) */
   .repo-inspect-modal {
-    max-width: 860px;
+    max-width: 1200px;
     width: 95vw;
-    max-height: 90vh;
+    height: min(85vh, 720px);
+    max-height: 85vh;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
+    overflow: hidden;
+    padding: 0;
   }
 
-  .repo-usages-panel {
+  .repo-inspect-size-badge {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--dim);
+    font-family: var(--font-mono);
+    padding: 2px 6px;
+    background: var(--input-bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+  }
+
+  .repo-inspect-body {
+    display: grid;
+    grid-template-columns: 1fr 1.25fr;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .repo-inspect-media-col {
     display: flex;
     flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    border-right: 1px solid var(--line);
+    background: color-mix(in srgb, var(--panel) 92%, #000);
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .repo-media-viewport {
+    flex: 1;
+    min-height: 220px;
+    background: #000;
+    border: 1px solid var(--line2);
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .repo-letterboxed-img {
+    max-width: 100%;
+    max-height: 100%;
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* Letterbox fill in viewport */
+    display: block;
+  }
+
+  .repo-media-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 14px;
+    background: var(--input-bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    font-size: 11px;
+    font-family: var(--font-mono);
+  }
+
+  .repo-media-meta .meta-row {
+    display: flex;
+    align-items: center;
     gap: 8px;
-    padding: 12px 16px 16px;
-    border-top: 1px solid var(--line2, #333);
-    background: rgba(0, 0, 0, 0.18);
+  }
+
+  .repo-media-meta .m-label {
+    font-weight: 800;
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 0.05em;
+    min-width: 58px;
+  }
+
+  .repo-media-meta .m-val {
+    color: var(--text-strong);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .repo-media-meta .m-val-highlight {
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .repo-inspect-usages-col {
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    min-height: 0;
+    overflow: hidden;
+    gap: 10px;
+  }
+
+  .repo-usages-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
   }
 
   .repo-usages-title {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 800;
     color: var(--accent);
     letter-spacing: 0.05em;
     font-family: var(--font-mono);
@@ -5990,23 +6199,28 @@
 
   .repo-usages-hint {
     font-size: 10px;
-    color: var(--text-muted, var(--dim));
-    font-weight: normal;
+    color: var(--dim);
   }
 
   .repo-usages-empty {
-    font-size: 11px;
-    color: var(--text-muted, var(--dim));
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--dim);
     font-style: italic;
-    padding: 10px 0;
+    padding: 24px 16px;
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
   }
 
   .repo-usages-table-wrap {
-    max-height: 180px;
+    flex: 1;
     overflow-y: auto;
-    border: 1px solid var(--line2, #333);
-    border-radius: var(--radius-sm, 4px);
-    background: var(--bg-surface, var(--panel));
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--input-bg);
+    position: relative;
   }
 
   .repo-usages-table {
@@ -6016,23 +6230,30 @@
     text-align: left;
   }
 
-  .repo-usages-table th {
-    padding: 6px 10px;
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--text-muted, var(--dim));
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    border-bottom: 1px solid var(--line2, #333);
-    background: rgba(0, 0, 0, 0.25);
+  .repo-usages-table thead {
     position: sticky;
     top: 0;
-    z-index: 1;
+    z-index: 2;
+  }
+
+  .repo-usages-table th {
+    padding: 8px 12px;
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid var(--line);
+    /* SOLID OPAQUE background matching panel surface so rows scrolling beneath never bleed through! */
+    background: var(--panel2);
+    position: sticky;
+    top: 0;
+    z-index: 2;
   }
 
   .repo-usages-table td {
-    padding: 6px 10px;
-    border-bottom: 1px solid var(--line2, #262626);
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line);
     vertical-align: middle;
   }
 
@@ -6042,7 +6263,83 @@
   }
 
   .usage-row:hover {
-    background: rgba(255, 90, 44, 0.08);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+
+  /* Fullscreen Stage Monitor Modal */
+  .stage-fullscreen-modal {
+    max-width: 1360px;
+    width: 95vw;
+    height: min(90vh, 850px);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0;
+    background: var(--panel);
+  }
+
+  .stage-fs-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-strong);
+  }
+
+  .stage-fs-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #050505;
+    padding: 16px;
+    overflow: hidden;
+  }
+
+  .stage-fs-canvas {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: var(--stage-aspect, 16 / 9);
+    max-width: 100%;
+    max-height: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 1px solid var(--line2);
+    border-radius: var(--radius);
+    background: #000;
+  }
+
+  .stage-fs-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 16px;
+    background: var(--panel2);
+    border-top: 1px solid var(--line);
+    flex-shrink: 0;
+  }
+
+  .stage-fs-tod-pills {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .stage-fs-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--dim);
+  }
+
+  .stage-fs-meta code {
+    color: var(--text-strong);
   }
 
   .usage-badge {

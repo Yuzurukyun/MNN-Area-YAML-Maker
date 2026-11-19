@@ -898,59 +898,128 @@ export const bgStore = {
   /**
    * Scans all backgrounds in the library and collects all referenced filenames.
    */
-  getReferencedAssetNames(bgs = null) {
+  /**
+   * Resolves comprehensive reference information (keys, filenames, alias mappings and blob URLs)
+   * across all background states, camera positions and time variants.
+   */
+  getReferencedAssetInfo(bgs = null) {
     const targetBgs = Array.isArray(bgs) ? bgs : backgrounds;
-    const referenced = new Set();
-    function collect(obj) {
-      if (!obj) return;
-      if (obj.background) referenced.add(obj.background.trim());
-      if (obj.foreground) referenced.add(obj.foreground.trim());
-      if (obj.ambience) {
-        referenced.add(obj.ambience.trim());
-        referenced.add(normalizeAmbiencePath(obj.ambience).trim());
-        const soundFile = obj.ambience.split('/').pop()?.trim();
-        if (soundFile) referenced.add(soundFile);
+    const referencedKeys = new Set();
+    const referencedUrls = new Set();
+
+    function addSlot(val, slotType, bg) {
+      if (!val || typeof val !== 'string') return;
+      const cleanVal = val.trim();
+      if (!cleanVal) return;
+      const lowerVal = cleanVal.toLowerCase();
+      const filename = cleanVal.split('/').pop().toLowerCase();
+      referencedKeys.add(cleanVal);
+      referencedKeys.add(lowerVal);
+      referencedKeys.add(filename);
+
+      if (slotType === 'audio') {
+        const normAmb = normalizeAmbiencePath(cleanVal).toLowerCase();
+        referencedKeys.add(normAmb);
       }
+
+      // Check explicit alias mapping
+      const mapped = bg?.assetSources?.[cleanVal] || bg?.assetSources?.[filename];
+      if (mapped) {
+        referencedKeys.add(mapped);
+        referencedKeys.add(mapped.toLowerCase());
+        referencedKeys.add(mapped.split('/').pop().toLowerCase());
+      }
+
+      // Check resolved asset URL from pool
+      try {
+        const url = bgStore.getAssetUrl(cleanVal, slotType, bg);
+        if (url && (url.startsWith('blob:') || url.startsWith('data:'))) {
+          referencedUrls.add(url);
+        }
+      } catch {}
     }
+
     for (const bg of targetBgs) {
+      if (!bg) continue;
       if (bg.assetSources) {
-        for (const src of Object.values(bg.assetSources)) {
-          if (src) {
-            referenced.add(src.trim());
-            const soundFile = src.split('/').pop()?.trim();
-            if (soundFile) referenced.add(soundFile);
+        for (const [k, v] of Object.entries(bg.assetSources)) {
+          if (k) {
+            referencedKeys.add(k);
+            referencedKeys.add(k.toLowerCase());
+            referencedKeys.add(k.split('/').pop().toLowerCase());
+          }
+          if (v) {
+            referencedKeys.add(v);
+            referencedKeys.add(v.toLowerCase());
+            referencedKeys.add(v.split('/').pop().toLowerCase());
           }
         }
       }
       for (const st of Object.values(bg.states || {})) {
-        collect(st);
+        if (!st) continue;
+        addSlot(st.background, 'image', bg);
+        addSlot(st.foreground, 'image', bg);
+        addSlot(st.ambience, 'audio', bg);
         if (st.time_variants) {
-          for (const tv of Object.values(st.time_variants)) collect(tv);
+          for (const tv of Object.values(st.time_variants)) {
+            if (!tv) continue;
+            addSlot(tv.background, 'image', bg);
+            addSlot(tv.foreground, 'image', bg);
+            addSlot(tv.ambience, 'audio', bg);
+          }
         }
         if (st.positions) {
           for (const pos of Object.values(st.positions)) {
-            collect(pos);
+            if (!pos) continue;
+            addSlot(pos.background, 'image', bg);
+            addSlot(pos.foreground, 'image', bg);
+            addSlot(pos.ambience, 'audio', bg);
             if (pos.time_variants) {
-              for (const tv of Object.values(pos.time_variants)) collect(tv);
+              for (const tv of Object.values(pos.time_variants)) {
+                if (!tv) continue;
+                addSlot(tv.background, 'image', bg);
+                addSlot(tv.foreground, 'image', bg);
+                addSlot(tv.ambience, 'audio', bg);
+              }
             }
           }
         }
       }
     }
-    return referenced;
+
+    return {
+      keys: referencedKeys,
+      urls: referencedUrls,
+      isReferenced(asset) {
+        if (!asset) return false;
+        const name = asset.name?.toLowerCase();
+        const rel = asset.relPath?.toLowerCase();
+        const full = asset.fullRelPath?.toLowerCase();
+        return (
+          referencedKeys.has(asset.name) ||
+          (name && referencedKeys.has(name)) ||
+          (rel && referencedKeys.has(rel)) ||
+          (full && referencedKeys.has(full)) ||
+          (asset.url && referencedUrls.has(asset.url))
+        );
+      }
+    };
+  },
+
+  getReferencedAssetNames(bgs = null) {
+    return this.getReferencedAssetInfo(bgs).keys;
   },
 
   /**
    * Purges unreferenced media files from asset pool and IndexedDB cache.
    */
   async purgeUnusedAssets() {
-    const referenced = this.getReferencedAssetNames();
+    const refInfo = this.getReferencedAssetInfo();
     const toDeleteIds = [];
     const kept = [];
 
     for (const a of assetPool) {
-      const isRef = referenced.has(a.name) || referenced.has(a.relPath) || referenced.has(a.fullRelPath);
-      if (isRef) {
+      if (refInfo.isReferenced(a)) {
         kept.push(a);
       } else {
         toDeleteIds.push(a.id);

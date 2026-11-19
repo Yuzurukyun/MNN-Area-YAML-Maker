@@ -86,7 +86,7 @@ Requires **Node.js 20+**.
 # Install dependencies
 npm install
 
-# Run comprehensive test suite (297 unit tests covering YAML, INI, geometry, and store)
+# Run comprehensive test suite (302 unit tests covering YAML, INI, geometry, and store)
 npm test
 
 # Start local Vite development server with hot-module reload
