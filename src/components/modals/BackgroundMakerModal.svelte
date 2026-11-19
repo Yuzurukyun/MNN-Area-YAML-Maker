@@ -1620,18 +1620,20 @@
       <!-- Left Column: Backgrounds Navigator -->
       <aside class="bg-nav">
         <div class="nav-head">
-          <span class="nav-title">BACKGROUNDS ({backgrounds.length})</span>
+          <div class="nav-head-title-row">
+            <span class="nav-title">BACKGROUNDS ({backgrounds.length})</span>
+          </div>
           <div class="nav-head-actions">
+            <button
+              class="mini-btn primary"
+              title="Create a new background in the current folder ({activeSubfolder || 'root'})"
+              on:click={createNewBackgroundInCurrentFolder}
+            >＋ New</button>
             <button
               class="mini-btn icon-action-btn"
               title="Import background.json, backgrounds-library.json, or package .zip"
               on:click={() => fileInputLibrary && fileInputLibrary.click()}
             >📥 Import</button>
-            <button
-              class="mini-btn"
-              title="Create a new background in the current folder ({activeSubfolder || 'root'})"
-              on:click={createNewBackgroundInCurrentFolder}
-            >+ New</button>
           </div>
         </div>
 
@@ -3254,32 +3256,42 @@
 
   .nav-head {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
     padding: 8px 10px;
     border-bottom: 1px solid var(--line);
-    gap: 8px;
+    gap: 6px;
   }
 
-  .nav-head-actions {
+  .nav-head-title-row {
     display: flex;
     align-items: center;
-    gap: 4px;
-    flex-shrink: 0;
-  }
-
-  .library-drop-menu {
-    right: 0;
-    left: auto;
-    min-width: 210px;
-    z-index: 100;
+    justify-content: space-between;
+    width: 100%;
   }
 
   .nav-title {
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 800;
     letter-spacing: 0.08em;
     color: var(--dim);
+    white-space: nowrap;
+    text-transform: uppercase;
+  }
+
+  .nav-head-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .nav-head-actions .mini-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 4px 6px;
+    font-size: 11px;
+    white-space: nowrap;
+    text-align: center;
   }
 
   .bg-list {

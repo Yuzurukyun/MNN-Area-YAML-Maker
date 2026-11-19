@@ -512,12 +512,17 @@
         - `GLOBAL:` Renames the asset in the pool globally across all backgrounds, states, time variants, and active project nodes in real time.
         - `EXPORT:` Customizes the export filename alias written into `background.json` and ZIP export for the active background without altering the global asset.
     - Unified vertical height (`height: 26px`) and flex-center alignment across `.lightbox-badge`, `.lightbox-input-box`, and close button `✕`, achieving 0.00px vertical offset for a clean, cyber-themed header bar.
+- **Backgrounds Sidebar Header Restructure (`BackgroundMakerModal.svelte`):**
+    - Restructured the left navigator header (`.nav-head`) into a clean two-row vertical layout:
+        - **Row 1 (`.nav-head-title-row`):** Full-width title `BACKGROUNDS ({count})` with bold uppercase styling, completely eliminating awkward wrapping of the title or count onto multiple lines.
+        - **Row 2 (`.nav-head-actions`):** Dedicated button row below the title structured as a 2-column grid (`1fr 1fr`) hosting `[ ＋ New ]` and `[ 📥 Import ]` side-by-side with balanced padding.
 
 ### Verification
 
 - `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **204 passed, 0 failed** (all assertions covering slot clearing on purge, global asset renaming propagation, slot export alias tracking, duplicate background, folder rename, state duplication, and time variant duplication).
-- `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5182 KB), `export/yuzu_area_maker_nomusic.html` (529 KB), and `docs/index.html` (529 KB) with 0 warnings.
+- `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5183 KB), `export/yuzu_area_maker_nomusic.html` (529 KB), and `docs/index.html` (529 KB) with 0 warnings.
 - Live browser CDP tests verified:
+    - **Backgrounds Sidebar Header Layout:** `BACKGROUNDS ({count})` title renders cleanly on top row while `[ ＋ New ]` and `[ 📥 Import ]` form a balanced 2-column grid below it ([verified_sidebar_header_two_row.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_sidebar_header_two_row.png)).
     - **Universal Scrim Drag-Out Protection:** Selecting text inside rename input and dragging mouse completely outside dialog card onto backdrop before releasing mouseup does NOT dismiss the dialog; direct backdrop clicks still close cleanly (`verified_single_click_rename_dialog.png`).
     - **Single-Click Slot Label to Rename:** Single-clicking slot filename labels on Background, Foreground, Ambience, and TOD mini-slots immediately opens the Rename Export Filename dialog with value pre-filled (`verified_single_click_rename_dialog.png`).
     - **Single-Click Lightbox Preview:** Single-clicking slot thumbnails or pool asset cards opens the Lightbox asset inspector smoothly while preserving asset drag-to-slot capability (`verified_lightbox_dual_inline_rename.png`).
