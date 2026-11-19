@@ -602,10 +602,10 @@ export const bgStore = {
       for (const prefix of prefixes) {
         const children = prefixMap.get(prefix);
         const hasBackground = children.has('background') || children.has('backgrounds');
-        const hasSounds = children.has('sounds');
-        const hasCharacters = children.has('characters');
-        const hasAnimations = children.has('animations');
-        const hasConfigs = children.has('configs');
+        const hasSounds = children.has('sounds') || children.has('sound');
+        const hasCharacters = children.has('characters') || children.has('character');
+        const hasAnimations = children.has('animations') || children.has('animation');
+        const hasConfigs = children.has('configs') || children.has('config');
 
         // Root folder indicator:
         // A root folder contains any of the standard asset repository folders:
@@ -627,10 +627,14 @@ export const bgStore = {
       onProgress?.('Root asset repository folder detected. Accepting background/ and sounds/ambient/ only...');
       const filtered = [];
       let skippedCount = 0;
+      const lowerRootPrefix = rootPrefix ? rootPrefix.toLowerCase() : '';
 
       for (const item of rawFileItems) {
         const cleanP = item.path.replace(/\\/g, '/').replace(/^\/+/, '');
-        if (rootPrefix && !cleanP.startsWith(rootPrefix)) {
+        const lowerCleanP = cleanP.toLowerCase();
+
+        // Case-insensitive check: does this file belong under rootPrefix?
+        if (lowerRootPrefix && !lowerCleanP.startsWith(lowerRootPrefix)) {
           // If outside rootPrefix, only keep if it's a library json or standalone config
           if (item.name.toLowerCase().endsWith('.json') || item.name.toLowerCase().endsWith('.ini')) {
             filtered.push(item);
@@ -640,16 +644,25 @@ export const bgStore = {
           continue;
         }
 
-        const relToRoot = rootPrefix ? cleanP.slice(rootPrefix.length).replace(/^\/+/, '') : cleanP;
+        const relToRoot = lowerRootPrefix ? cleanP.slice(rootPrefix.length).replace(/^\/+/, '') : cleanP;
         const lowerRel = relToRoot.toLowerCase();
 
-        // ONLY accept background/ and sounds/ambient/
+        // Check for ambient/background sounds:
+        // Strictly accept sounds/ambient/, sounds/ambience/, sound/ambient/, sound/ambience/
+        const isAmbientAudio =
+          lowerRel.startsWith('sounds/ambient/') ||
+          lowerRel.startsWith('sounds/ambience/') ||
+          lowerRel.startsWith('sound/ambient/') ||
+          lowerRel.startsWith('sound/ambience/');
+
+        // ONLY accept background/, ambient sounds, and root configs/library JSONs
         if (
           lowerRel.startsWith('background/') ||
           lowerRel.startsWith('backgrounds/') ||
-          lowerRel.startsWith('sounds/ambient/') ||
+          isAmbientAudio ||
           lowerRel === 'backgrounds-library.json' ||
-          (lowerRel.endsWith('.json') && !lowerRel.includes('/'))
+          (lowerRel.endsWith('.json') && !lowerRel.includes('/')) ||
+          (lowerRel.endsWith('.ini') && !lowerRel.includes('/'))
         ) {
           filtered.push(item);
         } else {
@@ -673,7 +686,7 @@ export const bgStore = {
       const bgMatch = p.match(/^(?:.*\/)?backgrounds?\/(.*)$/i);
       if (bgMatch) {
         p = bgMatch[1];
-      } else if (rootPrefix !== null && rootPrefix && p.startsWith(rootPrefix)) {
+      } else if (rootPrefix !== null && rootPrefix && p.toLowerCase().startsWith(rootPrefix.toLowerCase())) {
         p = p.slice(rootPrefix.length).replace(/^\/+/, '');
       } else {
         p = p.replace(/^(\.\/)?(base\/)?/i, '');

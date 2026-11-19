@@ -160,14 +160,44 @@
     if (typeof assetOrName === 'object' && assetOrName !== null) {
       inspectModalAsset = { ...assetOrName };
     } else if (typeof assetOrName === 'string') {
-      const matched = assetPool.find((a) => a.name === assetOrName || a.relPath === assetOrName);
+      const cleanName = assetOrName.split('/').pop().toLowerCase();
+      // Check alias mapped in activeBg.assetSources
+      const mappedSource = activeBg?.assetSources?.[assetOrName] || activeBg?.assetSources?.[cleanName] || assetOrName;
+      const targetUrl = bgStore.getAssetUrl(assetOrName, type, activeBg);
+
+      let matched = null;
+      // Match by exact URL resolved by bgStore for this activeBg
+      if (targetUrl) {
+        matched = assetPool.find((a) => a.url === targetUrl);
+      }
+      // Match by mapped source name in activeBg.assetSources
+      if (!matched && mappedSource) {
+        matched = assetPool.find((a) => a.name.toLowerCase() === mappedSource.toLowerCase() || a.relPath.toLowerCase() === mappedSource.toLowerCase());
+      }
+      // Match by folder origin of activeBg
+      if (!matched && activeBg?.folder) {
+        const normBgFolder = normalizeBgPath(activeBg.folder).toLowerCase();
+        matched = assetPool.find((a) => {
+          if (type && a.type !== type) return false;
+          if (!a.fullRelPath) return false;
+          const normAstPath = normalizeBgPath(a.fullRelPath).toLowerCase();
+          return (
+            (normAstPath.startsWith(`${normBgFolder}/`) || normAstPath.includes(`/${normBgFolder}/`)) &&
+            (normAstPath.endsWith(`/${cleanName}`) || a.name.toLowerCase() === cleanName)
+          );
+        });
+      }
+      // Fallback: match by filename in pool
+      if (!matched) {
+        matched = assetPool.find((a) => a.name === assetOrName || a.relPath === assetOrName || a.name.toLowerCase() === cleanName);
+      }
+
       if (matched) {
         inspectModalAsset = { ...matched };
       } else {
-        const url = bgStore.getAssetUrl(assetOrName, type, activeBg);
         inspectModalAsset = {
-          name: displayName || assetOrName,
-          url: url || assetOrName,
+          name: mappedSource || displayName || assetOrName,
+          url: targetUrl || assetOrName,
           type,
           size: 0,
           relPath: assetOrName,
@@ -184,7 +214,7 @@
         const targetObj = slotContext.todKey
           ? (usePositions ? activePos?.time_variants?.[slotContext.todKey] : activeState?.time_variants?.[slotContext.todKey])
           : (usePositions ? activePos : activeState);
-        inspectExportName = targetObj?.[slotContext.slotType] || inspectModalAsset.name;
+        inspectExportName = targetObj?.[slotContext.slotType] || (typeof assetOrName === 'string' ? assetOrName : inspectModalAsset.name);
       } else {
         let assignedExport = null;
         if (activeBg?.assetSources) {
@@ -195,7 +225,7 @@
             }
           }
         }
-        inspectExportName = assignedExport || inspectModalAsset.name;
+        inspectExportName = assignedExport || (typeof assetOrName === 'string' ? assetOrName : inspectModalAsset.name);
       }
     }
   }
@@ -277,6 +307,127 @@
         notify(`Registered export alias "${clean}" for "${inspectGlobalName}".`, 'ok');
       }
     }
+  }
+
+  // Repository Asset Inspector Modal State (for bottom dock assets)
+  let showRepoAssetModal = false;
+  let repoInspectAsset = null;
+  let repoInspectGlobalName = '';
+  let repoAssetUsages = [];
+
+  function openRepoAssetInspector(asset) {
+    if (assetDragOccurred) return;
+    closeContextMenu();
+    repoInspectAsset = { ...asset };
+    repoInspectGlobalName = asset.name;
+    repoAssetUsages = computeAssetUsages(asset);
+    showRepoAssetModal = true;
+  }
+
+  function computeAssetUsages(asset) {
+    if (!asset) return [];
+    const usages = [];
+    const aName = asset.name.toLowerCase();
+    const aRel = (asset.relPath || asset.name).toLowerCase();
+    const aUrl = asset.url;
+
+    for (const bg of backgrounds) {
+      if (!bg || !bg.states) continue;
+
+      function checkSlot(val, slotType, posName, stName, todName) {
+        if (!val) return;
+        const normVal = val.toLowerCase();
+        const cleanVal = val.split('/').pop().toLowerCase();
+        const mappedSource = bg.assetSources?.[val] || bg.assetSources?.[cleanVal];
+        const normMapped = mappedSource ? mappedSource.toLowerCase() : '';
+
+        // Check if this slot references the asset by name, alias, relPath, or URL
+        const isMatch =
+          normVal === aName ||
+          normVal === aRel ||
+          cleanVal === aName ||
+          normMapped === aName ||
+          normMapped === aRel ||
+          (aUrl && bgStore.getAssetUrl(val, slotType === 'Ambience' ? 'audio' : 'image', bg) === aUrl);
+
+        if (isMatch) {
+          usages.push({
+            bgId: bg.id,
+            bgFolder: bg.folder,
+            state: stName,
+            position: posName,
+            tod: todName,
+            slotType,
+            exportName: val,
+            globalName: mappedSource || asset.name,
+          });
+        }
+      }
+
+      for (const [stName, st] of Object.entries(bg.states)) {
+        if (st.usePositions && st.positions) {
+          for (const [posName, pos] of Object.entries(st.positions)) {
+            checkSlot(pos.background, 'Background', posName, stName, null);
+            checkSlot(pos.foreground, 'Foreground', posName, stName, null);
+            checkSlot(pos.ambience, 'Ambience', posName, stName, null);
+
+            if (pos.time_variants) {
+              for (const [todName, tv] of Object.entries(pos.time_variants)) {
+                checkSlot(tv.background, 'Background', posName, stName, todName);
+                checkSlot(tv.foreground, 'Foreground', posName, stName, todName);
+                checkSlot(tv.ambience, 'Ambience', posName, stName, todName);
+              }
+            }
+          }
+        } else {
+          checkSlot(st.background, 'Background', null, stName, null);
+          checkSlot(st.foreground, 'Foreground', null, stName, null);
+          checkSlot(st.ambience, 'Ambience', null, stName, null);
+
+          if (st.time_variants) {
+            for (const [todName, tv] of Object.entries(st.time_variants)) {
+              checkSlot(tv.background, 'Background', null, stName, todName);
+              checkSlot(tv.foreground, 'Foreground', null, stName, todName);
+              checkSlot(tv.ambience, 'Ambience', null, stName, todName);
+            }
+          }
+        }
+      }
+    }
+
+    return usages;
+  }
+
+  async function applyRepoGlobalRename() {
+    if (!repoInspectAsset || !repoInspectGlobalName) return;
+    const clean = repoInspectGlobalName.trim();
+    if (!clean || clean === repoInspectAsset.name) return;
+
+    const poolAsset = assetPool.find((a) => a.id === repoInspectAsset.id || a.name === repoInspectAsset.name);
+    if (poolAsset) {
+      const res = await bgStore.renameAsset(poolAsset.id, clean);
+      if (!res.success) {
+        notify(res.error || 'Failed to rename global asset', 'warn');
+        repoInspectGlobalName = repoInspectAsset.name;
+        return;
+      }
+      repoInspectAsset.name = clean;
+      repoInspectAsset.relPath = clean;
+      repoAssetUsages = computeAssetUsages(repoInspectAsset);
+      notify(`Renamed repository asset to "${clean}" globally.`, 'ok');
+    }
+  }
+
+  function navigateToUsage(usage) {
+    selectedBgId = usage.bgId;
+    if (usage.position && usePositions) {
+      activePositionName = usage.position;
+    }
+    if (usage.tod) {
+      activeTod = usage.tod;
+    }
+    showRepoAssetModal = false;
+    notify(`Switched to "${usage.bgFolder}"`, 'info');
   }
 
   // Rename Dialog State
@@ -414,9 +565,9 @@
         run: () => triggerRenameAsset(asset),
       },
       {
-        label: 'Inspect Asset Preview',
+        label: 'Inspect in Repository (Usages)…',
         icon: '🔍',
-        run: () => inspectAsset(asset),
+        run: () => openRepoAssetInspector(asset),
       },
       { separator: true },
       {
@@ -1606,7 +1757,7 @@
 
   function onAssetCardClick(asset) {
     if (assetDragOccurred) return;
-    inspectAsset(asset);
+    openRepoAssetInspector(asset);
   }
 
   async function onSlotDrop(e, slotType, tod = null) {
@@ -1735,6 +1886,7 @@
     if (e.key === 'Escape') {
       if (bgContextMenu) { closeContextMenu(); e.stopPropagation(); }
       else if (inspectModalAsset) { inspectModalAsset = null; e.stopPropagation(); }
+      else if (showRepoAssetModal) { showRepoAssetModal = false; e.stopPropagation(); }
       else if (showRenameModal) { showRenameModal = false; e.stopPropagation(); }
       else if (showPurgeConfirmModal) { showPurgeConfirmModal = false; e.stopPropagation(); }
       else if (showClearBgsConfirmModal) { showClearBgsConfirmModal = false; e.stopPropagation(); }
@@ -3451,6 +3603,98 @@
         <span>Path: <code>{inspectModalAsset.relPath || inspectModalAsset.name}</code></span>
         {#if inspectModalAsset.size}
           <span>Size: <code>{Math.round(inspectModalAsset.size / 1024)} KB</code></span>
+        {/if}
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Repository Asset Inspector Modal (Bottom Dock) -->
+{#if showRepoAssetModal && repoInspectAsset}
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+  <div class="modal-bg submodal-scrim lightbox-scrim" on:mousedown={onScrimMouseDown} on:click={(e) => handleScrimClose(e, () => (showRepoAssetModal = false))}>
+    <div class="modal submodal-card repo-inspect-modal" on:mousedown|stopPropagation on:click|stopPropagation>
+      <div class="lightbox-head">
+        <div class="lightbox-head-left">
+          <span class="lightbox-badge">{repoInspectAsset.type?.toUpperCase() || 'ASSET'}</span>
+          <div class="lightbox-inputs-row">
+            <div class="lightbox-input-box" title="Global asset filename in repository pool (renaming updates all referencing backgrounds & areas)">
+              <span class="lightbox-tag-prefix">GLOBAL:</span>
+              <input
+                type="text"
+                class="lightbox-input-text"
+                bind:value={repoInspectGlobalName}
+                on:blur={applyRepoGlobalRename}
+                on:change={applyRepoGlobalRename}
+                on:keydown={(e) => {
+                  if (e.key === 'Enter') {
+                    applyRepoGlobalRename();
+                    e.currentTarget.blur();
+                  }
+                }}
+                placeholder="asset_name.webp"
+              />
+            </div>
+          </div>
+        </div>
+        <button class="modal-x" title="Close (Esc)" on:click={() => (showRepoAssetModal = false)}>✕</button>
+      </div>
+
+      <div class="lightbox-body">
+        {#if repoInspectAsset.type === 'image' || (repoInspectAsset.name && repoInspectAsset.name.match(/\.(png|webp|jpg|jpeg|gif|svg|avif)$/i))}
+          <img src={repoInspectAsset.url} alt={repoInspectAsset.name} class="lightbox-img" />
+        {:else}
+          <div class="lightbox-audio-player">
+            <span class="lightbox-audio-icon">🎵</span>
+            <audio src={repoInspectAsset.url} controls autoplay></audio>
+          </div>
+        {/if}
+      </div>
+
+      <div class="lightbox-meta">
+        <span>Path: <code>{repoInspectAsset.relPath || repoInspectAsset.name}</code></span>
+        {#if repoInspectAsset.size}
+          <span>Size: <code>{Math.round(repoInspectAsset.size / 1024)} KB</code></span>
+        {/if}
+        <span>Usages: <strong>{repoAssetUsages.length}</strong></span>
+      </div>
+
+      <!-- Used In Backgrounds List -->
+      <div class="repo-usages-panel">
+        <div class="repo-usages-title">
+          <span>// USED IN BACKGROUND NODES ({repoAssetUsages.length})</span>
+          <span class="repo-usages-hint">Click any row to jump directly to that background in the editor</span>
+        </div>
+        {#if repoAssetUsages.length === 0}
+          <div class="repo-usages-empty">
+            <span>This asset is not currently referenced in any background node. It can be assigned to slots or safely purged.</span>
+          </div>
+        {:else}
+          <div class="repo-usages-table-wrap">
+            <table class="repo-usages-table">
+              <thead>
+                <tr>
+                  <th>Background Node</th>
+                  <th>Camera / State</th>
+                  <th>Slot Type</th>
+                  <th>Export Alias</th>
+                  <th style="width: 70px;">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each repoAssetUsages as u}
+                  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+                  <tr class="usage-row" on:click={() => navigateToUsage(u)}>
+                    <td class="usage-node font-mono">{u.bgFolder}</td>
+                    <td class="usage-pos">{u.position || u.state || 'default'}{u.tod ? ` [${u.tod}]` : ''}</td>
+                    <td class="usage-slot"><span class="usage-badge {u.slotType.toLowerCase()}">{u.slotType}</span></td>
+                    <td class="usage-alias font-mono"><code>{u.exportName}</code></td>
+                    <td><button class="mini-btn-table" on:click|stopPropagation={() => navigateToUsage(u)}>Go to ↗</button></td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
         {/if}
       </div>
     </div>
@@ -5489,6 +5733,138 @@
   }
   .lightbox-meta code {
     color: var(--text);
+  }
+
+  /* Repository Asset Inspector Modal (Bottom Dock) */
+  .repo-inspect-modal {
+    max-width: 860px;
+    width: 95vw;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .repo-usages-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 16px 16px;
+    border-top: 1px solid var(--line2, #333);
+    background: rgba(0, 0, 0, 0.18);
+  }
+
+  .repo-usages-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    font-family: var(--font-mono);
+  }
+
+  .repo-usages-hint {
+    font-size: 10px;
+    color: var(--text-muted, var(--dim));
+    font-weight: normal;
+  }
+
+  .repo-usages-empty {
+    font-size: 11px;
+    color: var(--text-muted, var(--dim));
+    font-style: italic;
+    padding: 10px 0;
+  }
+
+  .repo-usages-table-wrap {
+    max-height: 180px;
+    overflow-y: auto;
+    border: 1px solid var(--line2, #333);
+    border-radius: var(--radius-sm, 4px);
+    background: var(--bg-surface, var(--panel));
+  }
+
+  .repo-usages-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    text-align: left;
+  }
+
+  .repo-usages-table th {
+    padding: 6px 10px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-muted, var(--dim));
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--line2, #333);
+    background: rgba(0, 0, 0, 0.25);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  .repo-usages-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--line2, #262626);
+    vertical-align: middle;
+  }
+
+  .usage-row {
+    cursor: pointer;
+    transition: background 0.12s ease;
+  }
+
+  .usage-row:hover {
+    background: rgba(255, 90, 44, 0.08);
+  }
+
+  .usage-badge {
+    display: inline-block;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 9.5px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+  }
+
+  .usage-badge.background {
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+  }
+
+  .usage-badge.foreground {
+    background: rgba(168, 85, 247, 0.15);
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.3);
+  }
+
+  .usage-badge.ambience {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+  }
+
+  .mini-btn-table {
+    padding: 2px 7px;
+    font-size: 10px;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    border-radius: 3px;
+    background: rgba(255, 90, 44, 0.12);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    cursor: pointer;
+    transition: all 0.12s ease;
+  }
+
+  .mini-btn-table:hover {
+    background: var(--accent);
+    color: #fff;
   }
 
   .rename-dialog {

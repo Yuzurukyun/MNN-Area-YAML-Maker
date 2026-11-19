@@ -605,11 +605,42 @@
     - Added a `Clear All` button on the `.nav-head-title-row` in the Backgrounds sidebar header, an entry in `📚 Library ▾`, and an option in the Background item right-click context menu.
     - Added a dedicated confirmation submodal (`showClearBgsConfirmModal`) with an optional checkbox to also purge all assets from the Asset Repository Pool, full Escape key dismissal, and backdrop scrim drag-out protection.
 
+### Root Import Audio & Case-Sensitivity Fix, Slot Lightbox Disambiguation, Repository Asset Inspector & Empty Foreground Preview
+
+- **Case-Insensitive Root Folder & Ambient Audio Import Fix (`src/lib/bgStore.js`, `src/lib/bgSchema.js`):**
+    - Fixed an issue where case differences in root folder path names (e.g. `Base/` vs `base/` or custom root directory casings) caused `cleanP.startsWith(rootPrefix)` to evaluate to false, skipping all images and audio files while keeping only configs.
+    - Standardized root prefix detection and prefix matching to be completely case-insensitive (`cleanP.toLowerCase().startsWith(lowerRootPrefix)`).
+    - Expanded ambient sound filter to reliably accept audio files from `sounds/ambient/`, `sounds/ambience/`, `sound/ambient/`, and `sound/ambience/`, and updated `normalizeAmbiencePath` to strip all ambience folder variants cleanly.
+    - Sound files are now successfully registered into the global Asset Repository Pool (`Audio (N)`), and `bgStore.getAssetUrl` resolves blob URLs properly, enabling clean ambient audio playback.
+- **Slot Lightbox Disambiguation & Image Resolution Fix (`src/components/modals/BackgroundMakerModal.svelte`):**
+    - Fixed a bug where clicking a slot thumbnail (such as `witnessempty.webp` on `Eastside Beach [Evening]`) opened the Lightbox showing a 1 KB black image from Room 1 instead of the actual assigned room image.
+    - Overhauled `inspectAsset(assetOrName, displayName, type, slotContext)`:
+        - First resolves the active background's mapped asset from `activeBg.assetSources[assetOrName]` and resolves `targetUrl = bgStore.getAssetUrl(assetOrName, type, activeBg)`.
+        - Matches pool asset by exact URL, mapped alias name, or folder origin prefix, ensuring the true room image is displayed in the Lightbox.
+        - Accurately binds `GLOBAL:` to the mapped source asset and `EXPORT:` to the slot export name.
+- **Dedicated Repository Asset Inspector Modal (`src/components/modals/BackgroundMakerModal.svelte`):**
+    - Differentiated the Slot Lightbox (for background scene slots) from the Repository Asset Inspector (for bottom dock assets).
+    - Clicking an asset card in `.assets-strip` (or selecting "Inspect in Repository (Usages)…" from the right-click menu) now opens a dedicated **Repository Asset Inspector** modal (`showRepoAssetModal`):
+        - Displays asset preview (large image or audio player with waveform controls).
+        - Features in-line `GLOBAL: <input>` aligned with the `[IMAGE]` / `[AUDIO]` tag to rename the repository asset across all referencing backgrounds and areas.
+        - Features a **USED IN BACKGROUND NODES (N)** table listing every background node, camera position / state variant, slot type, and export alias name currently referencing this asset.
+        - Each row includes a **Go to ↗** button that jumps directly to that background in the visual editor.
+        - Unused assets clearly indicate that they are not referenced and can safely be purged or assigned.
+- **Empty Foreground Preview Bug Fix (`src/lib/bgSchema.js`):**
+    - Fixed a bug where a courtroom position with an empty foreground (such as Witness in courtroom setups) would erroneously display a stray rain or desk overlay in the Live Stage Monitor.
+    - In `parseBackgroundIni`: when courtroom positions are defined and `[wit]` is present, `defaultFg` strictly uses the witness foreground (or empty string). Subsequent position sections (e.g. `[def]` with `rain_front.webp`) no longer overwrite `defaultFg`.
+    - In `resolveActiveVisual`: updated foreground fallback logic so `pos.foreground !== undefined` is checked rather than `pos.foreground || ...`. If `pos.foreground` is `""`, it remains an empty string and never inherits `st.foreground`.
+    - Live Stage Monitor now displays `FG: —` cleanly when the active position has no foreground.
+
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **257 passed, 0 failed** (all assertions covering arbitrary root detection `MM/`, single-folder roots with ONLY `background` or ONLY `sounds`, bloat filtering of `characters/`, `animations/`, `configs/`, and non-ambient sounds, clean room folder extraction, `clearAllBackgrounds()` zero-reset, INI parsing, courtroom position mapping with Witness default, duplicate asset collision disambiguation, audio server fallback, slot alias preservation, camera position duplication, slot clearing on purge, and state duplication).
-- `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5209 KB), `export/yuzu_area_maker_nomusic.html` (556 KB), and `docs/index.html` (556 KB) with 0 warnings and 0 errors.
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **265 passed, 0 failed** (all assertions covering case-insensitive root repository import with `Base/` and `sounds/ambience/`, empty courtroom position foreground resolution, INI parser witness foreground retention, arbitrary root detection `MM/`, single-folder roots with ONLY `background` or ONLY `sounds`, bloat filtering of `characters/`, `animations/`, `configs/`, and non-ambient sounds, clean room folder extraction, `clearAllBackgrounds()` zero-reset, INI parsing, courtroom position mapping with Witness default, duplicate asset collision disambiguation, audio server fallback, slot alias preservation, camera position duplication, slot clearing on purge, and state duplication).
+- `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5218 KB), `export/yuzu_area_maker_nomusic.html` (565 KB), and `docs/index.html` (565 KB) with 0 warnings and 0 errors.
 - Live browser CDP tests verified:
+    - **Slot Lightbox Disambiguation:** Clicking `witnessempty.webp` on `Eastside Beach [Evening]` correctly displays `witnessempty_1.webp` (the actual beach evening image), with in-line `GLOBAL:` and `EXPORT:` inputs ([verified_correct_slot_lightbox_image.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_correct_slot_lightbox_image.png)).
+    - **Repository Asset Inspector Modal:** Clicking an asset card in the bottom dock opens the dedicated Repository Asset Inspector showing image preview, `GLOBAL:` rename input, and the `USED IN BACKGROUND NODES` usages table with background folder, camera position, slot badge, export alias, and `Go to ↗` button ([verified_repo_asset_inspector_modal.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_repo_asset_inspector_modal.png)).
+    - **Empty Foreground Resolution in Live Stage Monitor:** Witness camera position with empty foreground resolves to `FG: —` without any stray rain or desk overlay in the monitor ([verified_empty_foreground_preview.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_empty_foreground_preview.png)).
+    - **Ambient Audio Import & Playback:** Ambient loop `northeastside_beach_evening.opus` under `Base/sounds/ambient/` was successfully imported into the Asset Repository Pool (`Audio (1)`), enabling `Play Ambience` audio playback without errors.
     - **Root Asset Repository Import & Bloat Filtering:** Dropped an `MM/` root asset repository containing `background/`, `sounds/ambient/`, `characters/`, `animations/`, `configs/`, and `sounds/music/`. The background `WS Lambda/Manor Room 1` and ambient loop `wsl/birds.opus` were accepted while all 4 bloat files were filtered out completely ([verified_root_folder_bloat_filtered.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_root_folder_bloat_filtered.png)).
     - **Clear All Backgrounds Confirmation Modal:** Clicking `Clear All` in the Backgrounds sidebar title row opened the styled confirmation modal with destructive action warning badge and option to also purge asset repository pool ([verified_clear_all_backgrounds_modal.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_clear_all_backgrounds_modal.png)).
     - **Reset to Zero State:** Confirming clear reset the background list to a single clean `Default` background, cleared visual slots, and displayed a confirmation toast notification ([verified_cleared_zero_state.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_cleared_zero_state.png)).

@@ -22,12 +22,13 @@ export function normalizeBgPath(input) {
 
 /**
  * Normalizes an ambience sound path relative to sounds/ambient/
- * Handles root prefixes like "base/sounds/ambient/", "MM/sounds/ambient/", or "sounds/ambient/".
+ * Handles root prefixes like "base/sounds/ambient/", "MM/sounds/ambient/", "sounds/ambient/", "sounds/ambience/", etc.
  */
 export function normalizeAmbiencePath(input) {
   if (!input || typeof input !== 'string') return '';
   let s = input.trim().replace(/\\/g, '/');
-  s = s.replace(/^(?:.*\/)?sounds\/ambient\//i, '');
+  s = s.replace(/^(?:.*\/)?sounds?\/(?:ambient|ambience)\//i, '');
+  s = s.replace(/^(\.\/)?(base\/)?(sounds?\/)?/i, '');
   s = s.replace(/^\/+/, '');
   return s;
 }
@@ -383,7 +384,7 @@ export function parseBackgroundIni(iniText, folder = 'ImportedBackground') {
     if (witKey) {
       const witData = sections[witKey];
       defaultBg = witData.back || witData.background || witData.bg || witData.image || defaultBg;
-      defaultFg = witData.front || witData.foreground || witData.fg || witData.desk || witData.overlay || defaultFg;
+      defaultFg = witData.front || witData.foreground || witData.fg || witData.desk || witData.overlay || '';
       defaultAmb = witData.ambient_sfx || witData.ambient || witData.ambience || witData.audio || witData.sound || defaultAmb;
     }
 
@@ -403,9 +404,11 @@ export function parseBackgroundIni(iniText, folder = 'ImportedBackground') {
         time_variants: {},
       });
 
-      if (!defaultBg && bgImg) defaultBg = bgImg;
-      if (!defaultFg && fgImg) defaultFg = fgImg;
-      if (!defaultAmb && amb) defaultAmb = amb;
+      if (!witKey) {
+        if (!defaultBg && bgImg) defaultBg = bgImg;
+        if (!defaultFg && fgImg) defaultFg = fgImg;
+        if (!defaultAmb && amb) defaultAmb = amb;
+      }
     }
   }
 
@@ -445,9 +448,15 @@ export function resolveActiveVisual(bg, { state = 'default', position = 'Witness
       // Check if position has time variant
       const tv = pos.time_variants?.[tod];
       return {
-        background: tv?.background || pos.background || st.background || '',
-        foreground: tv?.foreground !== undefined ? tv.foreground : (pos.foreground || st.foreground || ''),
-        ambience: tv?.ambience || pos.ambience || st.ambience || '',
+        background: (tv?.background !== undefined && tv.background !== '')
+          ? tv.background
+          : (pos.background !== undefined && pos.background !== '' ? pos.background : (st.background || '')),
+        foreground: (tv?.foreground !== undefined && tv.foreground !== '')
+          ? tv.foreground
+          : (pos.foreground !== undefined ? pos.foreground : (st.foreground || '')),
+        ambience: (tv?.ambience !== undefined && tv.ambience !== '')
+          ? tv.ambience
+          : (pos.ambience !== undefined && pos.ambience !== '' ? pos.ambience : (st.ambience || '')),
       };
     }
   }
@@ -455,9 +464,9 @@ export function resolveActiveVisual(bg, { state = 'default', position = 'Witness
   // Direct time variant
   const tv = st.time_variants?.[tod];
   return {
-    background: tv?.background || st.background || '',
-    foreground: tv?.foreground !== undefined ? tv.foreground : (st.foreground || ''),
-    ambience: tv?.ambience || st.ambience || '',
+    background: (tv?.background !== undefined && tv.background !== '') ? tv.background : (st.background || ''),
+    foreground: (tv?.foreground !== undefined && tv.foreground !== '') ? tv.foreground : (st.foreground || ''),
+    ambience: (tv?.ambience !== undefined && tv.ambience !== '') ? tv.ambience : (st.ambience || ''),
   };
 }
 

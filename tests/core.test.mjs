@@ -908,6 +908,17 @@ eq(parsedSingle.states.default.background, 'room.png', 'single scene background 
 eq(parsedSingle.states.default.foreground, 'desk.png', 'single scene foreground parsed');
 eq(parsedSingle.states.default.ambience, 'rain.opus', 'single scene ambience parsed');
 
+// Empty foreground resolution test
+const witnessVisual = resolveActiveVisual(parsedIni, { position: 'Witness' });
+eq(witnessVisual.foreground, '', 'Witness with empty foreground resolves to empty string (no stray rain overlay)');
+eq(parsedIni.states.default.foreground, '', 'parsedIni default state foreground remains empty when wit has no foreground');
+const defenseVisual = resolveActiveVisual(parsedIni, { position: 'Defense' });
+eq(defenseVisual.foreground, 'rain_front.webp', 'Defense position foreground resolves correctly to rain_front.webp');
+
+// normalizeAmbiencePath tests
+eq(normalizeAmbiencePath('base/sounds/ambience/wsl/beach.opus'), 'wsl/beach.opus', 'normalizeAmbiencePath handles sounds/ambience/');
+eq(normalizeAmbiencePath('MM/sound/ambient/wsl/forest.opus'), 'wsl/forest.opus', 'normalizeAmbiencePath handles sound/ambient/');
+
 // Test registerFiles directory auto-slotting & duplicate asset collision suffix
 const testFiles = [
   { path: 'Manor/positions.ini', name: 'positions.ini', data: new TextEncoder().encode(samplePositionsIni) },
@@ -994,6 +1005,20 @@ const hasBattleTheme = regOnlySounds.addedAssets.some((a) => a.name === 'battle_
 ok(hasNatureLoop, 'root folder with ONLY sounds/ accepted sounds/ambient/nature_loop.opus');
 ok(!hasBattleTheme, 'root folder with ONLY sounds/ filtered sounds/music/battle_theme.mp3');
 eq(regOnlySounds.importedBackgrounds.length, 0, 'sounds-only import creates no fake backgrounds');
+
+// Test case-insensitive root folder with Base/ and sounds/ambience/
+const caseInsensitiveFiles = [
+  { path: 'Base/background/Beach/background.json', name: 'background.json', data: new TextEncoder().encode(JSON.stringify({ default: { background: 'beach.png' } })) },
+  { path: 'Base/background/Beach/beach.png', name: 'beach.png', data: new Uint8Array(20), size: 20 },
+  { path: 'base/sounds/ambience/wsl/beach_waves.opus', name: 'beach_waves.opus', data: new Uint8Array(35), size: 35 },
+];
+const regCase = await bgStore.registerFiles(caseInsensitiveFiles);
+const importedBeach = regCase.importedBackgrounds.find((b) => b.folder === 'Beach');
+ok(Boolean(importedBeach), 'case-insensitive root folder import created "Beach" background');
+const hasBeachPng = regCase.addedAssets.some((a) => a.name === 'beach.png');
+const hasBeachWaves = regCase.addedAssets.some((a) => a.name === 'beach_waves.opus');
+ok(hasBeachPng, 'beach.png imported into pool despite case differences');
+ok(hasBeachWaves, 'beach_waves.opus imported into pool from sounds/ambience/');
 
 // Test clearAllBackgrounds()
 const defaultReset = bgStore.clearAllBackgrounds();
