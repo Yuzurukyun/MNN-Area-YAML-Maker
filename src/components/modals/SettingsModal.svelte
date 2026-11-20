@@ -232,6 +232,26 @@
         </label>
       </div>
 
+      <!-- 6. Floating <ALL> Pill Toggle -->
+      <div class="setting-item">
+        <div class="setting-header">
+          <span class="setting-title">&lt;ALL&gt; Target Pill</span>
+          <span class="setting-val">
+            {$settings.showAllPill ? 'Shown' : 'Hidden'}
+            {#if !$settings.showAllPill}<span class="default-tag">Default</span>{/if}
+          </span>
+        </div>
+        <div class="hint">Floating "ALL AREAS" summary target pill and dashed links on the canvas (off by default).</div>
+        <label class="setting-check-row" style="margin-top:6px;display:flex;align-items:center;gap:10px;cursor:pointer">
+          <input
+            type="checkbox"
+            checked={$settings.showAllPill}
+            on:change={(e) => updateSettings((s) => (s.showAllPill = e.target.checked))}
+          />
+          <span style="font-size:12px;color:var(--text-strong)">Show &lt;ALL&gt; summary target pill on canvas</span>
+        </label>
+      </div>
+
       <!-- Live preview of line thickness, glow, and style -->
       <div class="preview-box">
         <div class="hint" style="margin-bottom:6px">Line appearance live preview:</div>

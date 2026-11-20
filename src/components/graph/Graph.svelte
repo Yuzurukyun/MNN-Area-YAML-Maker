@@ -158,7 +158,7 @@
   $: allAreas = P.areas.filter((a) => a.links[lt]?.mode === 'all');
   $: shownAllAreas = allAreas.filter((a) => !hiddenIds.has(a.id));
   $: pill =
-    shownAllAreas.length && !hideAll
+    $settings.showAllPill && shownAllAreas.length && !hideAll
       ? {
           x: Math.max(...P.areas.map((a) => a.x)) + NW + 90,
           y: P.areas.reduce((sum, a) => sum + a.y, 0) / P.areas.length,

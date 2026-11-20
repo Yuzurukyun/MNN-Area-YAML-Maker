@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import * as M from '../src/lib/core.js';
 import { edgeEndpoints } from '../src/lib/graphGeom.js';
-import { cameraCommand, centerCameraOn, resetCamera, fitCamera } from '../src/lib/state.js';
+import { cameraCommand, centerCameraOn, resetCamera, fitCamera, DEFAULT_SETTINGS } from '../src/lib/state.js';
 import { findShortestPath, auditMap } from '../src/lib/pathAudit.js';
 import {
   normalizeBgPath,
@@ -1414,6 +1414,10 @@ const shrineArea = {
 const nodeResolved = resolveNodeImageUrl(shrineArea, bgStore.get());
 const hoverResolved = resolveNodeImageUrl(shrineArea, bgStore.get());
 eq(nodeResolved, hoverResolved, 'node on canvas and hover card resolve identical image');
+
+/* ---- View Settings: Show <ALL> Target Pill Toggle ---- */
+eq(DEFAULT_SETTINGS.showAllPill, false, 'showAllPill is off by default in DEFAULT_SETTINGS');
+ok('showAllPill' in DEFAULT_SETTINGS, 'DEFAULT_SETTINGS contains showAllPill setting property');
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

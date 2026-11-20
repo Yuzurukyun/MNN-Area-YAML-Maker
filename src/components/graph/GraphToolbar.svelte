@@ -31,7 +31,7 @@
   let linkMenuOpen = false;
   let viewMenuOpen = false;
 
-  $: activeViewCount = ($state.focus ? 1 : 0) + (inFocus ? 1 : 0) + (hideHub ? 1 : 0) + (hideAll ? 1 : 0) + (showAllMesh ? 1 : 0);
+  $: activeViewCount = ($state.focus ? 1 : 0) + (inFocus ? 1 : 0) + (hideHub ? 1 : 0) + (hideAll ? 1 : 0) + (showAllMesh ? 1 : 0) + ($settings.showAllPill ? 1 : 0);
 
   function saveClick() {
     const name = layoutName;
@@ -144,6 +144,18 @@
           <div class="check-text">
             <b>&lt;ALL&gt; mesh connections</b>
             <span class="check-desc">Draw individual lines to every room</span>
+          </div>
+        </label>
+
+        <label class="view-check-row" title="Show floating <ALL> summary target pill and dashed links on canvas (off by default)">
+          <input
+            type="checkbox"
+            checked={$settings.showAllPill}
+            on:change={(e) => updateSettings((s) => (s.showAllPill = e.target.checked))}
+          />
+          <div class="check-text">
+            <b>&lt;ALL&gt; target pill</b>
+            <span class="check-desc">Show floating ALL AREAS indicator</span>
           </div>
         </label>
       </div>

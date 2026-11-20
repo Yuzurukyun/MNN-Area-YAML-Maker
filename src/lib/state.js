@@ -99,6 +99,7 @@ export const DEFAULT_SETTINGS = {
   edgeGlow: 0,             // px, default 0
   edgeStyle: 'curved',     // 'curved' | 'orthogonal' | 'straight'
   showMinimap: true,       // bool, default true
+  showAllPill: false,      // bool, default false (floating <ALL> target pill on canvas)
   sortInsideGroup: false,  // bool, default false (preserves custom internal group layout & shape)
   arrangeFitView: true,    // bool, default true (auto-fits camera after arrange)
   arrangeGroupsOnly: false,// bool, default false (only move groups, leaving loose areas untouched)
