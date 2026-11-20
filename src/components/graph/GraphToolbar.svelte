@@ -6,7 +6,6 @@
   export let hideAll;
   export let showAllMesh;
   export let panTool;
-  export let inFocus;
   export let layouts;
   export let onSetTab;
   export let onToggleHideHub;
@@ -31,7 +30,7 @@
   let linkMenuOpen = false;
   let viewMenuOpen = false;
 
-  $: activeViewCount = ($state.focus ? 1 : 0) + (inFocus ? 1 : 0) + (hideHub ? 1 : 0) + (hideAll ? 1 : 0) + (showAllMesh ? 1 : 0) + ($settings.showAllPill ? 1 : 0);
+  $: activeViewCount = ($state.focus ? 1 : 0) + ($state.isolateSelection ? 1 : 0) + (hideHub ? 1 : 0) + (hideAll ? 1 : 0) + (showAllMesh ? 1 : 0) + ($settings.showAllPill ? 1 : 0);
 
   function saveClick() {
     const name = layoutName;
@@ -115,8 +114,8 @@
           </div>
         </label>
 
-        <label class="view-check-row" title="Hide everything except the selected area and its direct neighbours (Esc to exit)">
-          <input type="checkbox" checked={inFocus} on:change={onToggleFocus} />
+        <label class="view-check-row" title="Hide everything except the selected area and its direct neighbours when an area is selected (Esc to exit)">
+          <input type="checkbox" checked={$state.isolateSelection} on:change={onToggleFocus} />
           <div class="check-text">
             <b>Isolate selection</b>
             <span class="check-desc">Show only selected area and neighbours</span>

@@ -113,7 +113,12 @@
     }
   }
   $: hubId = P.areas.length ? P.areas[0].id : null;
-  $: focusIds = $state.focusViewIds;
+  $: isolateActive = Boolean(
+    $state.isolateSelection && ($state.selectedId || ($state.selectedIds && $state.selectedIds.size > 0))
+  );
+  $: focusIds = isolateActive
+    ? M.neighbourhoodIds(P, $state.selectedIds && $state.selectedIds.size ? [...$state.selectedIds] : [$state.selectedId], lt)
+    : ($state.focusViewIds || null);
   $: inFocus = !!focusIds;
 
   $: hiddenIds = (() => {
@@ -201,16 +206,12 @@
   }
 
   function toggleFocus(e) {
-    if (!e.target.checked) {
-      update((s) => exitFocusView(s), { skipHistory: true });
-      return;
-    }
-    if (!$state.selectedId && !$state.selectedIds.size) {
-      e.target.checked = false;
-      notify('Select an area first to isolate its neighbourhood.', 'info');
-      return;
-    }
-    update((s) => enterFocusView(s), { skipHistory: true });
+    const on = e.target.checked;
+    update((s) => {
+      s.isolateSelection = on;
+      if (!on) s.focusViewIds = null;
+    }, { skipHistory: true });
+    notify(on ? 'Isolate selection enabled.' : 'Isolate selection disabled.', 'info');
   }
 
   function isTypingTarget(el) {
@@ -226,7 +227,10 @@
       if (menu) { menu = null; return; }
       if (routeActive) { routeActive = false; activeRoutePath = []; return; }
       if ($state.selectedEdge) { update((s) => (s.selectedEdge = null), { skipHistory: true }); return; }
-      if ($state.focusViewIds) update((s) => exitFocusView(s), { skipHistory: true });
+      if (inFocus || $state.focusViewIds || $state.isolateSelection) {
+        update((s) => exitFocusView(s), { skipHistory: true });
+        return;
+      }
     } else if (e.key.toLowerCase() === 'm' && !e.ctrlKey && !e.metaKey && !e.altKey && !editing) {
       e.preventDefault();
       updateSettings((s) => (s.showMinimap = !s.showMinimap));
@@ -1391,7 +1395,6 @@
   {hideAll}
   {showAllMesh}
   {panTool}
-  {inFocus}
   layouts={P.layouts}
   onSetTab={setTab}
   onToggleHideHub={(v) => (hideHub = v)}

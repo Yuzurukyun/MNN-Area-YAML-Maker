@@ -54,6 +54,7 @@ export const state = writable({
   focusViewIds: null,
   fieldFilter: 'all',
   focus: true,
+  isolateSelection: false,
   query: '',
   newAreaTemplate: 'builtin-yuzu',
   activeBgPrefix: '',
@@ -277,6 +278,7 @@ export function clearSelection(s) {
 }
 
 export function enterFocusView(s) {
+  s.isolateSelection = true;
   const seeds = s.selectedIds.size ? [...s.selectedIds] : s.selectedId ? [s.selectedId] : [];
   if (!seeds.length) {
     s.focusViewIds = null;
@@ -287,7 +289,7 @@ export function enterFocusView(s) {
 }
 
 export function refocusView(s) {
-  if (!s.focusViewIds) return;
+  if (!s.isolateSelection && !s.focusViewIds) return;
   const seeds = s.selectedIds.size ? [...s.selectedIds] : s.selectedId ? [s.selectedId] : [];
   if (!seeds.length) {
     s.focusViewIds = null;
@@ -297,6 +299,7 @@ export function refocusView(s) {
 }
 
 export function exitFocusView(s) {
+  s.isolateSelection = false;
   s.focusViewIds = null;
 }
 

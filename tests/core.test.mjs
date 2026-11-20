@@ -1427,27 +1427,36 @@ const mockState = {
   selectedEdge: null,
   activeLink: 'reachable',
   focusViewIds: null,
+  isolateSelection: false,
 };
 
 enterFocusView(mockState);
+eq(mockState.isolateSelection, true, 'enterFocusView sets isolateSelection = true');
 ok(mockState.focusViewIds !== null, 'enterFocusView activates isolation set');
 ok(mockState.focusViewIds.size > 0, 'isolation set contains hub and its neighbours');
 
-// Deselecting by clearing selection must exit isolation view and show all areas
+// Deselecting by clearing selection resets selectedId and focusViewIds, but PRESERVES isolateSelection = true
 clearSelection(mockState);
 eq(mockState.selectedId, null, 'selectedId cleared on deselect');
 eq(mockState.selectedIds.size, 0, 'selectedIds emptied on deselect');
-eq(mockState.focusViewIds, null, 'isolate selection automatically exits and shows all areas back on deselect');
+eq(mockState.focusViewIds, null, 'isolate selection automatically shows all areas back on deselect');
+eq(mockState.isolateSelection, true, 'isolateSelection toggle remains enabled across deselect');
 
-// Refocusing with no seeds also resets isolation
+// Refocusing with no seeds also resets isolation while keeping isolateSelection on
 mockState.selectedId = P.areas[1].id;
 mockState.selectedIds = new Set([P.areas[1].id]);
-enterFocusView(mockState);
-ok(mockState.focusViewIds !== null, 'enterFocusView re-activates on second area');
+refocusView(mockState);
+ok(mockState.focusViewIds !== null, 'selecting another area re-activates isolation on new area');
 mockState.selectedId = null;
 mockState.selectedIds = new Set();
 refocusView(mockState);
 eq(mockState.focusViewIds, null, 'refocusView resets focusViewIds when seeds are empty');
+eq(mockState.isolateSelection, true, 'isolateSelection remains true');
+
+// exitFocusView explicitly turns off isolateSelection
+exitFocusView(mockState);
+eq(mockState.isolateSelection, false, 'exitFocusView turns off isolateSelection');
+eq(mockState.focusViewIds, null, 'exitFocusView clears focusViewIds');
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
