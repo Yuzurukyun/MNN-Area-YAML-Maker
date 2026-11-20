@@ -134,14 +134,9 @@
 
 <g>
   <defs>
-    {#each P.areas as a (a.id)}
-      {@const nodeImg = resolveNodeImageUrl(a, bgStoreState)}
-      {#if nodeImg}
-        <clipPath id="clip-{a.id}">
-          <rect x="9" y="9" width="46" height="46" rx="4" />
-        </clipPath>
-      {/if}
-    {/each}
+    <clipPath id="node-img-clip">
+      <rect x="9" y="9" width="46" height="46" rx="4" />
+    </clipPath>
   </defs>
 
   {#if pill && !inFocus}
@@ -202,7 +197,7 @@
               width="46"
               height="46"
               preserveAspectRatio="xMidYMid slice"
-              clip-path="url(#clip-{a.id})"
+              clip-path="url(#node-img-clip)"
             />
             <rect x="9" y="9" width="46" height="46" rx="4" fill="none" stroke="var(--line2)" stroke-width="1" />
           {/if}

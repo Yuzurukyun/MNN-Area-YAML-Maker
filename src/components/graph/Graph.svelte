@@ -98,7 +98,20 @@
 
   $: P = $state.project;
   $: lt = $state.activeLink;
-  $: pairs = M.pairEdges(P, lt);
+  $: areaMap = new Map(P.areas.map((a) => [a.id, a]));
+  $: byId = (id) => areaMap.get(id);
+
+  let pairs = [];
+  let lastP = null;
+  let lastLt = null;
+
+  $: if (P !== lastP || lt !== lastLt) {
+    if (!drag || (drag.kind !== 'node' && drag.kind !== 'group' && drag.kind !== 'image')) {
+      pairs = M.pairEdges(P, lt);
+      lastP = P;
+      lastLt = lt;
+    }
+  }
   $: hubId = P.areas.length ? P.areas[0].id : null;
   $: focusIds = $state.focusViewIds;
   $: inFocus = !!focusIds;
@@ -122,8 +135,8 @@
   );
 
   function ghostPair(se, proj) {
-    const A = proj.areas.find((a) => a.id === se.x);
-    const B = proj.areas.find((a) => a.id === se.y);
+    const A = byId(se.x);
+    const B = byId(se.y);
     return A && B
       ? { x: se.x, y: se.y, xy: false, yx: false, dxy: false, dyx: false, derived: false, allOnly: false, ghost: true }
       : null;
@@ -142,6 +155,22 @@
     (!inFocus || (focusIds.has(selPair.x) && focusIds.has(selPair.y)))
       ? [...shownPairs, selPair]
       : shownPairs;
+
+  $: visibleEdgePairs = showAllMesh
+    ? displayPairs
+    : displayPairs.filter(
+        (p) => !p.allOnly || (inFocus && ($state.selectedId === p.x || $state.selectedId === p.y))
+      );
+
+  $: activeTagPairs = $state.selectedId
+    ? displayPairs.filter(
+        (p) =>
+          (p.x === $state.selectedId || p.y === $state.selectedId) &&
+          !p.derived &&
+          !p.ghost &&
+          (!p.allOnly || showAllMesh || inFocus)
+      )
+    : [];
 
   $: focusOn = $state.focus && !!$state.selectedId;
   $: neighbours = (() => {
@@ -165,7 +194,6 @@
         }
       : null;
   $: dups = M.dupNames(P);
-  $: byId = (id) => P.areas.find((a) => a.id === id);
 
   $: if (selPair) {
     const bounds = wrapEl ? { w: wrapEl.clientWidth, h: wrapEl.clientHeight } : null;
@@ -264,6 +292,10 @@
 
   onDestroy(() => {
     cancelCameraAnim();
+    if (dragRafId) {
+      cancelAnimationFrame(dragRafId);
+      dragRafId = null;
+    }
   });
 
   function easeInOutCubic(t) {
@@ -1126,18 +1158,30 @@
     }
   }
 
-  function onMove(e) {
+  let dragRafId = null;
+  let pendingDragEvent = null;
+
+  function flushPendingDrag() {
+    if (dragRafId) {
+      cancelAnimationFrame(dragRafId);
+      dragRafId = null;
+    }
+    if (pendingDragEvent && drag) {
+      applyDragMove(pendingDragEvent);
+      pendingDragEvent = null;
+    }
+  }
+
+  function applyDragMove(e) {
     if (!drag) return;
     const w = toWorld(e);
-    if (drag.kind === 'pan') {
-      const s = uiScale.value;
-      view = { ...view, x: drag.vx + (e.clientX - drag.sx) / s, y: drag.vy + (e.clientY - drag.sy) / s };
-    } else if (drag.kind === 'node') {
+    if (drag.kind === 'node') {
       const dx = w.x - drag.startW.x;
       const dy = w.y - drag.startW.y;
       update((s) => {
+        const nodeMap = new Map(s.project.areas.map((x) => [x.id, x]));
         Object.entries(drag.starts).forEach(([id, st]) => {
-          const n = s.project.areas.find((x) => x.id === id);
+          const n = nodeMap.get(id);
           if (n) {
             n.x = Math.round(st.x + dx);
             n.y = Math.round(st.y + dy);
@@ -1153,15 +1197,17 @@
         if (drag.mode === 'move') {
           g.x = Math.round(drag.gStart.x + dx);
           g.y = Math.round(drag.gStart.y + dy);
+          const nodeMap = new Map(s.project.areas.map((x) => [x.id, x]));
           Object.entries(drag.starts).forEach(([id, st]) => {
-            const n = s.project.areas.find((x) => x.id === id);
+            const n = nodeMap.get(id);
             if (n) {
               n.x = Math.round(st.x + dx);
               n.y = Math.round(st.y + dy);
             }
           });
+          const imgMap = new Map((s.project.images || []).map((x) => [x.id, x]));
           Object.entries(drag.imgStarts || {}).forEach(([id, st]) => {
-            const im = s.project.images.find((x) => x.id === id);
+            const im = imgMap.get(id);
             if (im) {
               im.x = Math.round(st.x + dx);
               im.y = Math.round(st.y + dy);
@@ -1186,7 +1232,18 @@
           im.h = Math.max(24, Math.round(im.w * (drag.start.h / drag.start.w)));
         }
       });
-    } else if (drag.kind === 'band') {
+    }
+  }
+
+  function onMove(e) {
+    if (!drag) return;
+    if (drag.kind === 'pan') {
+      const s = uiScale.value;
+      view = { ...view, x: drag.vx + (e.clientX - drag.sx) / s, y: drag.vy + (e.clientY - drag.sy) / s };
+      return;
+    }
+    if (drag.kind === 'band') {
+      const w = toWorld(e);
       drag.curW = w;
       band = {
         x: Math.min(w.x, drag.startW.x),
@@ -1194,18 +1251,37 @@
         w: Math.abs(w.x - drag.startW.x),
         h: Math.abs(w.y - drag.startW.y),
       };
-    } else if (drag.kind === 'maybeConnect') {
+      return;
+    }
+    if (drag.kind === 'maybeConnect') {
+      const w = toWorld(e);
       if (Math.hypot(w.x - drag.startW.x, w.y - drag.startW.y) > 6) {
         drag = { kind: 'connect', id: drag.id };
         tempTo = w;
       }
-    } else if (drag.kind === 'connect') {
-      tempTo = w;
+      return;
+    }
+    if (drag.kind === 'connect') {
+      tempTo = toWorld(e);
+      return;
+    }
+
+    pendingDragEvent = e;
+    if (!dragRafId) {
+      dragRafId = requestAnimationFrame(() => {
+        dragRafId = null;
+        if (pendingDragEvent && drag) {
+          const ev = pendingDragEvent;
+          pendingDragEvent = null;
+          applyDragMove(ev);
+        }
+      });
     }
   }
 
   function onUp(e) {
     detachWindowDrag();
+    flushPendingDrag();
     if (!drag) return;
     const d = drag;
     drag = null;
@@ -1396,7 +1472,7 @@
       />
       <ImageLayer images={P.images} {onImageDown} {onImageMenu} />
       <EdgeLayer
-        pairs={displayPairs}
+        pairs={visibleEdgePairs}
         {byId}
         selectedId={$state.selectedId}
         selectedEdge={$state.selectedEdge}
@@ -1432,7 +1508,7 @@
         onNodeEnter={handleNodeEnter}
         onNodeLeave={handleNodeLeave}
       />
-      <TagLayer pairs={displayPairs} {byId} selectedId={$state.selectedId} {showAllMesh} {inFocus} />
+      <TagLayer pairs={activeTagPairs} {byId} selectedId={$state.selectedId} {showAllMesh} {inFocus} />
     </g>
   </svg>
 

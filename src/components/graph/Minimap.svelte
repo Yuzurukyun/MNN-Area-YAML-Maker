@@ -18,11 +18,11 @@
   $: camX = -view.x / view.k;
   $: camY = -view.y / view.k;
 
-  $: bbox = (() => {
-    let minX = camX;
-    let minY = camY;
-    let maxX = camX + camW;
-    let maxY = camY + camH;
+  $: contentBounds = (() => {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
 
     if (areas && areas.length) {
       for (let i = 0; i < areas.length; i++) {
@@ -32,6 +32,11 @@
         if (a.x + NODE_W > maxX) maxX = a.x + NODE_W;
         if (a.y + NODE_H > maxY) maxY = a.y + NODE_H;
       }
+    } else {
+      minX = 0;
+      minY = 0;
+      maxX = 800;
+      maxY = 600;
     }
 
     if (groups && groups.length) {
@@ -44,11 +49,15 @@
       }
     }
 
+    return { minX, minY, maxX, maxY };
+  })();
+
+  $: bbox = (() => {
     const pad = 120;
-    minX -= pad;
-    minY -= pad;
-    maxX += pad;
-    maxY += pad;
+    const minX = Math.min(camX, contentBounds.minX) - pad;
+    const minY = Math.min(camY, contentBounds.minY) - pad;
+    const maxX = Math.max(camX + camW, contentBounds.maxX) + pad;
+    const maxY = Math.max(camY + camH, contentBounds.maxY) + pad;
 
     const w = Math.max(maxX - minX, 100);
     const h = Math.max(maxY - minY, 80);

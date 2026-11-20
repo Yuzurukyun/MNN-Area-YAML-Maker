@@ -136,8 +136,10 @@ let isMakerOpen = false;
 
 // Cached referenced asset information to eliminate expensive repeated scans on every state change
 let _cachedReferencedAssetInfo = null;
+let _cachedAreaBgUrls = new Map();
 function invalidateRefCache() {
   _cachedReferencedAssetInfo = null;
+  _cachedAreaBgUrls.clear();
 }
 
 /**
@@ -1543,6 +1545,10 @@ export function getAreaBgUrl(bgFolder, customStoreState) {
   if (bgFolder.startsWith('data:') || bgFolder.startsWith('blob:') || bgFolder.startsWith('http://') || bgFolder.startsWith('https://')) {
     return bgFolder;
   }
+  const isDefaultStore = !customStoreState;
+  if (isDefaultStore && _cachedAreaBgUrls.has(bgFolder)) {
+    return _cachedAreaBgUrls.get(bgFolder);
+  }
   const currentStore = customStoreState || getStoreState();
   const rawNorm = normalizeBgPath(bgFolder).toLowerCase();
   const rawClean = bgFolder.trim().toLowerCase();
@@ -1676,9 +1682,14 @@ export function getAreaBgUrl(bgFolder, customStoreState) {
     const aBase = aName.replace(/\.[^/.]+$/, '');
     return aName === last || aBase === last || a.relPath?.toLowerCase().endsWith(`/${last}`);
   });
-  if (lastMatch && lastMatch.url) return lastMatch.url;
+  if (lastMatch && lastMatch.url) {
+    if (isDefaultStore) _cachedAreaBgUrls.set(bgFolder, lastMatch.url);
+    return lastMatch.url;
+  }
 
-  return bgStore.getAssetUrl(last, 'image');
+  const res = bgStore.getAssetUrl(last, 'image') || '';
+  if (isDefaultStore) _cachedAreaBgUrls.set(bgFolder, res);
+  return res;
 }
 
 if (typeof window !== 'undefined') {
