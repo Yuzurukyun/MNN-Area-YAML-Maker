@@ -1149,7 +1149,7 @@
       return;
     }
     if (e.button !== 0) return;
-    if (e.target === svgElRef) {
+    if (e.target === svgElRef || e.target === wrapEl) {
       update((s) => (s.selectedEdge = null), { skipHistory: true });
       const w = toWorld(e);
       drag = { kind: 'band', startW: w, curW: w };
@@ -1313,7 +1313,7 @@
           },
           { skipHistory: true },
         );
-      } else if ($state.selectedId || $state.selectedIds.size || $state.selectedEdge) {
+      } else if ($state.selectedId || $state.selectedIds.size || $state.selectedEdge || $state.focusViewIds) {
         selectionGrouped = false;
         update((s) => clearSelection(s), { skipHistory: true });
       }

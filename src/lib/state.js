@@ -273,6 +273,7 @@ export function clearSelection(s) {
   s.selectedId = null;
   s.selectedIds = new Set();
   s.selectedEdge = null;
+  s.focusViewIds = null;
 }
 
 export function enterFocusView(s) {
@@ -288,7 +289,10 @@ export function enterFocusView(s) {
 export function refocusView(s) {
   if (!s.focusViewIds) return;
   const seeds = s.selectedIds.size ? [...s.selectedIds] : s.selectedId ? [s.selectedId] : [];
-  if (!seeds.length) return;
+  if (!seeds.length) {
+    s.focusViewIds = null;
+    return;
+  }
   s.focusViewIds = M.neighbourhoodIds(s.project, seeds, s.activeLink);
 }
 

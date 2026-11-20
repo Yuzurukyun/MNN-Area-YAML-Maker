@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import * as M from '../src/lib/core.js';
 import { edgeEndpoints } from '../src/lib/graphGeom.js';
-import { cameraCommand, centerCameraOn, resetCamera, fitCamera, DEFAULT_SETTINGS } from '../src/lib/state.js';
+import { cameraCommand, centerCameraOn, resetCamera, fitCamera, DEFAULT_SETTINGS, enterFocusView, refocusView, exitFocusView, clearSelection, selectOnly } from '../src/lib/state.js';
 import { findShortestPath, auditMap } from '../src/lib/pathAudit.js';
 import {
   normalizeBgPath,
@@ -1418,6 +1418,36 @@ eq(nodeResolved, hoverResolved, 'node on canvas and hover card resolve identical
 /* ---- View Settings: Show <ALL> Target Pill Toggle ---- */
 eq(DEFAULT_SETTINGS.showAllPill, false, 'showAllPill is off by default in DEFAULT_SETTINGS');
 ok('showAllPill' in DEFAULT_SETTINGS, 'DEFAULT_SETTINGS contains showAllPill setting property');
+
+/* ---- Isolate Selection Auto-Exit on Deselect ---- */
+const mockState = {
+  project: P,
+  selectedId: P.areas[0].id,
+  selectedIds: new Set([P.areas[0].id]),
+  selectedEdge: null,
+  activeLink: 'reachable',
+  focusViewIds: null,
+};
+
+enterFocusView(mockState);
+ok(mockState.focusViewIds !== null, 'enterFocusView activates isolation set');
+ok(mockState.focusViewIds.size > 0, 'isolation set contains hub and its neighbours');
+
+// Deselecting by clearing selection must exit isolation view and show all areas
+clearSelection(mockState);
+eq(mockState.selectedId, null, 'selectedId cleared on deselect');
+eq(mockState.selectedIds.size, 0, 'selectedIds emptied on deselect');
+eq(mockState.focusViewIds, null, 'isolate selection automatically exits and shows all areas back on deselect');
+
+// Refocusing with no seeds also resets isolation
+mockState.selectedId = P.areas[1].id;
+mockState.selectedIds = new Set([P.areas[1].id]);
+enterFocusView(mockState);
+ok(mockState.focusViewIds !== null, 'enterFocusView re-activates on second area');
+mockState.selectedId = null;
+mockState.selectedIds = new Set();
+refocusView(mockState);
+eq(mockState.focusViewIds, null, 'refocusView resets focusViewIds when seeds are empty');
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
