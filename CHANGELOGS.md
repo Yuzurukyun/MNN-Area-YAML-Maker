@@ -903,17 +903,26 @@
 - **Dense Meme Background Detail & Varied Dimensions on Embed Image (`scripts/render-og-image.mjs`, `docs/og-image.png`, `public/og-image.png`, `export/og-image.png`):**
     - Multiplied and densely sprinkled meme stickers across the background (expanded to 32 elements with varied dimensions ranging from 34px to 110px).
     - Positioned memes around empty spaces and edges behind the main cards with Comic Sans MS typography, `// GRAPHIC DESIGN IS MY SHIT` header, and Furude Rika centered prominently on the left.
+- **UI Overflow, Margin & Dropdown Boundary Fixes (`src/components/modals/BackgroundMakerModal.svelte`, `src/components/Header.svelte`, `src/styles/chrome.css`):**
+    - **Builder Column Padding & Scroll Margins:** Added 4-sided breathing padding (`padding: 6px 8px 24px 6px;` and `scroll-padding-top: 12px;`) to `.builder-col`. Elements scrolling inside the builder column now preserve their margins without touching or clipping against the top boundary.
+    - **Slots Grid Margining & Card Padding:** Added `margin: 6px 0 8px 0;` and `gap: 12px;` to `.slots-grid`. Increased `.slot-card` padding to `10px 12px;` with `line-height: 1.4` on `.slot-title`, preventing card headers (`Background Image`, `Foreground`, `Ambience`) and borders from being shaved or clipped.
+    - **Variant Dropdown Inward Alignment:** Changed `.variant-drop-menu` from `left: 0;` to `right: 0; left: auto;`, aligning its right edge with `+ Variant ▾`. The dropdown now opens inward towards the left, staying comfortably within the builder column with 37px of clearance and zero clipping against the monitor column.
+    - **Left Navigator Import Dropdown Inward Alignment:** Changed `.nav-import-drop-menu` from `left: 0;` to `right: 0; left: auto;`, ensuring it stays 100% within the 275px navigator panel.
+    - **Header Menu Stacking Context:** Added `position: relative; z-index: 60;` to `.header-menu-row` in `Header.svelte`, ensuring menu bar dropdowns (`File ▾`, `Edit ▾`, `View ▾`, `Map ▾`, `Tools ▾`) render strictly above `.header-toolbar-row` (`z-index: 50`) and canvas layers without being covered.
+    - **Dropdown Clamping:** Added `max-width: calc(100vw - 24px);` to `.drop-menu` in `chrome.css` to prevent any dropdown menu from extending beyond viewport bounds.
 
 ### Verification
 
 - `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **377 passed, 0 failed** (all unit and integration tests passing, including `background_variant` YAML export/import order rules, empty/default omission, shared state variant pool collection without hardcoded builtins, and unfilled variant omission).
 - `npm run build:both`: Successfully compiled all production distributions with 0 errors:
-    - Singlefile full distribution: `export/yuzu_area_maker.html` (5308 KB).
+    - Singlefile full distribution: `export/yuzu_area_maker.html` (5309 KB).
     - Singlefile no-music distribution: `export/yuzu_area_maker_nomusic.html` (655 KB).
     - GitHub Pages distribution: `docs/index.html` (655 KB).
     - Embed assets: `docs/og-image.png`, `public/og-image.png`, and `export/og-image.png` synchronized.
 - **Headless Chrome Visual Verification:**
-    - Variant Dropdown Menu ([verified_v220_variant_dropdown_fixed.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_variant_dropdown_fixed.png)): Verified custom popup menu cleanly shows `+ New variant…` and `SHARED VARIANT POOL` with actual library variants (`crowded`, `festive`), without any self-item or hardcoded defaults.
+    - Variant Dropdown Alignment ([verified_v220_dropdown_not_clipped.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_dropdown_not_clipped.png)): Confirmed `.variant-drop-menu` opens inward towards the left, remaining 100% within the builder column bounds with 37px clearance and zero clipping.
+    - Slots Grid Margins & Card Padding ([verified_v220_slots_margined.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_slots_margined.png)): Confirmed `.slots-grid` retains clean 12px margin, intact top borders, and generous card header padding even when scrolled.
+    - Header Menu Stacking ([verified_v220_file_menu_above_toolbar.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_file_menu_above_toolbar.png)): Confirmed menu bar dropdowns render strictly above the permanent toolbar with clean drop shadows and no occlusion.
     - Repository Mouse Wheel Scrolling: Verified `onRepoWheel` translates vertical wheel delta to horizontal scroll (`initialScroll: 0, afterScroll: 200, scrolled: true`).
     - Inspector Basics Layout ([verified_v220_inspector_variant.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_inspector_variant.png)): Verified `BACKGROUND_VARIANT` field with text input (placeholder `default (omitted)`) and `Variants ▾` dropdown situated directly before `BACKGROUND_TOD`.
     - Live Stage Monitor & State Variants ([verified_v220_bg_maker_animate_toggle.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_bg_maker_animate_toggle.png)): Verified `Animate Preview` toggle button between `LIVE STAGE MONITOR` and `LIVE` badge, repository static first-frame rendering, and zero modal lag.

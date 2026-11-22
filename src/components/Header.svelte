@@ -797,6 +797,8 @@
     min-height: 28px;
     width: 100%;
     align-self: stretch;
+    position: relative;
+    z-index: 60;
   }
 
   .header-brand-nav {

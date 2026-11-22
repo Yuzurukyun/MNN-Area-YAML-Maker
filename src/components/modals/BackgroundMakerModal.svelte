@@ -5048,10 +5048,12 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
     overflow-y: auto;
-    padding-right: 4px;
+    padding: 6px 8px 24px 6px;
     min-width: 0;
+    scroll-padding-top: 12px;
+    scroll-padding-bottom: 24px;
   }
 
   .view-tabs {
@@ -5188,17 +5190,19 @@
   .slots-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 10px;
+    gap: 12px;
+    margin: 6px 0 8px 0;
   }
 
   .slot-card {
     background: var(--panel2);
     border: 1px dashed var(--line2);
     border-radius: var(--radius);
-    padding: 8px 10px;
+    padding: 10px 12px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
+    min-height: 148px;
     transition: border-color 0.12s ease;
   }
   .slot-card:hover {
@@ -5254,7 +5258,8 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    min-height: 28px;
+    min-height: 30px;
+    margin-bottom: 2px;
   }
 
   .slot-title-group {
@@ -5270,10 +5275,11 @@
     font-weight: 700;
     color: var(--text-strong);
     letter-spacing: 0.01em;
-    line-height: 1.25;
+    line-height: 1.4;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    padding: 1px 0;
   }
 
   .slot-desc {
@@ -5412,14 +5418,16 @@
     white-space: nowrap;
   }
   .nav-import-drop-menu {
-    left: 0;
-    right: auto;
-    width: 250px;
+    right: 0;
+    left: auto;
+    width: 240px;
+    max-width: calc(100vw - 30px);
     padding: 6px;
     display: flex;
     flex-direction: column;
     gap: 2px;
     z-index: 1000;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.4);
   }
   .menu-header-tag {
     font-size: 9.5px;
@@ -7027,12 +7035,14 @@
     box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
   }
   .variant-drop-menu {
-    left: 0;
-    top: calc(100% + 4px);
-    min-width: 170px;
+    right: 0;
+    left: auto;
+    top: calc(100% + 5px);
+    min-width: 180px;
     max-width: 260px;
     max-height: 280px;
     overflow-y: auto;
     z-index: 1000;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.4);
   }
 </style>
