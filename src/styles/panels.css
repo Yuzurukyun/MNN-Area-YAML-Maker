@@ -285,6 +285,51 @@ main {
   font-weight: 700;
 }
 
+.inspector-variant-drop-menu {
+  right: 0;
+  left: auto;
+  top: calc(100% + 4px);
+  min-width: 175px;
+  max-width: 240px;
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 100;
+}
+.inspector-variant-drop-menu .menu-header-tag {
+  padding: 5px 8px 3px;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: var(--dim);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 3px;
+}
+.inspector-variant-drop-menu button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  padding: 5px 8px;
+  font-size: 11px;
+  font-family: var(--mono);
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+.inspector-variant-drop-menu button:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text-strong);
+}
+.inspector-variant-drop-menu button.active-variant {
+  background: var(--sel);
+  color: var(--accent);
+  font-weight: 700;
+}
+
 .preview-toggle-btn {
   background: transparent;
   border: none;

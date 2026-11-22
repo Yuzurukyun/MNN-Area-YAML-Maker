@@ -8,6 +8,7 @@
   let editingId = null;
   let newName = '';
   let fileTplImport;
+  let prefixMenuOpen = false;
 
   $: P = $state.project;
   $: all = M.allTemplates(P);
@@ -160,7 +161,19 @@
   let scrimMouseDownTarget = null;
 </script>
 
-<svelte:window on:keydown={(e) => e.key === 'Escape' && dispatch('close')} />
+<svelte:window
+  on:click={() => (prefixMenuOpen = false)}
+  on:keydown={(e) => {
+    if (e.key === 'Escape') {
+      if (prefixMenuOpen) {
+        prefixMenuOpen = false;
+        e.stopPropagation();
+      } else {
+        dispatch('close');
+      }
+    }
+  }}
+/>
 
 <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 <div
@@ -207,19 +220,41 @@
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
           <span style="font-size:12px;font-weight:700">Background Folder Prefix / Pattern</span>
           {#if knownPrefixes.length > 0}
-            <select
-              style="font-size:11px;padding:1px 4px;background:var(--input-bg);color:var(--dim);border:1px solid var(--line);border-radius:var(--radius);cursor:pointer"
-              title="Pick an existing series folder prefix"
-              on:change={(e) => {
-                if (e.target.value) setBgPrefix(editing, e.target.value);
-                e.target.value = '';
-              }}
-            >
-              <option value="">▾ Pick known prefix ({knownPrefixes.length})</option>
-              {#each knownPrefixes as p}
-                <option value={p}>{p}</option>
-              {/each}
-            </select>
+            <span class="toolbar-dropdown-anchor" style="position:relative;display:inline-block">
+              <button
+                type="button"
+                class="mini-btn"
+                style="font-size:11px;padding:2px 6px;cursor:pointer"
+                title="Pick an existing series folder prefix"
+                on:click|stopPropagation={() => (prefixMenuOpen = !prefixMenuOpen)}
+              >
+                ▾ Pick known prefix ({knownPrefixes.length})
+              </button>
+              {#if prefixMenuOpen}
+                <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+                <div
+                  class="drop-menu prefix-drop-menu"
+                  style="right:0;left:auto;top:calc(100% + 4px);min-width:180px;max-width:280px;max-height:200px;overflow-y:auto;z-index:100"
+                  on:pointerdown|stopPropagation
+                  on:click|stopPropagation
+                >
+                  <div class="menu-header-tag" style="padding:4px 8px;font-size:9.5px;color:var(--dim);font-weight:bold;border-bottom:1px solid var(--line)">KNOWN PREFIXES</div>
+                  {#each knownPrefixes as p}
+                    <button
+                      type="button"
+                      style="display:flex;align-items:center;padding:5px 8px;font-size:11px;text-align:left;width:100%;background:transparent;border:none;color:var(--text);border-radius:3px;cursor:pointer"
+                      title="Set prefix pattern to '{p}'"
+                      on:click={() => {
+                        prefixMenuOpen = false;
+                        setBgPrefix(editing, p);
+                      }}
+                    >
+                      {p}
+                    </button>
+                  {/each}
+                </div>
+              {/if}
+            </span>
           {/if}
         </div>
         <input

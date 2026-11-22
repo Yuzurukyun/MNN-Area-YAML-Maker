@@ -19,6 +19,7 @@
   let armDelete = false;
   let armFor = null;
   let showBgPicker = false;
+  let variantMenuOpen = false;
   $: imageDisplayMode = a?.imageMode || (a?.image ? 'node' : (currentBgUrl ? 'scene' : 'node'));
 
   function setImageMode(mode) {
@@ -37,6 +38,7 @@
   $: if (armFor !== $state.selectedId) {
     armFor = $state.selectedId;
     armDelete = false;
+    variantMenuOpen = false;
   }
 
   $: P = $state.project;
@@ -198,6 +200,8 @@
     reader.readAsDataURL(f);
   }
 </script>
+
+<svelte:window on:click={() => (variantMenuOpen = false)} on:keydown={(e) => { if (e.key === 'Escape') variantMenuOpen = false; }} />
 
 {#if a}
   <div class="insp-head">
@@ -402,35 +406,68 @@
                 on:input={inputStr('background_variant')}
                 on:change={trimStr('background_variant')}
               />
-              <select
-                class="mini-btn"
-                style="width:auto;max-width:130px;padding:4px 6px;font-size:11px"
-                title="Pick an existing state variant from library"
-                disabled={sharedStateVariants.length === 0 && !a.background_variant}
-                on:change={(e) => {
-                  const val = e.target.value;
-                  if (val === '__clear__') {
-                    update((s) => {
-                      const cur = s.project.areas.find((x) => x.id === a.id);
-                      if (cur) cur.background_variant = '';
-                    });
-                  } else if (val) {
-                    update((s) => {
-                      const cur = s.project.areas.find((x) => x.id === a.id);
-                      if (cur) cur.background_variant = val;
-                    });
-                  }
-                  e.target.value = '';
-                }}
-              >
-                <option value="">{sharedStateVariants.length === 0 ? 'No variants' : 'Variants ▾'}</option>
-                {#if a.background_variant}
-                  <option value="__clear__">(Clear / default)</option>
+              <span class="toolbar-dropdown-anchor" style="position:relative;display:inline-block">
+                <button
+                  type="button"
+                  class="mini-btn insp-variant-picker-btn"
+                  style="width:auto;padding:4px 8px;font-size:11px;display:inline-flex;align-items:center;gap:4px"
+                  title="Pick an existing state variant from library"
+                  disabled={sharedStateVariants.length === 0 && !a.background_variant}
+                  on:click|stopPropagation={() => (variantMenuOpen = !variantMenuOpen)}
+                >
+                  Variants ▾
+                </button>
+                {#if variantMenuOpen}
+                  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+                  <div
+                    class="drop-menu inspector-variant-drop-menu"
+                    on:pointerdown|stopPropagation
+                    on:click|stopPropagation
+                  >
+                    {#if a.background_variant}
+                      <button
+                        type="button"
+                        class="clear-variant-btn"
+                        title="Clear variant and use server default"
+                        on:click={() => {
+                          variantMenuOpen = false;
+                          update((s) => {
+                            const cur = s.project.areas.find((x) => x.id === a.id);
+                            if (cur) cur.background_variant = '';
+                          });
+                        }}
+                      >
+                        <span style="color:var(--dim);font-size:11px">(Clear / default)</span>
+                      </button>
+                    {/if}
+                    {#if sharedStateVariants.length > 0}
+                      <div class="menu-header-tag">SHARED VARIANT POOL</div>
+                      {#each sharedStateVariants as v}
+                        <button
+                          type="button"
+                          class="variant-item-btn {a.background_variant === v ? 'active-variant' : ''}"
+                          title="Set variant to '{v}'"
+                          on:click={() => {
+                            variantMenuOpen = false;
+                            update((s) => {
+                              const cur = s.project.areas.find((x) => x.id === a.id);
+                              if (cur) cur.background_variant = v;
+                            });
+                          }}
+                        >
+                          <span class="bullet" style="color:var(--accent);font-size:10px;margin-right:6px">●</span>
+                          <span class="name" style="flex:1;text-align:left">{v}</span>
+                          {#if a.background_variant === v}
+                            <span class="check" style="margin-left:auto;color:var(--accent);font-weight:bold">✓</span>
+                          {/if}
+                        </button>
+                      {/each}
+                    {:else}
+                      <div class="drop-hint" style="padding:6px 10px;font-size:11px;color:var(--dim)">No state variants in library</div>
+                    {/if}
+                  </div>
                 {/if}
-                {#each sharedStateVariants as v}
-                  <option value={v}>{v}</option>
-                {/each}
-              </select>
+              </span>
             </div>
           </Field>
         {/if}

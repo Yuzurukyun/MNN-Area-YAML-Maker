@@ -72,6 +72,8 @@
   let importMenuOpen = false;
   let navImportMenuOpen = false;
   let variantMenuOpen = false;
+  let subfolderMenuOpen = false;
+  let slotPickerMenu = null; // 'bg' | 'fg' | 'amb' | null
 
   // Importing loading state
   let isImporting = false;
@@ -2264,7 +2266,7 @@
 </script>
 
 <svelte:window
-  on:click={() => { libraryMenuOpen = false; tplMenuOpen = false; purgeMenuOpen = false; importMenuOpen = false; navImportMenuOpen = false; variantMenuOpen = false; closeContextMenu(); }}
+  on:click={() => { libraryMenuOpen = false; tplMenuOpen = false; purgeMenuOpen = false; importMenuOpen = false; navImportMenuOpen = false; variantMenuOpen = false; subfolderMenuOpen = false; slotPickerMenu = null; closeContextMenu(); }}
   on:keydown={(e) => {
     if (e.key === 'Escape') {
       if (bgContextMenu) { closeContextMenu(); e.stopPropagation(); }
@@ -2281,6 +2283,8 @@
       else if (purgeMenuOpen) { purgeMenuOpen = false; e.stopPropagation(); }
       else if (importMenuOpen || navImportMenuOpen) { importMenuOpen = false; navImportMenuOpen = false; e.stopPropagation(); }
       else if (variantMenuOpen) { variantMenuOpen = false; e.stopPropagation(); }
+      else if (subfolderMenuOpen) { subfolderMenuOpen = false; e.stopPropagation(); }
+      else if (slotPickerMenu) { slotPickerMenu = null; e.stopPropagation(); }
     }
   }}
 />
@@ -2550,22 +2554,40 @@
             on:blur={onPathBlur}
           />
           {#if knownSubfolders.length > 0}
-            <select
-              class="subfolder-dropdown"
-              title="Shortcut: Pick an existing directory path"
-              on:change={(e) => {
-                if (e.target.value !== '') {
-                  onSubfolderChange(e.target.value);
-                  onPathBlur();
-                }
-                e.target.value = '';
-              }}
-            >
-              <option value="">▾ Folders ({knownSubfolders.length})</option>
-              {#each knownSubfolders as sub}
-                <option value={sub}>{sub}/</option>
-              {/each}
-            </select>
+            <span class="toolbar-dropdown-anchor" style="position:relative;display:inline-block">
+              <button
+                type="button"
+                class="subfolder-dropdown-btn"
+                title="Shortcut: Pick an existing directory path"
+                on:click|stopPropagation={() => (subfolderMenuOpen = !subfolderMenuOpen)}
+              >
+                ▾ Folders ({knownSubfolders.length})
+              </button>
+              {#if subfolderMenuOpen}
+                <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+                <div class="drop-menu subfolder-drop-menu" on:pointerdown|stopPropagation on:click|stopPropagation>
+                  <div class="menu-header-tag">EXISTING DIRECTORIES</div>
+                  {#each knownSubfolders as sub}
+                    <button
+                      type="button"
+                      class="subfolder-item-btn {activeSubfolder === sub ? 'active-subfolder' : ''}"
+                      title="Set directory path to '{sub}/'"
+                      on:click={() => {
+                        subfolderMenuOpen = false;
+                        onSubfolderChange(sub);
+                        onPathBlur();
+                      }}
+                    >
+                      <Icon name="folder" />
+                      <span class="subfolder-name">{sub}/</span>
+                      {#if activeSubfolder === sub}
+                        <span class="subfolder-check">✓</span>
+                      {/if}
+                    </button>
+                  {/each}
+                </div>
+              {/if}
+            </span>
           {/if}
         </div>
 
@@ -2885,21 +2907,35 @@
                     <button class="icon-btn" title="Clear image" on:click|stopPropagation={() => assignSlotAsset('background', '')}>✕</button>
                   </div>
                 {:else if availableImages.length > 0}
-                  <select
-                    class="mini-slot-picker"
-                    title="Quick pick from imported images"
-                    on:change={(e) => {
-                      if (e.target.value) {
-                        assignSlotAsset('background', e.target.value);
-                        e.target.value = '';
-                      }
-                    }}
-                  >
-                    <option value="">▾ Pick image…</option>
-                    {#each availableImages as a}
-                      <option value={a.relPath || a.name}>{a.relPath || a.name}</option>
-                    {/each}
-                  </select>
+                  <span class="toolbar-dropdown-anchor" style="position:relative;display:inline-block">
+                    <button
+                      type="button"
+                      class="mini-slot-picker-btn"
+                      title="Quick pick from imported images"
+                      on:click|stopPropagation={() => (slotPickerMenu = slotPickerMenu === 'bg' ? null : 'bg')}
+                    >
+                      ▾ Pick image…
+                    </button>
+                    {#if slotPickerMenu === 'bg'}
+                      <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+                      <div class="drop-menu mini-slot-drop-menu" on:pointerdown|stopPropagation on:click|stopPropagation>
+                        <div class="menu-header-tag">AVAILABLE BACKDROPS</div>
+                        {#each availableImages as a}
+                          {@const val = a.relPath || a.name}
+                          <button
+                            type="button"
+                            title="Assign '{val}' to scene backdrop"
+                            on:click={() => {
+                              slotPickerMenu = null;
+                              assignSlotAsset('background', val);
+                            }}
+                          >
+                            <span class="slot-asset-name">{val}</span>
+                          </button>
+                        {/each}
+                      </div>
+                    {/if}
+                  </span>
                 {/if}
               </div>
 
@@ -2965,21 +3001,35 @@
                     <button class="icon-btn" title="Clear overlay" on:click|stopPropagation={() => assignSlotAsset('foreground', '')}>✕</button>
                   </div>
                 {:else if availableImages.length > 0}
-                  <select
-                    class="mini-slot-picker"
-                    title="Quick pick from imported overlay images"
-                    on:change={(e) => {
-                      if (e.target.value) {
-                        assignSlotAsset('foreground', e.target.value);
-                        e.target.value = '';
-                      }
-                    }}
-                  >
-                    <option value="">▾ Pick overlay…</option>
-                    {#each availableImages as a}
-                      <option value={a.relPath || a.name}>{a.relPath || a.name}</option>
-                    {/each}
-                  </select>
+                  <span class="toolbar-dropdown-anchor" style="position:relative;display:inline-block">
+                    <button
+                      type="button"
+                      class="mini-slot-picker-btn"
+                      title="Quick pick from imported overlay images"
+                      on:click|stopPropagation={() => (slotPickerMenu = slotPickerMenu === 'fg' ? null : 'fg')}
+                    >
+                      ▾ Pick overlay…
+                    </button>
+                    {#if slotPickerMenu === 'fg'}
+                      <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+                      <div class="drop-menu mini-slot-drop-menu" on:pointerdown|stopPropagation on:click|stopPropagation>
+                        <div class="menu-header-tag">AVAILABLE OVERLAYS</div>
+                        {#each availableImages as a}
+                          {@const val = a.relPath || a.name}
+                          <button
+                            type="button"
+                            title="Assign '{val}' to foreground overlay"
+                            on:click={() => {
+                              slotPickerMenu = null;
+                              assignSlotAsset('foreground', val);
+                            }}
+                          >
+                            <span class="slot-asset-name">{val}</span>
+                          </button>
+                        {/each}
+                      </div>
+                    {/if}
+                  </span>
                 {/if}
               </div>
 
@@ -3045,21 +3095,35 @@
                     <button class="icon-btn" title="Clear sound" on:click|stopPropagation={() => assignSlotAsset('ambience', '')}>✕</button>
                   </div>
                 {:else if availableAudios.length > 0}
-                  <select
-                    class="mini-slot-picker"
-                    title="Quick pick from imported audio"
-                    on:change={(e) => {
-                      if (e.target.value) {
-                        assignSlotAsset('ambience', e.target.value);
-                        e.target.value = '';
-                      }
-                    }}
-                  >
-                    <option value="">▾ Pick audio…</option>
-                    {#each availableAudios as a}
-                      <option value={a.relPath || a.name}>{a.relPath || a.name}</option>
-                    {/each}
-                  </select>
+                  <span class="toolbar-dropdown-anchor" style="position:relative;display:inline-block">
+                    <button
+                      type="button"
+                      class="mini-slot-picker-btn"
+                      title="Quick pick from imported audio"
+                      on:click|stopPropagation={() => (slotPickerMenu = slotPickerMenu === 'amb' ? null : 'amb')}
+                    >
+                      ▾ Pick audio…
+                    </button>
+                    {#if slotPickerMenu === 'amb'}
+                      <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+                      <div class="drop-menu mini-slot-drop-menu" on:pointerdown|stopPropagation on:click|stopPropagation>
+                        <div class="menu-header-tag">AVAILABLE AMBIENCE</div>
+                        {#each availableAudios as a}
+                          {@const val = a.relPath || a.name}
+                          <button
+                            type="button"
+                            title="Assign '{val}' to ambience sound"
+                            on:click={() => {
+                              slotPickerMenu = null;
+                              assignSlotAsset('ambience', val);
+                            }}
+                          >
+                            <span class="slot-asset-name">{val}</span>
+                          </button>
+                        {/each}
+                      </div>
+                    {/if}
+                  </span>
                 {/if}
               </div>
 
@@ -4539,7 +4603,7 @@
     text-overflow: ellipsis;
   }
 
-  .subfolder-dropdown {
+  .subfolder-dropdown-btn {
     background: var(--panel2);
     border: 1px solid var(--line2);
     border-radius: 3px;
@@ -4551,12 +4615,51 @@
     padding: 3px 8px;
     cursor: pointer;
     flex-shrink: 0;
-    max-width: 140px;
+    white-space: nowrap;
     transition: border-color 0.12s ease, color 0.12s ease;
   }
-  .subfolder-dropdown:hover {
+  .subfolder-dropdown-btn:hover {
     border-color: var(--accent);
     color: var(--accent);
+  }
+  .subfolder-drop-menu {
+    left: 0;
+    right: auto;
+    top: calc(100% + 4px);
+    min-width: 220px;
+    max-width: 320px;
+    max-height: 240px;
+    overflow-y: auto;
+    z-index: 100;
+  }
+  .subfolder-item-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 5px 8px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    text-align: left;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    cursor: pointer;
+    border-radius: 3px;
+  }
+  .subfolder-item-btn:hover {
+    background: var(--hover);
+    color: var(--text-strong);
+  }
+  .subfolder-item-btn.active-subfolder {
+    background: var(--sel);
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .subfolder-check {
+    margin-left: auto;
+    color: var(--accent);
+    font-weight: bold;
   }
 
   .input-dup-warning {
@@ -5221,21 +5324,56 @@
     background: rgba(239, 68, 68, 0.15) !important;
     cursor: not-allowed !important;
   }
-  .mini-slot-picker {
+  .mini-slot-picker-btn {
     background: var(--input-bg);
     border: 1px solid var(--line);
     border-radius: var(--radius);
     color: var(--dim);
     font-size: 9.5px;
-    padding: 2px 4px;
-    max-width: 105px;
+    padding: 2px 6px;
     cursor: pointer;
     outline: none;
     transition: border-color 0.1s ease, color 0.1s ease;
   }
-  .mini-slot-picker:hover {
+  .mini-slot-picker-btn:hover {
     border-color: var(--accent);
+    color: var(--text-strong);
+  }
+  .mini-slot-drop-menu {
+    right: 0;
+    left: auto;
+    top: calc(100% + 4px);
+    min-width: 180px;
+    max-width: 260px;
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 100;
+  }
+  .mini-slot-drop-menu button {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 5px 8px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    text-align: left;
+    background: transparent;
+    border: none;
     color: var(--text);
+    cursor: pointer;
+    border-radius: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mini-slot-drop-menu button:hover {
+    background: var(--hover);
+    color: var(--text-strong);
+  }
+  .slot-asset-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .mslot-clear-btn {
     background: none;

@@ -910,22 +910,42 @@
     - **Left Navigator Import Dropdown Inward Alignment:** Changed `.nav-import-drop-menu` from `left: 0;` to `right: 0; left: auto;`, ensuring it stays 100% within the 275px navigator panel.
     - **Header Menu Stacking Context:** Added `position: relative; z-index: 60;` to `.header-menu-row` in `Header.svelte`, ensuring menu bar dropdowns (`File ▾`, `Edit ▾`, `View ▾`, `Map ▾`, `Tools ▾`) render strictly above `.header-toolbar-row` (`z-index: 50`) and canvas layers without being covered.
     - **Dropdown Clamping:** Added `max-width: calc(100vw - 24px);` to `.drop-menu` in `chrome.css` to prevent any dropdown menu from extending beyond viewport bounds.
+- **Area Inspector Custom Variant Dropdown (`src/components/panels/Inspector.svelte`, `src/styles/panels.css`):**
+    - Replaced native `<select>` with custom terminal popup menu (`.toolbar-dropdown-anchor` + `.drop-menu.inspector-variant-drop-menu`).
+    - Completely eliminated the dummy `Variants ▾` self-option from the dropdown list.
+    - Displays `(Clear / default)` option if an area variant is currently assigned, followed by `SHARED VARIANT POOL` with active dot indicators (`●`), variant names, and active checkmarks (`✓`).
+    - Bound to `right: 0; left: auto; top: calc(100% + 4px);` with `z-index: 100` and `max-height: 250px; overflow-y: auto;`, preventing horizontal clipping against the Inspector's right panel boundary.
+    - Added click-outside and Escape key dismissal.
+- **Directory Path Subfolder Dropdown Refactor (`src/components/modals/BackgroundMakerModal.svelte`):**
+    - Replaced native `<select class="subfolder-dropdown">` with custom `.subfolder-dropdown-btn` + `.drop-menu.subfolder-drop-menu`.
+    - Eliminated the dummy `▾ Folders (N)` self-item from the directory menu.
+    - Lists existing series folder paths with folder icons, paths (`<path>/`), active checkmarks, and hover states.
+- **Slot Card Asset Quick Pickers Refactor (`src/components/modals/BackgroundMakerModal.svelte`):**
+    - Replaced native `<select class="mini-slot-picker">` across Background, Foreground, and Ambience slot headers with custom dropdown buttons (`.mini-slot-picker-btn`) and popup menus (`.mini-slot-drop-menu`).
+    - Eliminated dummy options (`▾ Pick image…`, `▾ Pick overlay…`, `▾ Pick audio…`) from the asset choice lists.
+    - Cleanly lists available backdrops, overlays, and ambience tracks with proper scrolling and text truncation.
+- **Templates Modal Prefix Picker Refactor (`src/components/modals/TemplatesModal.svelte`):**
+    - Replaced native `<select>` prefix picker with custom button and popup `.prefix-drop-menu`, eliminating `▾ Pick known prefix (N)` from the choices list.
+- **Comprehensive Dropdown & Popover Audit Across Entire Codebase:**
+    - Audited every `<select>` and `.drop-menu` across Header, GraphToolbar, AreaList, Inspector, LinkEditor, BackgroundMakerModal, and TemplatesModal.
+    - Confirmed zero pseudo-select action buttons remain in the project; all dropdowns use styled, bounded popup menus with inward alignment, proper z-indexes, and no self-referential menu items.
 
 ### Verification
 
 - `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **377 passed, 0 failed** (all unit and integration tests passing, including `background_variant` YAML export/import order rules, empty/default omission, shared state variant pool collection without hardcoded builtins, and unfilled variant omission).
 - `npm run build:both`: Successfully compiled all production distributions with 0 errors:
-    - Singlefile full distribution: `export/yuzu_area_maker.html` (5309 KB).
-    - Singlefile no-music distribution: `export/yuzu_area_maker_nomusic.html` (655 KB).
-    - GitHub Pages distribution: `docs/index.html` (655 KB).
+    - Singlefile full distribution: `export/yuzu_area_maker.html` (5315 KB).
+    - Singlefile no-music distribution: `export/yuzu_area_maker_nomusic.html` (662 KB).
+    - GitHub Pages distribution: `docs/index.html` (662 KB).
     - Embed assets: `docs/og-image.png`, `public/og-image.png`, and `export/og-image.png` synchronized.
 - **Headless Chrome Visual Verification:**
+    - Inspector Variant Dropdown ([verified_v220_inspector_variant_custom_dropdown.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_inspector_variant_custom_dropdown.png)): Confirmed Area Inspector variant dropdown opens cleanly without self-item, listing shared pool variants with active checkmarks and inward boundary alignment.
+    - Subfolder Custom Dropdown ([verified_v220_subfolder_custom_dropdown.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_subfolder_custom_dropdown.png)): Confirmed directory path dropdown displays custom styled directory list with folder icons without self-item.
+    - Background Maker Layout & Slots ([verified_v220_bg_maker_all_dropdowns.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_bg_maker_all_dropdowns.png)): Confirmed slots grid margins, card headers, and stage monitor Animate Preview toggle render cleanly.
     - Variant Dropdown Alignment ([verified_v220_dropdown_not_clipped.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_dropdown_not_clipped.png)): Confirmed `.variant-drop-menu` opens inward towards the left, remaining 100% within the builder column bounds with 37px clearance and zero clipping.
     - Slots Grid Margins & Card Padding ([verified_v220_slots_margined.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_slots_margined.png)): Confirmed `.slots-grid` retains clean 12px margin, intact top borders, and generous card header padding even when scrolled.
     - Header Menu Stacking ([verified_v220_file_menu_above_toolbar.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_file_menu_above_toolbar.png)): Confirmed menu bar dropdowns render strictly above the permanent toolbar with clean drop shadows and no occlusion.
     - Repository Mouse Wheel Scrolling: Verified `onRepoWheel` translates vertical wheel delta to horizontal scroll (`initialScroll: 0, afterScroll: 200, scrolled: true`).
-    - Inspector Basics Layout ([verified_v220_inspector_variant.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_inspector_variant.png)): Verified `BACKGROUND_VARIANT` field with text input (placeholder `default (omitted)`) and `Variants ▾` dropdown situated directly before `BACKGROUND_TOD`.
-    - Live Stage Monitor & State Variants ([verified_v220_bg_maker_animate_toggle.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_bg_maker_animate_toggle.png)): Verified `Animate Preview` toggle button between `LIVE STAGE MONITOR` and `LIVE` badge, repository static first-frame rendering, and zero modal lag.
     - OG Embed Image ([verified_rika_meme_og_image.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_rika_meme_og_image.png)): Verified dense sticker layout with varied sizes, Comic Sans typography, centered Rika sprite, and `// GRAPHIC DESIGN IS MY SHIT` header.
 - Music player internals verified completely untouched.
 
