@@ -365,22 +365,43 @@ export const bgStore = {
   },
 
   /**
-   * Returns a sorted list of unique state variant names used across all library backgrounds.
+   * Returns a sorted list of unique state variant names used across library backgrounds.
+   * Only gathers variant names that actually exist on backgrounds in the list (plus any extra area variants).
    * State variants are shared across backgrounds, opt-in per background.
    */
-  getSharedStateVariantNames(extraVariants = []) {
-    const BUILTIN_STATES = ['crowded', 'empty', 'night', 'dim', 'rainy', 'damaged', 'festive', 'ruined', 'clean'];
-    const set = new Set(BUILTIN_STATES);
-    for (const bg of backgrounds) {
+  getSharedStateVariantNames(bgListOrExtra = null, extraVariants = []) {
+    let list = backgrounds;
+    let extras = [];
+    if (Array.isArray(bgListOrExtra)) {
+      if (arguments.length >= 2) {
+        list = bgListOrExtra;
+        extras = Array.isArray(extraVariants) ? extraVariants : [];
+      } else if (bgListOrExtra.length > 0 && typeof bgListOrExtra[0] === 'object' && bgListOrExtra[0] !== null && 'states' in bgListOrExtra[0]) {
+        list = bgListOrExtra;
+      } else {
+        extras = bgListOrExtra;
+      }
+    } else if (Array.isArray(extraVariants)) {
+      extras = extraVariants;
+    }
+
+    const set = new Set();
+    for (const bg of list || []) {
       if (bg && bg.states && typeof bg.states === 'object') {
         for (const k of Object.keys(bg.states)) {
-          if (k && k !== 'default') set.add(k);
+          const trimmed = (k || '').trim();
+          if (trimmed && trimmed.toLowerCase() !== 'default') {
+            set.add(trimmed);
+          }
         }
       }
     }
-    if (Array.isArray(extraVariants)) {
-      for (const v of extraVariants) {
-        if (v && v !== 'default') set.add(v);
+    if (Array.isArray(extras)) {
+      for (const v of extras) {
+        const trimmed = (v || '').trim();
+        if (trimmed && trimmed.toLowerCase() !== 'default') {
+          set.add(trimmed);
+        }
       }
     }
     return Array.from(set).sort();

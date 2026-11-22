@@ -71,6 +71,7 @@
 
   let importMenuOpen = false;
   let navImportMenuOpen = false;
+  let variantMenuOpen = false;
 
   // Importing loading state
   let isImporting = false;
@@ -1285,13 +1286,23 @@
     }, { invalidateAssets });
   }
 
-  $: sharedStateVariants = bgStore.getSharedStateVariantNames($state?.project?.areas?.map((x) => x.background_variant) || []);
+  let assetsStripEl;
+  function onRepoWheel(e) {
+    if (!assetsStripEl || poolCollapsed) return;
+    const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    if (delta !== 0) {
+      e.preventDefault();
+      assetsStripEl.scrollLeft += delta;
+    }
+  }
+
+  $: sharedStateVariants = bgStore.getSharedStateVariantNames(backgrounds, $state?.project?.areas?.map((x) => x.background_variant) || []);
   $: unassignedSharedVariants = sharedStateVariants.filter((v) => !activeBg?.states?.[v]);
 
   // State variant actions
   function openAddStateModal(prefillState = '') {
     const existing = new Set(Object.keys(activeBg?.states || {}).map((k) => k.toLowerCase()));
-    const sharedPool = bgStore.getSharedStateVariantNames();
+    const sharedPool = bgStore.getSharedStateVariantNames(backgrounds);
     newStateName = prefillState || sharedPool.find((c) => !existing.has(c.toLowerCase())) || '';
     stateCopySource = 'blank'; // Default to blank empty slots per spec
     showAddStateModal = true;
@@ -2253,7 +2264,7 @@
 </script>
 
 <svelte:window
-  on:click={() => { libraryMenuOpen = false; tplMenuOpen = false; purgeMenuOpen = false; importMenuOpen = false; navImportMenuOpen = false; closeContextMenu(); }}
+  on:click={() => { libraryMenuOpen = false; tplMenuOpen = false; purgeMenuOpen = false; importMenuOpen = false; navImportMenuOpen = false; variantMenuOpen = false; closeContextMenu(); }}
   on:keydown={(e) => {
     if (e.key === 'Escape') {
       if (bgContextMenu) { closeContextMenu(); e.stopPropagation(); }
@@ -2269,6 +2280,7 @@
       else if (showManageTemplatesModal) { showManageTemplatesModal = false; e.stopPropagation(); }
       else if (purgeMenuOpen) { purgeMenuOpen = false; e.stopPropagation(); }
       else if (importMenuOpen || navImportMenuOpen) { importMenuOpen = false; navImportMenuOpen = false; e.stopPropagation(); }
+      else if (variantMenuOpen) { variantMenuOpen = false; e.stopPropagation(); }
     }
   }}
 />
@@ -2761,31 +2773,44 @@
                     {stKey}{stKey === 'default' ? ' ★' : ''}
                   </button>
                 {/each}
-                <div class="add-variant-group">
-                  <select
-                    class="mini-btn add-btn variant-pool-select"
-                    title="Add state variant from shared pool or create new"
-                    on:change={(e) => {
-                      const val = e.target.value;
-                      if (val === '__new__') {
-                        openAddStateModal();
-                      } else if (val) {
-                        addVariantFromPool(val);
-                      }
-                      e.target.value = '';
-                    }}
+                <span class="toolbar-dropdown-anchor">
+                  <button
+                    class="mini-btn add-btn"
+                    title="Add alternative state variant (from shared pool or new)"
+                    on:click|stopPropagation={() => (variantMenuOpen = !variantMenuOpen)}
                   >
-                    <option value="">+ Variant ▾</option>
-                    <option value="__new__">+ New variant…</option>
-                    {#if unassignedSharedVariants.length > 0}
-                      <optgroup label="Shared Variant Pool">
+                    + Variant ▾
+                  </button>
+                  {#if variantMenuOpen}
+                    <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+                    <div class="drop-menu variant-drop-menu" on:pointerdown|stopPropagation on:click|stopPropagation>
+                      <button
+                        title="Create a new custom state variant"
+                        on:click={() => {
+                          variantMenuOpen = false;
+                          openAddStateModal();
+                        }}
+                      >
+                        <Icon name="plus" /> New variant…
+                      </button>
+
+                      {#if unassignedSharedVariants.length > 0}
+                        <div class="menu-header-tag" style="margin-top:4px">SHARED VARIANT POOL</div>
                         {#each unassignedSharedVariants as sv}
-                          <option value={sv}>{sv}</option>
+                          <button
+                            title="Add '{sv}' variant (empty slot) to this background"
+                            on:click={() => {
+                              variantMenuOpen = false;
+                              addVariantFromPool(sv);
+                            }}
+                          >
+                            <span style="color:var(--accent);font-size:10px;margin-right:4px">●</span> {sv}
+                          </button>
                         {/each}
-                      </optgroup>
-                    {/if}
-                  </select>
-                </div>
+                      {/if}
+                    </div>
+                  {/if}
+                </span>
               </div>
             </div>
 
@@ -3497,6 +3522,7 @@
       on:dragover={onPoolDragOver}
       on:dragleave={onPoolDragLeave}
       on:drop={onPoolDrop}
+      on:wheel={onRepoWheel}
     >
       <div class="dock-bar">
         <div class="dock-left">
@@ -3565,7 +3591,7 @@
 
       {#if !poolCollapsed}
         <!-- Assets Grid / Carousel Strip -->
-        <div class="assets-strip">
+        <div class="assets-strip" bind:this={assetsStripEl} on:wheel={onRepoWheel}>
           {#if filteredAssets.length === 0}
             <div class="dock-empty-msg">
               <span>Drag & drop images (.webp, .png, .jpg) or audio (.opus, .mp3) here to build without re-uploading.</span>
@@ -7000,14 +7026,13 @@
     background: #10b981;
     box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
   }
-  .variant-pool-select {
-    padding: 3px 6px;
-    font-size: 11px;
-    height: 24px;
-    width: auto;
-  }
-  .add-variant-group {
-    display: inline-flex;
-    align-items: center;
+  .variant-drop-menu {
+    left: 0;
+    top: calc(100% + 4px);
+    min-width: 170px;
+    max-width: 260px;
+    max-height: 280px;
+    overflow-y: auto;
+    z-index: 1000;
   }
 </style>

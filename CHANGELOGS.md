@@ -894,20 +894,29 @@
     - **Empty Slot Isolation:** Opting into a shared variant creates an empty state variant slot on that background only, without copying images or content from other backgrounds.
     - **Unfilled Variant Omission:** Updated `serializeBackgroundObject` with `isStateVariantEmpty(st)`: non-default state variants with no assigned background, foreground, ambience, or time variants are automatically omitted from `background.json` exports.
 
+- **Shared State Variant Pool Fix & Dynamic Reactivity (`src/lib/bgStore.js`, `src/components/modals/BackgroundMakerModal.svelte`, `src/components/panels/Inspector.svelte`, `tests/core.test.mjs`):**
+    - Removed hardcoded builtin states (`clean`, `dim`, `empty`, `night`, `rainy`, `ruined`). The shared variant pool now strictly derives from actual state variants defined on backgrounds within the library (and area `background_variant` overrides).
+    - Fixed state variant dropdown UI: replaced native `<select>` with a custom popup menu (`.toolbar-dropdown-anchor` + `.drop-menu.variant-drop-menu`), eliminating the self-item `+ Variant ▾` bug and ensuring smooth selection.
+    - Added reactive dependency binding (`bgStore.getSharedStateVariantNames(backgrounds, ...)`) so the shared variant pool dynamically updates whenever backgrounds are added, modified, or loaded. When one background defines variants like `crowded` and `festive`, they immediately appear in the `+ Variant ▾` shared pool of other backgrounds.
+- **Repository Horizontal Mouse Wheel Scrolling (`src/components/modals/BackgroundMakerModal.svelte`):**
+    - Added an `on:wheel` handler to the asset repository dock (`.asset-pool-dock`) and strip (`.assets-strip`), translating vertical mouse wheel events (`deltaY`) directly to horizontal scrolling (`assetsStripEl.scrollLeft += delta`). Rolling the mouse wheel over the repository dock smoothly scrolls the asset cards horizontally.
+- **Dense Meme Background Detail & Varied Dimensions on Embed Image (`scripts/render-og-image.mjs`, `docs/og-image.png`, `public/og-image.png`, `export/og-image.png`):**
+    - Multiplied and densely sprinkled meme stickers across the background (expanded to 32 elements with varied dimensions ranging from 34px to 110px).
+    - Positioned memes around empty spaces and edges behind the main cards with Comic Sans MS typography, `// GRAPHIC DESIGN IS MY SHIT` header, and Furude Rika centered prominently on the left.
+
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **373 passed, 0 failed** (all unit and integration tests passing, including `background_variant` YAML export/import order rules, empty/default omission, shared state variant pool collection, and unfilled variant omission).
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **377 passed, 0 failed** (all unit and integration tests passing, including `background_variant` YAML export/import order rules, empty/default omission, shared state variant pool collection without hardcoded builtins, and unfilled variant omission).
 - `npm run build:both`: Successfully compiled all production distributions with 0 errors:
-    - Singlefile full distribution: `export/yuzu_area_maker.html` (5307 KB).
-    - Singlefile no-music distribution: `export/yuzu_area_maker_nomusic.html` (654 KB).
-    - GitHub Pages distribution: `docs/index.html` (654 KB).
-    - Embed assets: `docs/og-image.png` and `export/og-image.png` synchronized.
+    - Singlefile full distribution: `export/yuzu_area_maker.html` (5308 KB).
+    - Singlefile no-music distribution: `export/yuzu_area_maker_nomusic.html` (655 KB).
+    - GitHub Pages distribution: `docs/index.html` (655 KB).
+    - Embed assets: `docs/og-image.png`, `public/og-image.png`, and `export/og-image.png` synchronized.
 - **Headless Chrome Visual Verification:**
+    - Variant Dropdown Menu ([verified_v220_variant_dropdown_fixed.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_variant_dropdown_fixed.png)): Verified custom popup menu cleanly shows `+ New variant…` and `SHARED VARIANT POOL` with actual library variants (`crowded`, `festive`), without any self-item or hardcoded defaults.
+    - Repository Mouse Wheel Scrolling: Verified `onRepoWheel` translates vertical wheel delta to horizontal scroll (`initialScroll: 0, afterScroll: 200, scrolled: true`).
     - Inspector Basics Layout ([verified_v220_inspector_variant.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_inspector_variant.png)): Verified `BACKGROUND_VARIANT` field with text input (placeholder `default (omitted)`) and `Variants ▾` dropdown situated directly before `BACKGROUND_TOD`.
-    - Live Stage Monitor & State Variants ([verified_v220_bg_maker_animate_toggle.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_bg_maker_animate_toggle.png)):
-        - Verified `Animate Preview` toggle button cleanly positioned between `LIVE STAGE MONITOR` and the `LIVE` badge with tooltip and single-line layout.
-        - Verified `+ Variant ▾` picker placed beside state tabs.
-        - Verified repository asset pool static first-frame canvas rendering and hover animation.
-        - Verified complete elimination of modal transition and scrolling lag.
+    - Live Stage Monitor & State Variants ([verified_v220_bg_maker_animate_toggle.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_bg_maker_animate_toggle.png)): Verified `Animate Preview` toggle button between `LIVE STAGE MONITOR` and `LIVE` badge, repository static first-frame rendering, and zero modal lag.
+    - OG Embed Image ([verified_rika_meme_og_image.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_rika_meme_og_image.png)): Verified dense sticker layout with varied sizes, Comic Sans typography, centered Rika sprite, and `// GRAPHIC DESIGN IS MY SHIT` header.
 - Music player internals verified completely untouched.
 

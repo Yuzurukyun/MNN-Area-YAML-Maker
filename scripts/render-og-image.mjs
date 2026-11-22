@@ -38,30 +38,55 @@ const html = `<!DOCTYPE html>
     pointer-events: none;
   }
 
-  /* Crisp Small Meme Sprinkles (Background detail, no blur, multiple instances) */
+  /* Crisp Meme Sprinkles (Background detail, varied sizes, no blur) */
   .meme-sticker {
     position: absolute;
     z-index: 2;
     pointer-events: none;
-    opacity: 0.86;
+    opacity: 0.88;
     filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.55));
   }
+  .meme-deep {
+    z-index: 1;
+    opacity: 0.65;
+  }
 
-  .ms-1 { top: 22px; left: 28px; width: 48px; transform: rotate(-8deg); }
-  .ms-2 { top: 120px; left: 24px; width: 44px; transform: rotate(10deg); }
-  .ms-3 { bottom: 30px; left: 26px; width: 46px; transform: rotate(-6deg); }
+  .ms-1 { top: 18px; left: 30px; width: 62px; transform: rotate(-10deg); }
+  .ms-2 { top: 12px; left: 160px; width: 34px; transform: rotate(8deg); }
+  .ms-3 { top: 35px; left: 280px; width: 85px; transform: rotate(-15deg); }
+  .ms-4 { top: 14px; left: 430px; width: 44px; transform: rotate(12deg); }
+  .ms-5 { top: 16px; left: 560px; width: 70px; transform: rotate(-8deg); }
+  .ms-6 { top: 10px; right: 440px; width: 36px; transform: rotate(14deg); }
+  .ms-7 { top: 18px; right: 290px; width: 82px; transform: rotate(-6deg); }
+  .ms-8 { top: 14px; right: 140px; width: 42px; transform: rotate(10deg); }
+  .ms-9 { top: 22px; right: 30px; width: 95px; transform: rotate(-12deg); }
 
-  .ms-4 { top: 16px; left: 450px; width: 42px; transform: rotate(12deg); }
-  .ms-5 { top: 20px; right: 480px; width: 46px; transform: rotate(-10deg); }
-  .ms-6 { top: 18px; right: 260px; width: 48px; transform: rotate(8deg); }
-  .ms-7 { top: 24px; right: 42px; width: 44px; transform: rotate(-6deg); }
+  .ms-10 { top: 120px; left: 18px; width: 55px; transform: rotate(15deg); }
+  .ms-11 { top: 210px; left: 25px; width: 90px; transform: rotate(-8deg); }
+  .ms-12 { top: 320px; left: 12px; width: 38px; transform: rotate(12deg); }
+  .ms-13 { top: 410px; left: 30px; width: 75px; transform: rotate(-14deg); }
+  .ms-14 { bottom: 85px; left: 14px; width: 45px; transform: rotate(10deg); }
+  .ms-15 { bottom: 20px; left: 25px; width: 88px; transform: rotate(-6deg); }
 
-  .ms-8 { top: 230px; right: 20px; width: 48px; transform: rotate(14deg); }
-  .ms-9 { bottom: 170px; right: 18px; width: 42px; transform: rotate(-12deg); }
+  .ms-16 { bottom: 15px; left: 170px; width: 35px; transform: rotate(12deg); }
+  .ms-17 { bottom: 25px; left: 320px; width: 68px; transform: rotate(-10deg); }
+  .ms-18 { bottom: 18px; left: 460px; width: 48px; transform: rotate(8deg); }
+  .ms-19 { bottom: 22px; right: 480px; width: 92px; transform: rotate(-14deg); }
+  .ms-20 { bottom: 16px; right: 350px; width: 38px; transform: rotate(10deg); }
+  .ms-21 { bottom: 24px; right: 210px; width: 72px; transform: rotate(-8deg); }
+  .ms-22 { bottom: 18px; right: 45px; width: 105px; transform: rotate(6deg); }
 
-  .ms-10 { bottom: 22px; right: 54px; width: 50px; transform: rotate(6deg); }
-  .ms-11 { bottom: 18px; right: 390px; width: 45px; transform: rotate(-8deg); }
-  .ms-12 { bottom: 24px; left: 510px; width: 44px; transform: rotate(10deg); }
+  .ms-23 { top: 130px; right: 22px; width: 40px; transform: rotate(-12deg); }
+  .ms-24 { top: 230px; right: 16px; width: 78px; transform: rotate(14deg); }
+  .ms-25 { top: 340px; right: 24px; width: 34px; transform: rotate(-10deg); }
+  .ms-26 { bottom: 160px; right: 15px; width: 82px; transform: rotate(12deg); }
+
+  .ms-27 { top: 160px; left: 420px; width: 110px; transform: rotate(16deg); }
+  .ms-28 { top: 290px; left: 380px; width: 46px; transform: rotate(-18deg); }
+  .ms-29 { top: 90px; right: 240px; width: 32px; transform: rotate(-15deg); }
+  .ms-30 { bottom: 220px; right: 420px; width: 42px; transform: rotate(12deg); }
+  .ms-31 { bottom: 120px; left: 490px; width: 95px; transform: rotate(-8deg); }
+  .ms-32 { top: 460px; right: 280px; width: 50px; transform: rotate(14deg); }
 
   /* Layout container */
   .layout-container {
@@ -254,7 +279,7 @@ const html = `<!DOCTYPE html>
 <body>
   <div class="flat-grid"></div>
 
-  <!-- Crisp Small Meme Detail Stickers (Multiple copies, background detail) -->
+  <!-- Crisp Small Meme Detail Stickers (Multiple copies, varied sizes, background detail) -->
   <img class="meme-sticker ms-1" src="${meme1Base64}" alt="meme" />
   <img class="meme-sticker ms-2" src="${meme4Base64}" alt="meme" />
   <img class="meme-sticker ms-3" src="${meme2Base64}" alt="meme" />
@@ -267,6 +292,26 @@ const html = `<!DOCTYPE html>
   <img class="meme-sticker ms-10" src="${meme5Base64}" alt="meme" />
   <img class="meme-sticker ms-11" src="${meme1Base64}" alt="meme" />
   <img class="meme-sticker ms-12" src="${meme4Base64}" alt="meme" />
+  <img class="meme-sticker ms-13" src="${meme5Base64}" alt="meme" />
+  <img class="meme-sticker ms-14" src="${meme2Base64}" alt="meme" />
+  <img class="meme-sticker ms-15" src="${meme3Base64}" alt="meme" />
+  <img class="meme-sticker ms-16" src="${meme1Base64}" alt="meme" />
+  <img class="meme-sticker ms-17" src="${meme4Base64}" alt="meme" />
+  <img class="meme-sticker ms-18" src="${meme2Base64}" alt="meme" />
+  <img class="meme-sticker ms-19" src="${meme5Base64}" alt="meme" />
+  <img class="meme-sticker ms-20" src="${meme3Base64}" alt="meme" />
+  <img class="meme-sticker ms-21" src="${meme1Base64}" alt="meme" />
+  <img class="meme-sticker ms-22" src="${meme4Base64}" alt="meme" />
+  <img class="meme-sticker ms-23" src="${meme2Base64}" alt="meme" />
+  <img class="meme-sticker ms-24" src="${meme5Base64}" alt="meme" />
+  <img class="meme-sticker ms-25" src="${meme3Base64}" alt="meme" />
+  <img class="meme-sticker ms-26" src="${meme1Base64}" alt="meme" />
+  <img class="meme-sticker ms-27" src="${meme4Base64}" alt="meme" />
+  <img class="meme-sticker ms-28" src="${meme2Base64}" alt="meme" />
+  <img class="meme-sticker ms-29" src="${meme5Base64}" alt="meme" />
+  <img class="meme-sticker ms-30" src="${meme3Base64}" alt="meme" />
+  <img class="meme-sticker ms-31" src="${meme1Base64}" alt="meme" />
+  <img class="meme-sticker ms-32" src="${meme2Base64}" alt="meme" />
 
   <div class="layout-container">
     <!-- Left side: Furude Rika takes most of the screen -->
@@ -359,6 +404,7 @@ server.listen(8094, () => {
   const chromePath = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
   const outDoc = path.resolve('docs/og-image.png');
   const outPublic = path.resolve('public/og-image.png');
+  const outExport = path.resolve('export/og-image.png');
   const outArtifact = 'C:\\Users\\user\\.gemini\\antigravity\\brain\\3189314c-7a18-42e5-ab0c-aba948813dfc\\verified_rika_meme_og_image.png';
 
   const cp = spawn(chromePath, [
@@ -372,8 +418,11 @@ server.listen(8094, () => {
 
   cp.on('close', () => {
     fs.copyFileSync(outDoc, outPublic);
+    if (fs.existsSync(path.dirname(outExport))) {
+      fs.copyFileSync(outDoc, outExport);
+    }
     fs.copyFileSync(outDoc, outArtifact);
-    console.log('Successfully generated og-image.png to docs, public, and artifact directory!');
+    console.log('Successfully generated og-image.png to docs, public, export, and artifact directory!');
     server.close();
     process.exit(0);
   });

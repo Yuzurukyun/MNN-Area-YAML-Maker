@@ -1498,16 +1498,21 @@ eq(parsedAreas.length, 1, 'parsed 1 area');
 eq(parsedAreas[0].background_variant, 'rainy', 'parsed background_variant: rainy');
 
 /* ---- Shared State Variants Pool & Empty Variant Omission ---- */
-const sharedPool = bgStore.getSharedStateVariantNames(['custom_trial']);
-ok(sharedPool.includes('crowded'), 'shared pool includes crowded');
-ok(sharedPool.includes('custom_trial'), 'shared pool includes extra area variant');
-
 const testBgWithVariants = createBackground('Library/TestRoom');
 testBgWithVariants.states = {
   default: { name: 'default', background: 'default.webp' },
   empty_slot: { name: 'empty_slot', background: '', foreground: '', ambience: '' },
   crowded: { name: 'crowded', background: 'crowded.webp', foreground: '', ambience: '' },
+  festive: { name: 'festive', background: 'festive.webp', foreground: '', ambience: '' },
 };
+
+const sharedPool = bgStore.getSharedStateVariantNames([testBgWithVariants], ['custom_trial']);
+ok(sharedPool.includes('crowded'), 'shared pool includes crowded from background');
+ok(sharedPool.includes('festive'), 'shared pool includes festive from background');
+ok(sharedPool.includes('custom_trial'), 'shared pool includes extra area variant');
+ok(!sharedPool.includes('dim'), 'shared pool does not include unassigned builtin state dim');
+ok(!sharedPool.includes('ruined'), 'shared pool does not include unassigned builtin state ruined');
+ok(!sharedPool.includes('default'), 'shared pool excludes default');
 
 const serializedBg = serializeBackgroundObject(testBgWithVariants);
 ok(serializedBg.default !== undefined, 'exports default state');

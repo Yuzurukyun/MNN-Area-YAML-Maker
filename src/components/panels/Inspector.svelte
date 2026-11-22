@@ -65,7 +65,7 @@
     filter === 'all' ? true : filter === 'rarely' ? g === 'rarely' : M.GROUP_RANK[g] <= (filter === 'common' ? 0 : 1);
   const showK = (k) => showG(grpOf(k));
 
-  $: sharedStateVariants = bgStore.getSharedStateVariantNames(P?.areas?.map((x) => x.background_variant).filter(Boolean) || []);
+  $: sharedStateVariants = bgStore.getSharedStateVariantNames(bgStoreState?.backgrounds, P?.areas?.map((x) => x.background_variant).filter(Boolean) || []);
   $: showBasics = ['area', 'background', 'background_variant', 'background_tod', 'default_description'].some(showK);
   $: showLinks = ['reachable_areas', 'visible_areas', 'scream_range', 'restricted_chars'].some(showK);
   $: accessFields = M.BOOL_FIELDS.filter((f) => f[1] === 'access');
@@ -406,6 +406,7 @@
                 class="mini-btn"
                 style="width:auto;max-width:130px;padding:4px 6px;font-size:11px"
                 title="Pick an existing state variant from library"
+                disabled={sharedStateVariants.length === 0 && !a.background_variant}
                 on:change={(e) => {
                   const val = e.target.value;
                   if (val === '__clear__') {
@@ -422,8 +423,10 @@
                   e.target.value = '';
                 }}
               >
-                <option value="">Variants ▾</option>
-                <option value="__clear__">(Clear / default)</option>
+                <option value="">{sharedStateVariants.length === 0 ? 'No variants' : 'Variants ▾'}</option>
+                {#if a.background_variant}
+                  <option value="__clear__">(Clear / default)</option>
+                {/if}
                 {#each sharedStateVariants as v}
                   <option value={v}>{v}</option>
                 {/each}
