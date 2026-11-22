@@ -89,7 +89,7 @@
     : 0;
   $: permMod = a ? permFields.filter(([k, , d]) => a[k] !== d).length : 0;
 
-  $: multiCount = $state.selectedIds && $state.selectedIds.size > 1 && $state.selectedIds.has($state.selectedId)
+  $: multiCount = $state.selectedIds && $state.selectedIds.size > 1
     ? $state.selectedIds.size
     : 1;
   $: isMulti = multiCount > 1;
@@ -318,7 +318,7 @@
               {#if ar.color}
                 <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:{ar.color};flex-shrink:0" title="Custom color: {ar.color}"></span>
               {/if}
-              <span style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)">
+              <span style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);flex:1;min-width:0">
                 {ar.area || 'Unnamed'}
               </span>
             </button>
@@ -347,16 +347,16 @@
     <div class="insp-mode-pills" style="display:flex;gap:4px;margin-top:8px">
       <button
         class="mini-btn insp-tier-btn {inspectorMode === 'essentials' ? 'active-tier' : ''}"
-        style="flex:1;font-size:11px;padding:3px 6px;display:inline-flex;align-items:center;justify-content:center;gap:6px"
+        style="flex:1;min-width:0;font-size:11px;padding:3px 6px;display:inline-flex;align-items:center;justify-content:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
         title="Focused view: Name, Color, Preview, Background and Walkable Corridors"
         on:click={() => (inspectorMode = 'essentials')}
-      ><Icon name="zap" /> Essentials</button>
+      ><Icon name="zap" /> <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Essentials</span></button>
       <button
         class="mini-btn insp-tier-btn {inspectorMode === 'full' ? 'active-tier' : ''}"
-        style="flex:1;font-size:11px;padding:3px 6px;display:inline-flex;align-items:center;justify-content:center;gap:6px"
+        style="flex:1;min-width:0;font-size:11px;padding:3px 6px;display:inline-flex;align-items:center;justify-content:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
         title="Advanced view: Access locks, behaviour, and server permissions"
         on:click={() => (inspectorMode = 'full')}
-      ><Icon name="wrench" /> Full Server Spec</button>
+      ><Icon name="wrench" /> <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Full Server Spec</span></button>
     </div>
 
     <div class="btn-row" style="margin:8px 0 0;align-items:center">

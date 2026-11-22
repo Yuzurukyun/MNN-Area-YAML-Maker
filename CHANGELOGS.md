@@ -39,7 +39,7 @@
 - **Reduced `<ALL>` clutter (`src/components/graph/EdgeLayer.svelte`, `src/components/graph/GraphToolbar.svelte`):** `<ALL>` mesh lines are hidden by default and replaced with `<ALL>` node tags and the `ALL AREAS` pill; toggle **<ALL> mesh** in the toolbar to inspect every generated edge.
 - **Better navigation & interaction (`src/components/graph/Graph.svelte`, `NodeLayer.svelte`, `GraphHud.svelte`):**
     - Added hover quick-connect ports on nodes (alternative to `Shift+drag`).
-    - Added **✋ Pan** tool toggle, `Space + drag` panning, and a bottom-right zoom HUD (`−` / `%` / `+` / `Fit` and `F` key).
+    - Added ** Pan** tool toggle, `Space + drag` panning, and a bottom-right zoom HUD (`−` / `%` / `+` / `Fit` and `F` key).
     - Added `Delete`/`Backspace` shortcut for selected non-hub areas, `Escape` dismissal across modals/cards/menus, and viewport clamping for `ContextMenu` and `DirectionCard`.
     - Switched active drags to `window` pointer listeners with `pointercancel` cleanup so drags cannot get stuck.
 
@@ -118,7 +118,7 @@
     - Added cubic ease-in-out (`easeInOutCubic`) `requestAnimationFrame` interpolation across programmatic camera moves (`fitView`, `zoomReset`, camera reset, and center-on-node).
     - Gracefully halts animation upon user pointer input (`onSvgDown`, `onNodeDown`, `onWheel`, etc.) so controls never stutter or fight the user.
 - **Camera Reset button & shortcuts (`src/components/graph/GraphToolbar.svelte`, `Graph.svelte`):**
-    - Added **⟲ Reset** beside the ✋ Pan button on the graph toolbar to smoothly return zoom to 100% and view to default coordinates.
+    - Added **⟲ Reset** beside the  Pan button on the graph toolbar to smoothly return zoom to 100% and view to default coordinates.
     - Bound to keyboard shortcuts `Home` and `0` (or `Numpad0`).
 - **Center-on-node camera navigation (`src/components/graph/GraphToolbar.svelte`, `Graph.svelte`, `AreaList.svelte`, `src/lib/state.js`):**
     - Added **⌖ Center** toolbar button to smoothly reposition the camera over the selected area without altering the current zoom level.
@@ -157,11 +157,11 @@
     - Right-clicking any spatial group now inspects its member area indices and provides two instant copy-paste code blocks:
         1. Just the range: `<lowest>, <highest>` (e.g. `4, 12`).
         2. The full command: `/zone <lowest>, <highest>` (e.g. `/zone 4, 12`).
-    - **Consecutive detection & warning:** If group members do not form a consecutive range (e.g. `3, 6, 12, 13, 14, 15`), a warning notification and banner alert users to run **Sort IDs**, while still providing the scattered values and `/zone` command to copy anyway, alongside an instant `⚡ Auto-sort IDs into range…` action button.
+    - **Consecutive detection & warning:** If group members do not form a consecutive range (e.g. `3, 6, 12, 13, 14, 15`), a warning notification and banner alert users to run **Sort IDs**, while still providing the scattered values and `/zone` command to copy anyway, alongside an instant ` Auto-sort IDs into range…` action button.
 - **Significantly increased group visibility (`base.css`, `GroupLayer.svelte`):**
     - Boosted dark theme group fill from invisible 1.5% to 5% with distinct `#525263` stroke; boosted light theme group fill to 18% with `#64748b` stroke.
 - **Group custom colours (`GroupLayer.svelte`, `ContextMenu.svelte`, `Graph.svelte`):**
-    - Right-clicking any spatial group now presents an interactive color swatch palette (Red, Orange, Amber, Green, Teal, Blue, Purple, Pink, Slate) plus custom color picker `🎨` and Reset.
+    - Right-clicking any spatial group now presents an interactive color swatch palette (Red, Orange, Amber, Green, Teal, Blue, Purple, Pink, Slate) plus custom color picker `` and Reset.
     - Custom colors dynamically tint the group body, tab, and header label, and persist in JSON project exports.
 
 ### Extended Zoom Range & Node Double-Click Behaviors
@@ -176,7 +176,7 @@
 ### Full Graph Screenshot / Map Visual Export
 
 - **High-resolution map image snapshot (`Graph.svelte`, `GraphToolbar.svelte`, `Header.svelte`):**
-    - Added one-click **📷 Snapshot** button in the graph toolbar and **Map image — high-res PNG visual…** in the `Export ▾` dropdown.
+    - Added one-click ** Snapshot** button in the graph toolbar and **Map image — high-res PNG visual…** in the `Export ▾` dropdown.
     - Computes bounding box of all visible nodes, lines, groups, and images (excluding hidden or non-focused nodes), embeds active theme styles and background, and exports a high-definition 2× PNG image (`MNN-Area-Map.png`) with clean fallback to SVG.
 
 ### Area List Dropdown Sizing & Sort IDs Confirmation Modal
@@ -226,18 +226,18 @@
 ### Smart Route Finder
 
 - **Turn-by-turn shortest path navigation (`src/lib/pathAudit.js`, `src/components/graph/RouteBar.svelte`, `Graph.svelte`, `EdgeLayer.svelte`, `src/styles/graph.css`):**
-    - Added a floating tactical Route Finder bar toggled via the toolbar **🧭 Route** button or canvas right-click context menu (**Find route from here** / **Find route to here**).
+    - Added a floating tactical Route Finder bar toggled via the toolbar ** Route** button or canvas right-click context menu (**Find route from here** / **Find route to here**).
     - Uses Dijkstra's algorithm to compute the shortest walkable path between any two rooms based on physical `reachable_areas` corridors.
     - **Strict physical exit resolution:** Strictly excludes global `<ALL>` reachability shortcuts (`mode === 'list'` required for walkable transit).
     - **RP privacy & lobby protection:** Prevents private rooms/dorms (`private_area: true`) and OOC lobbies (`lobby_area: true`) from being used as intermediate pass-through thoroughfares (they can only serve as starting points or final destinations).
     - **Turn-by-turn cards:** Displays step numbers, source/target `#ID` badges, role badges (`Hub`, `Private`, `Lobby`), and direction arrows.
     - **Visual route highlighting:** Active route connections illuminate on the map with a pulsating neon emerald glow (`.edge.route-active`).
-    - Added **⌖ Frame route** to smoothly zoom and frame the active route, and **📋 Copy route** for clipboard sharing.
+    - Added **⌖ Frame route** to smoothly zoom and frame the active route, and ** Copy route** for clipboard sharing.
 
 ### Map Network Audit
 
 - **Refined map network auditor (`src/lib/pathAudit.js`, `src/components/modals/AuditModal.svelte`, `Graph.svelte`, `GraphToolbar.svelte`):**
-    - Added a one-click network audit tool opened via the **🔍 Audit** button in the canvas toolbar.
+    - Added a one-click network audit tool opened via the ** Audit** button in the canvas toolbar.
     - Accurately distinguishes between structural oversights and intentional RP design choices, strictly excluding `<ALL>` areas from being flagged as dead ends.
     - Categorizes notices into 4 clean tabs:
         - **Dead Ends:** Rooms entered from the network that have 0 outgoing exits (`<ALL>` areas are never flagged as dead ends).
@@ -268,19 +268,19 @@
 ### Visual Background.json Maker
 
 - **Dedicated visual builder (`src/components/modals/BackgroundMakerModal.svelte`, `src/lib/bgSchema.js`, `src/lib/bgStore.js`):**
-    - Added a dedicated 3-column workspace accessible via the header **🖼 Backgrounds** button, the **Export ▾** menu, or directly from the Inspector beside the `background` input field.
+    - Added a dedicated 3-column workspace accessible via the header ** Backgrounds** button, the **Export ▾** menu, or directly from the Inspector beside the `background` input field.
     - **Unified 3-Part Proportional Path Strip:** Relocated the background path bar to its own full-width horizontal strip directly beneath the header, divided into 3 dedicated sections:
         1. Fixed Root Badge: `> base/background/`.
         2. Directory Path Input: Takes ~70% of available width with auto-truncation for long series subfolders (`text-overflow: ellipsis`), and houses the `▾ Folders` shortcut dropdown.
         3. Background / File Name Input: Takes ~30% of available width, highlighted in accent orange.
-        - Includes a `📋 Copy` button on the far right and a small monospace full-path label directly beneath the inputs displaying the complete computed server asset path (`FULL PATH: base/background/<subfolder>/<room>/background.json`).
+        - Includes a ` Copy` button on the far right and a small monospace full-path label directly beneath the inputs displaying the complete computed server asset path (`FULL PATH: base/background/<subfolder>/<room>/background.json`).
     - **Folder inheritance on creation:** Clicking **+ New** automatically creates the new background inside the currently active series folder.
     - **State Variants:** Supports the mandatory `default` state plus custom states (`crowded`, `festive`, `rainy`, etc.) with tab-based editing and state deletion.
     - **Courtroom & Camera Positions:** Toggleable position mode supporting standard court camera angles (`Normal`, `Witness`, `Prosecution`, `Defense`, `Judge`, `Juror`) or custom position tags.
-    - **Asset Slots:** Dedicated drag-and-drop slots for Background Image (`★ background`), Foreground Overlay filter/desk (`foreground`), and Ambience Audio (`ambience`, relative to `base/sounds/ambient/`).
+    - **Asset Slots:** Dedicated drag-and-drop slots for Background Image (` background`), Foreground Overlay filter/desk (`foreground`), and Ambience Audio (`ambience`, relative to `base/sounds/ambient/`).
     - **Time of Day Variants (`time_variants`):** Visual rows for `day`, `evening`, `night`, and custom times of day with individual background, foreground, and ambience slots.
     - **Dual view & configurable indentation:** Instant toggling between the **Visual Builder** and **Live background.json** formatted code inspector, featuring an indent selector (dropdown + number input) with default `4 spaces`, `2 spaces`, `3 spaces`, `8 spaces`, `Tabs (\t)`, and `Compact (0)`.
-    - **One-click area assignment:** **✓ Apply to Area #ID** sets the edited background folder directly onto the currently selected area.
+    - **One-click area assignment:** ** Apply to Area #ID** sets the edited background folder directly onto the currently selected area.
 
 ### Background Folder Templates & Streamlined Area Creation
 
@@ -291,7 +291,7 @@
     - Added an active `BG Prefix` field in the Area List toolbar right beneath `Template:` with a dropdown of all series folders detected across the project.
     - Creating areas anywhere (via `＋ Add Area` button, map double-click, or context menu) automatically applies the active prefix + area name without needing to duplicate areas or retype repetitive folder prefixes.
 - **Inspector Quick Prefix Stamping (`src/components/panels/Inspector.svelte`):**
-    - Added a 1-click `⚡ <prefix><area>` button and `▾ Pick prefix…` dropdown in the Inspector's `background:` row, allowing instant application of any series folder to an existing or renamed area.
+    - Added a 1-click ` <prefix><area>` button and `▾ Pick prefix…` dropdown in the Inspector's `background:` row, allowing instant application of any series folder to an existing or renamed area.
     - Added `<datalist>` auto-completion to the `background` input with all project folder combinations.
 
 ### Interactive Live Stage Monitor & Aspect Ratio Controls
@@ -301,9 +301,9 @@
     - **Letterboxed display with black bars:** Defaults to `16:9` resolution with pure black bars (`#000000`, `object-fit: contain`) so visuals match target aspect ratio without cropping or distortion.
     - **Selectable aspect ratio presets:** Quick dropdown with `16:9 (Default)`, `4:3`, `21:9`, `1:1`, and `Auto` (automatically adopts natural loaded image dimensions).
     - **Custom aspect ratio editing:** Dual-input numeric editors (`[ W ] : [ H ]`) allowing direct editing of either dimension on the fly.
-    - **Letterbox vs Cover toggle:** 1-click toggle between `◼ Letterbox` (full contained view with black bars) and `⛶ Cover` (viewport fill).
+    - **Letterbox vs Cover toggle:** 1-click toggle between `◼ Letterbox` (full contained view with black bars) and ` Cover` (viewport fill).
     - Inspector background scene preview updated to `object-fit: contain` with black bars for unified consistency.
-    - Interactive testing controls: Switch between time-of-day variants (`☀ Day`, `🌆 Evening`, `🌙 Night`), positions, and states to preview visual changes live.
+    - Interactive testing controls: Switch between time-of-day variants (` Day`, ` Evening`, ` Night`), positions, and states to preview visual changes live.
     - Built-in ambience audio player with Play/Pause button and loop playback for dropped sound files.
 
 ### In-Memory Asset Repository Pool & Multi-Upload
@@ -318,10 +318,10 @@
 
 - **Standard client-side ZIP builder & parser (`src/lib/zip.js`):**
     - Built a pure vanilla JavaScript ZIP archive generator and reader supporting UTF-8 filenames, CRC-32 checksums, standard uncompressed STORE packaging, and DEFLATE decompression via native `DecompressionStream`.
-    - **📦 Export Folder ZIP:** Exports a ready-to-use MNN server package containing `base/background/<folder>/background.json`, all referenced images, and `base/sounds/ambient/<soundPath>` audio files.
-    - **📦 Export All Backgrounds (ZIP):** Comprehensive package bundling the root `backgrounds-library.json`, all background folders with their respective `background.json` files, and referenced artwork/ambience tracks.
+    - ** Export Folder ZIP:** Exports a ready-to-use MNN server package containing `base/background/<folder>/background.json`, all referenced images, and `base/sounds/ambient/<soundPath>` audio files.
+    - ** Export All Backgrounds (ZIP):** Comprehensive package bundling the root `backgrounds-library.json`, all background folders with their respective `background.json` files, and referenced artwork/ambience tracks.
     - **Zero-dependency unzipper (`readZip`):** Directly unpacks `.zip` archives in memory, extracting images, ambience audio, and JSON definitions into the library and asset pool with zero external dependencies.
-    - **💾 Download JSON / 📋 Copy JSON:** Fast clipboard copy or single `.json` file download.
+    - ** Download JSON /  Copy JSON:** Fast clipboard copy or single `.json` file download.
 
 ### Background Progress Persistence & Collaborative Sharing
 
@@ -331,20 +331,20 @@
 - **Zero-loss `localStorage` Autosave (`src/lib/bgStore.js`, `src/lib/state.js`):**
     - Background configurations automatically persist in browser `localStorage` under `areaMakerDemo.backgrounds`. Refreshing or reopening the app restores all background definitions seamlessly without data loss.
 - **Dedicated Library Sharing & Import Tools (`BackgroundMakerModal.svelte`, `src/lib/bgStore.js`):**
-    - Added **📚 Library ▾** dropdown in the modal header:
-        - `💾 Export Library (JSON)`: downloads standalone `backgrounds-library.json` containing all background definitions.
-        - `📦 Export All (ZIP)`: downloads full package archive containing all backgrounds and asset files.
-        - `📥 Import JSON / ZIP…`: opens file picker to load single background files, library collections, project files, or zip packages.
-    - Added **📥 Import** button in the Navigator sidebar header next to `+ New`.
+    - Added ** Library ▾** dropdown in the modal header:
+        - ` Export Library (JSON)`: downloads standalone `backgrounds-library.json` containing all background definitions.
+        - ` Export All (ZIP)`: downloads full package archive containing all backgrounds and asset files.
+        - ` Import JSON / ZIP…`: opens file picker to load single background files, library collections, project files, or zip packages.
+    - Added ** Import** button in the Navigator sidebar header next to `+ New`.
     - **Modal-wide Drag & Drop:** Dropping any `.json` or `.zip` file anywhere onto the Background Maker modal highlights the window and automatically registers assets and loads backgrounds with feedback.
 
 ### Inspector & Node Hover Integration
 
 - **Inspector background tools (`src/components/panels/Inspector.svelte`, `src/components/graph/NodeLayer.svelte`, `src/lib/bgStore.js`):**
     - Added a library picker dropdown under `background:` to quickly assign any defined background to an area.
-    - Added a direct **🖼 Maker…** button to open the editor pre-focused on that area's background.
+    - Added a direct ** Maker…** button to open the editor pre-focused on that area's background.
     - **Synchronized Node Avatar & Visual Preview Toggle:** Toggling **Icon** vs **Scene** under `Visual Preview` in the Inspector now updates the area node card's avatar on the map canvas in real time. Choosing **Scene** displays the resolved background scene visual asset directly on the node card, while choosing **Icon** displays the custom uploaded icon.
-    - Strict `background_tod` detection (`hasTimeVariants`): Displays the green badge (`✓ Handled by <folder>/background.json — separate bg_tod is optional`) ONLY when `background.json` specifically defines non-empty `time_variants` (in states or positions); otherwise completely ignored and hidden.
+    - Strict `background_tod` detection (`hasTimeVariants`): Displays the green badge (` Handled by <folder>/background.json — separate bg_tod is optional`) ONLY when `background.json` specifically defines non-empty `time_variants` (in states or positions); otherwise completely ignored and hidden.
 - **Node hover summaries (`src/components/graph/NodeHoverCard.svelte`):**
     - Displays background scene asset previews when hovering nodes on the canvas that don't have custom node icons, and respects `imageMode: 'scene'`.
 
@@ -358,20 +358,20 @@
     - Standardized naming across the top navigation bar and modal menus to clearly distinguish server configs, project saves, and asset packages:
         - Header Export: `YAML — server config (areas.yaml)…`, `JSON — project backup (areas-project.json)`, `ZIP — background packages & assets (.zip)…`, `PNG — high-res map canvas image…`.
         - Header Import: `YAML — import server config (areas.yaml)…`, `JSON — import project backup (areas-project.json)…`, `ZIP / JSON — import backgrounds & assets…`.
-        - Background Maker Actions: `💾 Export JSON`, `📦 Export Package (.zip)`, and `📚 Library ▾` menu with `💾 Export Library Backup (.json)`, `📦 Export All Backgrounds & Assets (.zip)`, `📥 Import Package or JSON (.json, .zip)…`, and `🧹 Purge Unused Assets`.
+        - Background Maker Actions: ` Export JSON`, ` Export Package (.zip)`, and ` Library ▾` menu with ` Export Library Backup (.json)`, ` Export All Backgrounds & Assets (.zip)`, ` Import Package or JSON (.json, .zip)…`, and ` Purge Unused Assets`.
 - **Map Network Audit Rework (`src/components/modals/AuditModal.svelte`):**
     - Expanded modal width to `min(840px, 96vw)` for a spacious, comfortable inspection view.
     - Decoupled category filter tabs and search into dedicated rows:
-        - Row 1: Full-width category pill tabs (`All Issues [N]`, `🛑 Dead Ends [N]`, `🚪 One-Way Trips [N]`, `🏝️ Disconnected [N]`, `🚶 No Way In [N]`) with `white-space: nowrap; flex: 0 0 auto; flex-wrap: wrap;` so category titles never truncate with `...` under any resolution.
-        - Row 2: Dedicated search toolbar with live matching count summary (`Matching: X of Y`) and instant clear (`✕`) button.
+        - Row 1: Full-width category pill tabs (`All Issues [N]`, ` Dead Ends [N]`, ` One-Way Trips [N]`, `️ Disconnected [N]`, ` No Way In [N]`) with `white-space: nowrap; flex: 0 0 auto; flex-wrap: wrap;` so category titles never truncate with `...` under any resolution.
+        - Row 2: Dedicated search toolbar with live matching count summary (`Matching: X of Y`) and instant clear (``) button.
     - Added a `⌖ View Node` button on every notice row to center the camera on the affected node directly.
 - **Strict Duplicate Path Collision Prevention (`src/lib/bgStore.js`, `BackgroundMakerModal.svelte`):**
     - Added `ensureUniqueBgFolder(folder, excludeId)` to prevent duplicate background folder collisions.
-    - Live reactive warning (`isDuplicatePath`) highlights duplicate inputs and renders an animated badge (`⚠️ Duplicate Path`) plus hint alert if two backgrounds share the same path.
+    - Live reactive warning (`isDuplicatePath`) highlights duplicate inputs and renders an animated badge (`️ Duplicate Path`) plus hint alert if two backgrounds share the same path.
     - Automatic disambiguation on blur, creation, duplication, or export (e.g. `subfolder/name` → `subfolder/name 2`).
 - **Used vs Unused Asset Filter & Purge (`src/lib/bgStore.js`, `BackgroundMakerModal.svelte`):**
     - Added `Used` and `Unused` filter pills in the Asset Repository Pool dock with real-time reference tracking (`getReferencedAssetNames`).
-    - Added 1-click `🧹 Purge Unused Assets` action in both the dock bar and the Library menu to delete unreferenced media from memory and IndexedDB.
+    - Added 1-click ` Purge Unused Assets` action in both the dock bar and the Library menu to delete unreferenced media from memory and IndexedDB.
 - **Direct Asset Drag-and-Drop to Canvas Nodes (`src/components/graph/NodeLayer.svelte`, `src/styles/graph.css`):**
     - Enabled HTML5 drag-and-drop on map canvas nodes: dragging an image card from the Asset Pool dock directly onto a node sets its custom node icon (`ar.image`) and switches mode to `node`.
     - Supports dropping OS image files directly from the desktop onto any canvas node with automatic client-side thumbnail scaling.
@@ -384,27 +384,27 @@
     - Added a user preference in `SettingsModal.svelte`: `Autoscroll long labels when not focused` (`autoscrollLongLabels: false` by default). When enabled, overflowing labels scroll continuously even without hover.
     - Attached to area names in `AreaList.svelte`, area header in `Inspector.svelte`, audit report chips in `AuditModal.svelte`, and folder/file paths in `BackgroundMakerModal.svelte`. Music player remains strictly untouched.
 - **Compact Link Mode & View Filter Dropdowns (`src/components/graph/GraphToolbar.svelte`):**
-    - Replaced the 3 wide link tabs (`Reachable`, `Visible`, `Scream`) with a streamlined `[ 🔗 Reachable ▾ ]` dropdown menu showing descriptive role labels and active checkmarks.
-    - Clustered the 5 visibility checkboxes (`Focus mode`, `Isolate selection`, `Hide hub node`, `Hide <ALL> areas`, `<ALL> mesh connections`) into a single `👁 View ▾` dropdown equipped with a dynamic active-filter counter badge (`1`..`5`).
-    - Removed `📷 Snapshot` from `GraphToolbar.svelte` to keep canvas toolbar focused exclusively on navigation, layouts, and diagnostics.
+    - Replaced the 3 wide link tabs (`Reachable`, `Visible`, `Scream`) with a streamlined `[  Reachable ▾ ]` dropdown menu showing descriptive role labels and active checkmarks.
+    - Clustered the 5 visibility checkboxes (`Focus mode`, `Isolate selection`, `Hide hub node`, `Hide <ALL> areas`, `<ALL> mesh connections`) into a single ` View ▾` dropdown equipped with a dynamic active-filter counter badge (`1`..`5`).
+    - Removed ` Snapshot` from `GraphToolbar.svelte` to keep canvas toolbar focused exclusively on navigation, layouts, and diagnostics.
 - **Standalone Header Camera Snapshot Button (`src/components/Header.svelte`, `src/styles/chrome.css`):**
-    - Relocated map canvas snapshot export to a standalone camera emoji button (`📷`) situated directly beside `Export ▾` in the main top header bar.
+    - Relocated map canvas snapshot export to a standalone camera emoji button (``) situated directly beside `Export ▾` in the main top header bar.
     - Removed `PNG — high-res map canvas image…` from the `Export ▾` dropdown menu so the camera button serves as the single clear, accessible snapshot action.
 - **Inspector Progressive Disclosure (`src/components/panels/Inspector.svelte`, `src/styles/panels.css`):**
-    - Added a segmented tier selector: `[ ⚡ Essentials ]` vs `[ 🛠️ Full Server Spec ]`.
-    - In `⚡ Essentials` (default), advanced server spec sections (`Access & locks`, `Behaviour`, `Permissions`) are hidden unless an area has modified non-default values (`accessMod > 0 || behMod > 0 || permMod > 0`), keeping the inspector uncluttered for standard corridor mapping.
+    - Added a segmented tier selector: `[  Essentials ]` vs `[ ️ Full Server Spec ]`.
+    - In ` Essentials` (default), advanced server spec sections (`Access & locks`, `Behaviour`, `Permissions`) are hidden unless an area has modified non-default values (`accessMod > 0 || behMod > 0 || permMod > 0`), keeping the inspector uncluttered for standard corridor mapping.
     - Added a collapsible chevron toggle for `Visual Preview` (`previewOpen`).
 - **Foldable Asset Pool Dock & Micro-Animations (`BackgroundMakerModal.svelte`, `src/styles/base.css`, `src/styles/panels.css`):**
     - Added a `▼` / `▲` collapse toggle button on the bottom Asset Repository Pool dock in Background Maker, collapsing the strip to expand vertical builder workspace.
     - Added tactile `:active { transform: scale(0.975) translateY(0.5px); }` button micro-animations across all UI buttons.
     - Smooth chevron rotation on preview collapse toggles and dragover slot highlights.
 - **Background Templates & Dedicated Variant Modals (`src/lib/bgSchema.js`, `src/lib/bgStore.js`, `BackgroundMakerModal.svelte`):**
-    - **Safe Row Delete Action:** Moved the variant delete `✕` button to the far right end of `.tod-row-card` separated from the variant badge, completely eliminating accidental deletions when selecting rows.
+    - **Safe Row Delete Action:** Moved the variant delete `` button to the far right end of `.tod-row-card` separated from the variant badge, completely eliminating accidental deletions when selecting rows.
     - **Add Time of Day Variant Modal:** Replaced hardcoded `+ Day`, `+ Evening`, `+ Night`, `+ Custom` buttons with a single `+ Time Variant` action that opens a modal with a dropdown populated with standard presets (`day`, `evening`, `night`, `morning`, `dawn`, `dusk`, `midnight`) plus any existing keys across the library/server.
     - **Add State Variant Modal:** Replaced browser `prompt()` with a dedicated `+ State` modal featuring suggested state presets (`crowded`, `festive`, `rainy`, `damaged`, `ruined`, `empty`, `dim`, `night`, `clean`) plus library states, with an initial slot clone source picker.
     - **Full Background Templates System:** Implemented reusable background structural templates mirroring area templates (`BUILTIN_BG_TEMPLATES`, `applyBgTemplate`, `extractBgTemplateStructure`):
         - 6 Built-in Presets: *Simple Single Scene*, *Day / Night Cycle* (2 variants), *Full Day Cycle* (Day / Evening / Night), *Courtroom (5 Positions)*, *Courtroom + Day / Night Cycle* (5 positions × 2 time variants), and *Class Trial Debate* (4 states).
-        - Added `📋 Templates ▾` dropdown in the builder bar for 1-click application of any template.
+        - Added ` Templates ▾` dropdown in the builder bar for 1-click application of any template.
         - Added **Manage & Save Templates** dialog to inspect presets, save the active background structure as a custom reusable template, and manage custom templates.
 
 ### Real-Time Purge Reactivity & Purge Dropdown QoL
@@ -413,14 +413,14 @@
     - Fixed reactivity bug where deleting backgrounds did not immediately mark their unreferenced assets as unused until closing and reopening the modal.
     - Updated `bgStore.getReferencedAssetNames(bgs = null)` to accept the reactive `backgrounds` list as an argument, and bound `$: referencedAssetNames = bgStore.getReferencedAssetNames(backgrounds);` so Svelte recalculates referenced assets instantly whenever backgrounds or states are added, modified, or deleted.
 - **Purge Dropdown Menu (`BackgroundMakerModal.svelte`, `src/styles/chrome.css`):**
-    - Converted the single purge button in the Asset Repository Pool dock into a clean `[ 🧹 Purge ▾ ]` dropdown opening upwards (`bottom: calc(100% + 6px)`).
+    - Converted the single purge button in the Asset Repository Pool dock into a clean `[  Purge ▾ ]` dropdown opening upwards (`bottom: calc(100% + 6px)`).
     - Includes two dedicated actions:
-        - `🧹 Purge Unused (N)`: Disabled when `unusedAssetCount === 0`.
-        - `🗑 Purge All (N)`: Destructive purge option to completely clear all assets from memory and IndexedDB.
-    - Added the same two options under the modal header's `📚 Library ▾` menu.
+        - ` Purge Unused (N)`: Disabled when `unusedAssetCount === 0`.
+        - ` Purge All (N)`: Destructive purge option to completely clear all assets from memory and IndexedDB.
+    - Added the same two options under the modal header's ` Library ▾` menu.
 - **Dedicated Purge Confirmation Modals (`BackgroundMakerModal.svelte`):**
     - Replaced generic browser `confirm()` popups with a custom styled confirmation modal (`.purge-confirm-dialog`).
-    - Surfaces clear explanations of what will be purged, distinguishing between safe unused asset cleanup and destructive full pool purges (`⚠️ Destructive Action` badge).
+    - Surfaces clear explanations of what will be purged, distinguishing between safe unused asset cleanup and destructive full pool purges (`️ Destructive Action` badge).
 
 ### Slot Type Safety, Duplicate Prevention & Import Disambiguation
 
@@ -429,8 +429,8 @@
     - Added `draggable="false"` on all thumbnail `<img>` elements and called `e.stopPropagation()` on slot drops.
     - Added explicit guard in `onModalDrop` and `onPoolDrop` to ignore internal asset drags (`application/x-area-maker-asset`), ensuring asset cards dropped onto slots or modal background never re-import as new files.
 - **Strict Slot Type Enforcement (`BackgroundMakerModal.svelte`):**
-    - Disallowed audio files from being slotted into image slots (`background`, `foreground`, and TOD `background`/`foreground`). Any attempt to drop or assign audio to an image slot is strictly blocked with an explanatory warning toast (`⚠️ Audio files cannot be assigned to image slots.`).
-    - Disallowed image files from being slotted into ambience audio slots (`ambience` and TOD `ambience`). Any attempt to drop or assign an image to ambience is strictly blocked with an explanatory warning toast (`⚠️ Image files cannot be assigned to Ambience Audio.`).
+    - Disallowed audio files from being slotted into image slots (`background`, `foreground`, and TOD `background`/`foreground`). Any attempt to drop or assign audio to an image slot is strictly blocked with an explanatory warning toast (`️ Audio files cannot be assigned to image slots.`).
+    - Disallowed image files from being slotted into ambience audio slots (`ambience` and TOD `ambience`). Any attempt to drop or assign an image to ambience is strictly blocked with an explanatory warning toast (`️ Image files cannot be assigned to Ambience Audio.`).
     - Added interactive drag-over visual cues: dragging valid assets over slots displays a glowing accent border (`.drag-target-valid`), while dragging mismatched assets displays a red dashed border and a forbidden cursor (`.drag-target-invalid` with `dropEffect = 'none'`).
 - **Batch Import vs Single-Slot Drop Separation (`BackgroundMakerModal.svelte`):**
     - Fixed issue where dragging multiple files from desktop to import them accidentally slotted the first file into whichever slot the cursor was over.
@@ -438,7 +438,7 @@
     - Dropping a single file directly onto a slot card registers it into the pool and assigns it only if its file type matches the slot type.
 - **Slot Quick-Pickers & Mini-Slot Clear Actions (`BackgroundMakerModal.svelte`):**
     - Added quick-pick dropdowns (`▾ Pick image…`, `▾ Pick overlay…`, `▾ Pick audio…`) on empty slot card headers, allowing users to assign assets directly with a single click without requiring drag-and-drop.
-    - Added clear `✕` buttons on Time of Day mini-slots (`.mslot-clear-btn`), enabling users to clear individual TOD slot overrides back to base without deleting the entire time variant.
+    - Added clear `` buttons on Time of Day mini-slots (`.mslot-clear-btn`), enabling users to clear individual TOD slot overrides back to base without deleting the entire time variant.
 - **Two-Line Slot Header Typography & Subtitle Formatting (`BackgroundMakerModal.svelte`):**
     - Replaced the single-line cluttered slot titles with a structured two-line layout:
         - **Background Image:** Title `Background Image` with dimmed secondary descriptor `Scene backdrop`.
@@ -454,14 +454,14 @@
 - **Two-Row Header Layout & Blinking Caret (`BackgroundMakerModal.svelte`):**
     - Removed the gray badge box `<span class="maker-subtag">MNN SCENE ASSET BUILDER</span>`.
     - Transformed the header into a clean two-row layout:
-        - **Row 1 (`.maker-title-row`):** Full-width header title `// BACKGROUND.JSON MAKER_` with terminal blinking cursor (`.cursor` animated with `cursor-blink` keyframes), plus the modal close `✕` button on the far right.
-        - **Row 2 (`.maker-toolbar-row`):** Dedicated toolbar row below the title hosting `✓ Apply to Area #N` on the left and `Import…`, `Copy JSON`, `Export JSON`, `Export Package (.zip)`, `Library ▾`, `Templates ▾` on the right, completely resolving header crowding.
+        - **Row 1 (`.maker-title-row`):** Full-width header title `// BACKGROUND.JSON MAKER_` with terminal blinking cursor (`.cursor` animated with `cursor-blink` keyframes), plus the modal close `` button on the far right.
+        - **Row 2 (`.maker-toolbar-row`):** Dedicated toolbar row below the title hosting ` Apply to Area #N` on the left and `Import…`, `Copy JSON`, `Export JSON`, `Export Package (.zip)`, `Library ▾`, `Templates ▾` on the right, completely resolving header crowding.
 - **Global Asset Renaming with Instant Propagation (`src/lib/bgStore.js`, `src/App.svelte`, `BackgroundMakerModal.svelte`):**
     - Added global asset renaming function `bgStore.renameAsset(assetId, newName)` accessible from the Asset Repository Pool cards context menu.
     - Automatically updates the asset file and filename in the asset pool and IndexedDB cache, propagates the new name across all backgrounds, states, positions, time variants, and `assetSources` maps in the library, and dispatches a `bg-asset-renamed` event.
     - `App.svelte` listens for `bg-asset-renamed` and synchronizes all area node backgrounds (`area.background`, `area.background_tod`, and canvas image overlays) across the active project graph in real time.
 - **Per-Background Slot Export Filename Aliases (`src/lib/bgStore.js`, `BackgroundMakerModal.svelte`):**
-    - Added local slot override renaming function via the pencil icon `✏️` on slot headers and right-click context menu (**Rename Export Filename…**).
+    - Added local slot override renaming function via the pencil icon `️` on slot headers and right-click context menu (**Rename Export Filename…**).
     - Allows users to customize the exported filename written into `background.json` and package ZIP for that specific background (e.g. exporting `IMG_098.png` as `courtroom_day.png`) without modifying the original asset in the pool.
     - Preserves source-to-export mapping via `bg.assetSources[exportName] = originalPoolAssetName`.
     - Renders an `alias of [original_name]` indicator tag beneath the slot filename and an amber dot indicator `●` on Time of Day mini-slots.
@@ -486,29 +486,29 @@
     - Modals now only close when a user explicitly initiates and completes a click directly on the backdrop scrim, never from dragging text selection out of inputs.
 - **Single-Click Slot Label to Rename (`BackgroundMakerModal.svelte`):**
     - Single-clicking the filename label on any slot card (Background Image, Foreground, Ambience) or Time of Day mini-slot immediately opens the Rename Export Filename modal (since single-clicking the thumbnail specifically opens the Lightbox preview, single-clicking the text label provides direct, effortless access to renaming).
-    - Added `.clickable-rename` with hover color highlighting and dotted underline cues for intuitive discoverability alongside the pencil icon `✏️`.
+    - Added `.clickable-rename` with hover color highlighting and dotted underline cues for intuitive discoverability alongside the pencil icon `️`.
 - **Single-Click Lightbox Preview & In-Line Dual Renaming (`BackgroundMakerModal.svelte`):**
     - Single-clicking slot thumbnails or Asset Repository Pool cards directly opens the full-screen Lightbox asset inspector (with internal drag-detection flag `assetDragOccurred` ensuring drag-to-slot functionality remains completely uninterrupted).
     - Double-clicking asset cards in the pool directly triggers the Global Asset Rename modal.
     - Replaced the static Lightbox header with two in-line input boxes placed strictly in-line with the `[IMAGE]` / `[AUDIO]` tag badge:
         - `GLOBAL:` Renames the asset in the pool globally across all backgrounds, states, time variants, and active project nodes in real time.
         - `EXPORT:` Customizes the export filename alias written into `background.json` and ZIP export for the active background without altering the global asset.
-    - Unified vertical height (`height: 26px`) and flex-center alignment across `.lightbox-badge`, `.lightbox-input-box`, and close button `✕`, achieving 0.00px vertical offset for a clean, cyber-themed header bar.
+    - Unified vertical height (`height: 26px`) and flex-center alignment across `.lightbox-badge`, `.lightbox-input-box`, and close button ``, achieving 0.00px vertical offset for a clean, cyber-themed header bar.
 - **Backgrounds Sidebar Header Restructure (`BackgroundMakerModal.svelte`):**
     - Restructured the left navigator header (`.nav-head`) into a clean two-row vertical layout:
         - **Row 1 (`.nav-head-title-row`):** Full-width title `BACKGROUNDS ({count})` with bold uppercase styling, completely eliminating awkward wrapping of the title or count onto multiple lines.
-        - **Row 2 (`.nav-head-actions`):** Dedicated button row below the title structured as a 2-column grid (`1fr 1fr`) hosting `[ ＋ New ]` and `[ 📥 Import ]` side-by-side with balanced padding.
+        - **Row 2 (`.nav-head-actions`):** Dedicated button row below the title structured as a 2-column grid (`1fr 1fr`) hosting `[ ＋ New ]` and `[  Import ]` side-by-side with balanced padding.
 
 ### Courtroom Camera Positions Modal, Template Presets & Context Menu
 
 - **Add Camera Position Modal (`BackgroundMakerModal.svelte`):**
-    - Replaced the legacy browser `prompt()` dialog and redundant quick-add preset pill strip (`Normal Witness Prosecution Defense Judge`) with a dedicated **🎥 Add Camera Position** modal (`showAddPositionModal`).
+    - Replaced the legacy browser `prompt()` dialog and redundant quick-add preset pill strip (`Normal Witness Prosecution Defense Judge`) with a dedicated ** Add Camera Position** modal (`showAddPositionModal`).
     - Position preset dropdown populated dynamically with:
         - **Standard Courtroom Presets:** `Normal`, `Witness`, `Prosecution`, `Defense`, `Judge`, `Counsel`, `Gallery`, `Jury`, `Bench`, `Wide`.
         - **Template Positions:** Positions extracted directly from built-in templates (`builtin-courtroom-5`, `builtin-courtroom-day-night`) and custom background templates saved in the library (`tpl.structure.positions`).
         - **Existing in Library:** Any camera positions defined across other backgrounds and states in the project.
     - Automatically pre-selects the first available preset that does not already exist on the active state (e.g. defaulting to `Witness` when `Normal` is active).
-    - Custom text input with live duplicate detection warning (`⚠ Camera position "{name}" already exists on this state.`).
+    - Custom text input with live duplicate detection warning (` Camera position "{name}" already exists on this state.`).
     - **Initial slots copy options:** Allows copying from the active position, another existing position, base state slots, or starting with blank slots.
     - Checkbox option to copy Time of Day variants from the source position into the new camera position.
     - Equipped with universal scrim drag-out protection (`onScrimMouseDown` / `handleScrimClose`) and Escape key dismissal.
@@ -547,8 +547,8 @@
 - **Recursive Drag-and-Drop & Two-Option Import Dropdown (`BackgroundMakerModal.svelte`):**
     - Upgraded drag-and-drop handler with `getAllFilesFromDataTransfer` utilizing `webkitGetAsEntry()` and recursive `readEntries()` to seamlessly traverse dropped folders and nested directory structures in modern browsers.
     - Replaced single import button with an intelligent dropdown menu available in both the top toolbar and the Backgrounds sidebar:
-        - **📁 Import Directory / Folder…**: Selects and recursively traverses any folder structure from disk.
-        - **📦 Import ZIP, INI, or JSON File…**: Imports archive packages, legacy `.ini` definitions, or modern `background.json` files.
+        - ** Import Directory / Folder…**: Selects and recursively traverses any folder structure from disk.
+        - ** Import ZIP, INI, or JSON File…**: Imports archive packages, legacy `.ini` definitions, or modern `background.json` files.
     - Updated file inputs to accept `.zip,.ini,.json`.
 
 ### Background Maker Width & Search, Import Progress Overlay, Subfolder Filtering & Asset Collision Fix
@@ -558,7 +558,7 @@
     - Widened the left `.bg-nav` sidebar from `220px` to `275px`, preventing long background titles and nested series subfolders (e.g. `WS Lambda/East Island/Manor/Manor Room 3 [Evening]`) from truncating prematurely.
 - **Backgrounds Sidebar Search & Filter (`src/components/modals/BackgroundMakerModal.svelte`):**
     - Added an instant search/filter input (`.bg-nav-search`) with real-time reactive filtering across background folder paths, names, and descriptions (`filteredBackgrounds`).
-    - Includes a quick-clear (`✕`) button and dynamically updates the displayed background count while preserving active selection and drag-drop capabilities.
+    - Includes a quick-clear (``) button and dynamically updates the displayed background count while preserving active selection and drag-drop capabilities.
 - **Import Loading & Progress Overlay (`src/components/modals/BackgroundMakerModal.svelte`, `src/lib/bgStore.js`):**
     - Added an animated modal overlay (`.import-loading-overlay`) with a spinning indicator, glowing orange heading, and real-time step descriptions during directory, ZIP archive, or file imports (`isImporting` & `importProgressText`).
     - Reports granular import progress through `bgStore.registerFiles(files, onProgress)`: unpacking directories, grouping scenes, registering assets, mapping courtroom positions, and persisting assets to IndexedDB cache.
@@ -584,7 +584,7 @@
     - Updated `normalizeBgPath` and `normalizeAmbiencePath` to strip arbitrary root prefixes cleanly (e.g. `MM/background/...` -> clean room folder, `MM/sounds/ambient/...` -> clean relative audio loop path).
 - **Clear All Backgrounds / Reset to Zero (`src/lib/bgStore.js`, `src/components/modals/BackgroundMakerModal.svelte`):**
     - Added `bgStore.clearAllBackgrounds()` to reset the background library to a single blank `Default` background, clear local storage persistence, and reset active visual state.
-    - Added a `Clear All` button on the `.nav-head-title-row` in the Backgrounds sidebar header, an entry in `📚 Library ▾`, and an option in the Background item right-click context menu.
+    - Added a `Clear All` button on the `.nav-head-title-row` in the Backgrounds sidebar header, an entry in ` Library ▾`, and an option in the Background item right-click context menu.
     - Added a dedicated confirmation submodal (`showClearBgsConfirmModal`) with an optional checkbox to also purge all assets from the Asset Repository Pool, full Escape key dismissal, and backdrop scrim drag-out protection.
 
 ### Root Import Audio & Case-Sensitivity Fix, Slot Lightbox Disambiguation, Repository Asset Inspector & Empty Foreground Preview
@@ -639,9 +639,9 @@
     - Retained audio element across modal lifecycle with safe teardown on modal close, preventing stray audio.
 - **Ambience Volume Slider & Ear Protection (`src/components/modals/BackgroundMakerModal.svelte`):**
     - Added an ambient volume slider in the Live Stage Monitor right below the play button with default volume preset to `0.30` (30%) to protect ears against loud loop files.
-    - Features interactive percentage indicator (`30%`) and speaker icon toggle (`🔉` / `🔊` / `🔇`) for one-click mute and unmute (restoring previous volume).
+    - Features interactive percentage indicator (`30%`) and speaker icon toggle (`` / `` / ``) for one-click mute and unmute (restoring previous volume).
     - Persists user volume preferences in local storage (`yuzu_mnn_bg_ambience_volume`).
-    - When no ambience is assigned to the current position/state, displays a graceful `🔇 No Ambience` disabled indicator while keeping the volume slider accessible.
+    - When no ambience is assigned to the current position/state, displays a graceful ` No Ambience` disabled indicator while keeping the volume slider accessible.
 
 ### Repository Inspector Horizontal Split, Table Header Fix, Used Asset Filter Accuracy & Fullscreen Stage Monitor
 
@@ -658,8 +658,8 @@
     - Guarantees 100% parity between the inspector's usage listing and the bottom dock's `Used (N)` / `Unused (N)` tabs, preventing referenced assets from ever being flagged as unused or purged prematurely.
 - **Fullscreen Live Stage Monitor Popup (`src/components/modals/BackgroundMakerModal.svelte`):**
     - Added an interactive fullscreen inspection modal (`showStageFullscreenModal`) for the Live Stage Monitor.
-    - Clicking anywhere on the canvas viewport (or hovering to reveal the `⛶ Click to expand` pill) opens an expanded high-resolution popup maintaining exact aspect ratios (`16:9`, `4:3`, custom) with backdrop and desk overlays.
-    - Includes interactive Time of Day toggles (`☀ Day`, `🌆 Evening`, `🌙 Night`), full scene metadata, and one-click Escape/scrim dismissal.
+    - Clicking anywhere on the canvas viewport (or hovering to reveal the ` Click to expand` pill) opens an expanded high-resolution popup maintaining exact aspect ratios (`16:9`, `4:3`, custom) with backdrop and desk overlays.
+    - Includes interactive Time of Day toggles (` Day`, ` Evening`, ` Night`), full scene metadata, and one-click Escape/scrim dismissal.
 
 ### Embed Image & Social Card Update
 
@@ -673,7 +673,7 @@
 ### Library Dropdown Positioning & Modal Clipping Fix
 
 - **Library Dropdown Anchoring & Overflow Prevention (`src/components/modals/BackgroundMakerModal.svelte`):**
-    - Fixed an issue where clicking `📚 Library ▾` caused the dropdown menu to clip past the right border of the modal and truncate menu items (such as "Export Library Backup" and "Export All Backgrounds & Assets").
+    - Fixed an issue where clicking ` Library ▾` caused the dropdown menu to clip past the right border of the modal and truncate menu items (such as "Export Library Backup" and "Export All Backgrounds & Assets").
     - Anchored `.library-drop-menu` to `right: 0; left: auto;`, aligning the menu cleanly to the right edge of the button and opening inward to the left where extensive modal clearance exists.
     - Set explicit `min-width: 320px`, `width: max-content`, `max-width: 380px`, and `white-space: nowrap` for menu action labels.
     - Added styled `LIBRARY & ASSETS` menu section header tag and event stop-propagation handlers, preventing unintentional scrim dismissal.
@@ -737,7 +737,7 @@
     - Restored `[Icon]` vs `[Scene]` toggle visibility: ensured the `Scene` button remains accessible whenever a background scene URL is available regardless of whether a custom icon is present, allowing one-click switching between the custom cropped avatar and the live stage background scene on both the Inspector preview and graph node cards.
     - Automatic node avatar fallback: when no custom icon is assigned, `resolveNodeImageUrl` automatically presents the background scene preview on the map node card.
 - **Repository Asset Inspector Modal UI Polish (`src/components/modals/BackgroundMakerModal.svelte`):**
-    - File size relocated to bottom left: moved file size indicator from the top-right header into `.repo-media-meta` as `SIZE:`, alongside `PATH:` and `FROM FOLDER:`, completely freeing up the top-right `✕` exit button from visual overlap or blocking.
+    - File size relocated to bottom left: moved file size indicator from the top-right header into `.repo-media-meta` as `SIZE:`, alongside `PATH:` and `FROM FOLDER:`, completely freeing up the top-right `` exit button from visual overlap or blocking.
     - Expanded spacious modal bounds: increased modal width and height (`max-width: 1200px; width: 95vw; height: min(86vh, 680px); min-height: 520px;`), providing a spacious and comfortable inspection window.
     - Glowing top-left accent line removed: suppressed `.modal::before` on `.repo-inspect-modal` and `.inspect-lightbox` (`content: none !important; display: none !important;`), eliminating the stray decorative orange accent line.
     - Universal image letterboxing: removed hardcoded 16:9 ratio locks on `.repo-media-viewport` and applied `object-fit: contain` with `#000` background fill so images of any dimension (16:9, 4:3, square, 9:16 vertical portrait, 21:9 ultrawide) center and letterbox cleanly without distortion.
@@ -772,7 +772,7 @@
     - Default/unselected full visibility: when "Isolate selection" is enabled, if no area is currently selected, creators see all areas and connections normally as per usual; the toggle remains checked.
     - Dynamic isolation on node selection: clicking any area node on the canvas or sidebar immediately isolates that area and its direct neighbours.
     - Full restoration on deselect without disabling toggle: clicking empty canvas space to deselect immediately restores all hidden areas to view, while keeping "Isolate selection" active (`true`) so clicking another area node later automatically isolates it.
-    - Toggle deactivation: unchecking the toggle in the `View ▾` dropdown menu, clicking `✕ Show everything (Esc)`, or pressing `Escape` cleanly disables isolation mode (`isolateSelection = false`).
+    - Toggle deactivation: unchecking the toggle in the `View ▾` dropdown menu, clicking ` Show everything (Esc)`, or pressing `Escape` cleanly disables isolation mode (`isolateSelection = false`).
 
 ## [2.1.1] - 2026-11-22
 
@@ -781,7 +781,7 @@
 - **Unified Lucide Iconography (`src/components/Icon.svelte`, modals, panels, and graph):**
     - Installed `@lucide/svelte` and created a single unified `Icon.svelte` component.
     - Replaced all emojis across the entire UI with standard 16x16px Lucide SVG icons (stroke width 1.5, `currentColor`, baseline aligned, 6px gap to label).
-    - Preserved text navigation characters (`▾ ↑ ↓ ✕ ↔ → ▸ ● ★`) strictly as text.
+    - Preserved text navigation characters (`▾ ↑ ↓  ↔ → ▸ ● `) strictly as text.
     - Untouched music player (`MusicPlayer.svelte`): all player buttons, marquee, captions, audio loop, and volume slider remain completely untouched.
 - **Three-Tier Visual Hierarchy & Inspector Typography (`src/styles/panels.css`, `src/styles/base.css`, `src/components/panels/Inspector.svelte`, `src/components/Header.svelte`):**
     - **Tier 1 (Export):** The sole filled button across the UI, styled in red-orange accent fill with dark `#0e0e12` text and subtle glow.
@@ -913,7 +913,7 @@
 - **Area Inspector Custom Variant Dropdown (`src/components/panels/Inspector.svelte`, `src/styles/panels.css`):**
     - Replaced native `<select>` with custom terminal popup menu (`.toolbar-dropdown-anchor` + `.drop-menu.inspector-variant-drop-menu`).
     - Completely eliminated the dummy `Variants ▾` self-option from the dropdown list.
-    - Displays `(Clear / default)` option if an area variant is currently assigned, followed by `SHARED VARIANT POOL` with active dot indicators (`●`), variant names, and active checkmarks (`✓`).
+    - Displays `(Clear / default)` option if an area variant is currently assigned, followed by `SHARED VARIANT POOL` with active dot indicators (`●`), variant names, and active checkmarks (``).
     - Bound to `right: 0; left: auto; top: calc(100% + 4px);` with `z-index: 100` and `max-height: 250px; overflow-y: auto;`, preventing horizontal clipping against the Inspector's right panel boundary.
     - Added click-outside and Escape key dismissal.
 - **Directory Path Subfolder Dropdown Refactor (`src/components/modals/BackgroundMakerModal.svelte`):**
@@ -951,23 +951,41 @@
         - Displays header `Selected Areas (N)` with total area count and a `Clear` button to deselect all.
         - Displays full `Batch Colour (N nodes)` swatches, reset button, and custom color picker to style all selected nodes simultaneously in a single undoable history transaction.
         - Displays scrollable `Nodes in selection` list showing every selected area's `#ID` badge, current color indicator dot, and area name.
-        - Provides a per-node `✕` removal button on each row to quickly drop individual nodes from the selection, automatically reverting to the single-area inspector when 1 node remains.
+        - Provides a per-node `` removal button on each row to quickly drop individual nodes from the selection, automatically reverting to the single-area inspector when 1 node remains.
         - Clicking any node row in the selection list focuses that individual area.
         - Completely omits single-area form fields (names, backgrounds, template dropdowns, walkable corridors, access locks) while multi-selection is active.
     - **Uniform Graph Canvas Node Highlighting:**
         - All selected nodes in `selectedIds` on the graph canvas receive full selection styling (`transform: scale(1.04)`, 2px custom/accent stroke, glowing drop-shadow `filter: drop-shadow(0 0 18px ...)`, accent bar fill, and bold text).
         - In Focus mode (`focusOn`), all selected nodes stay 100% opaque alongside their neighbours while unselected nodes dim.
     - **Set Reactivity:** Reassigns `selectedIds = new Set(...)` across `Graph.svelte` and `AreaList.svelte` on all selection operations so Inspector and canvas updates propagate reactively without stale references.
+- **Settings Modal Line Style Button Label & Padding Fixes (`src/components/modals/SettingsModal.svelte`):**
+    - Removed `Blueprint` from the orthogonal line style label, changing the description text to `90° Circuit`.
+    - Fixed container padding on `.style-choice-btn` (`padding: 8px 4px`), added `box-sizing: border-box`, `min-width: 0`, and `overflow: hidden`.
+    - Added `max-width: 100%`, `overflow: hidden`, `text-overflow: ellipsis`, and `white-space: nowrap` to `.style-choice-btn b` and `.choice-sub` labels.
+    - Switched `.style-btn-group` to `grid-template-columns: repeat(3, minmax(0, 1fr))` to guarantee equal button column widths that cannot exceed the modal boundary.
+    - Added `flex-wrap: wrap; gap: 8px;` to `.setting-header` and `white-space: nowrap; flex-shrink: 0;` to `.default-tag` and `.range-bound` labels.
+- **Universal Container Containment & Text Overflow Sweep Across All UI Components:**
+    - **Area Inspector (`src/components/panels/Inspector.svelte`):** Added `min-width: 0`, `flex: 1`, and text-overflow ellipsis on `.node-jump-btn` labels in the multi-selection node list. Added `min-width: 0` and ellipsis truncation on `.insp-mode-pills` buttons (`Essentials` and `Full Server Spec`).
+    - **Area List Sidebar (`src/components/panels/AreaList.svelte`):** Changed the top action buttons to `grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)` with `min-width: 0` and ellipsis on `Add Area` and `Merge ▾`.
+    - **Background Picker Modal (`src/components/modals/BgPickerModal.svelte`):** Updated `.info-grid` to `grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)` and added `min-width: 0` to `.info-cell` to protect layout on long path values.
+    - **Audit Modal (`src/components/modals/AuditModal.svelte`):** Added `max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 1;` on `.area-bg-chip` to prevent long background paths from displacing focus buttons.
+    - **Help Modal (`src/components/modals/HelpModal.svelte`):** Added `max-width: 100%; overflow-x: auto; display: block;` to markdown tables to prevent wide reference tables from overflowing modal width.
+    - **Direction Card (`src/components/graph/DirectionCard.svelte`):** Added `max-width: 140px; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0;` to `.dc-locked` mode badges.
+    - **Route Bar (`src/components/graph/RouteBar.svelte`):** Added `min-width: 0; box-sizing: border-box;` to `.deck-card` containers.
+    - **Header & Graph Toolbar Menus (`src/components/Header.svelte`, `src/components/graph/GraphToolbar.svelte`):** Added `min-width: 0` to check item text containers and `word-break: break-word` to `.check-desc` and `.link-opt-desc` to eliminate text clipping in dropdowns.
+    - **Templates Modal (`src/styles/chrome.css`):** Added `flex-wrap: wrap` and `min-width: 140px` to `.modal .tpl-row` to ensure clean wrapping on narrow viewports.
+    - **Background Maker Modal (`src/components/modals/BackgroundMakerModal.svelte`):** Updated `.nav-head-actions` to `minmax(0, 1fr)` columns with text truncation and added `min-width: 0; box-sizing: border-box;` to `.slot-card`.
 
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **408 passed, 0 failed** (all unit and integration tests passing, including 14 new tests for `hideLinesUnlessFocused` default settings, multi-node batch color application, and focus edge filtering).
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **408 passed, 0 failed** (all unit and integration tests passing, including 14 tests for `hideLinesUnlessFocused` default settings, multi-node batch color application, and focus edge filtering).
 - `npm run build:both`: Successfully compiled all production distributions with 0 errors:
-    - Singlefile full distribution: `export/yuzu_area_maker.html` (5324 KB).
-    - Singlefile no-music distribution: `export/yuzu_area_maker_nomusic.html` (670 KB).
-    - GitHub Pages distribution: `docs/index.html` (670 KB).
+    - Singlefile full distribution: `export/yuzu_area_maker.html` (5325 KB).
+    - Singlefile no-music distribution: `export/yuzu_area_maker_nomusic.html` (672 KB).
+    - GitHub Pages distribution: `docs/index.html` (672 KB).
     - Embed assets: `docs/og-image.png`, `public/og-image.png`, and `export/og-image.png` synchronized.
 - **Headless Chrome Visual Verification:**
+    - Settings Modal Line Style Buttons ([verified_v220_settings_orthogonal_label_fixed.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_settings_orthogonal_label_fixed.png)): Verified Orthogonal button renders `90° Circuit` with zero clipping, clean 5px margin from container border, no overflow (`subRight < bRight`), and identical 125.7px width matching Curved and Straight.
     - Dedicated Multi-Node Selection Inspector & Canvas Highlighting ([verified_v220_multi_node_selected_list.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_multi_node_selected_list.png)): Confirmed multi-selection displays `Selected Areas` header, batch color swatches, and the `Nodes in selection` list with ID badges, color indicators, and remove buttons. Confirmed all selected nodes on the canvas are uniformly highlighted with 2px stroke and drop-shadow glow.
     - Viewport Culling Active Rendering ([verified_v220_viewport_culling_active.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_viewport_culling_active.png)): Confirmed connection lines, one-way markers, direction tags, selection borders, and radar minimap render cleanly without visual degradation.
     - Connection Line Focus Hiding ([verified_v220_hide_lines_focus.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_hide_lines_focus.png)): Confirmed enabling "Hide lines (focus only)" in `View ▾` hides background connection lines, rendering only lines touching the focused/selected node while keeping the canvas clean.

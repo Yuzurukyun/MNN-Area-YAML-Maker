@@ -162,9 +162,10 @@
       <!-- 5. Autoscroll Long Labels -->
       <div class="setting-item">
         <label class="setting-header" style="cursor:pointer;margin-bottom:0">
-          <div style="display:flex;align-items:center;gap:8px">
+          <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1">
             <input
               type="checkbox"
+              style="flex-shrink:0;cursor:pointer"
               checked={$settings.autoscrollLongLabels}
               on:change={(e) => updateSettings((s) => (s.autoscrollLongLabels = e.target.checked))}
             />
@@ -200,7 +201,7 @@
           >
             <span class="choice-icon">⌐</span>
             <b>Orthogonal</b>
-            <span class="choice-sub">90° Circuit / Blueprint</span>
+            <span class="choice-sub">90° Circuit</span>
           </button>
           <button
             class="style-choice-btn {($settings.edgeStyle || 'curved') === 'straight' ? 'active' : ''}"
@@ -223,13 +224,14 @@
           </span>
         </div>
         <div class="hint">Birds-eye interactive radar in the bottom-right corner showing full network layout and camera viewport.</div>
-        <label class="setting-check-row" style="margin-top:6px;display:flex;align-items:center;gap:10px;cursor:pointer">
+        <label class="setting-check-row" style="margin-top:6px;display:flex;align-items:flex-start;gap:10px;cursor:pointer">
           <input
             type="checkbox"
+            style="margin-top:2px;flex-shrink:0;cursor:pointer"
             checked={$settings.showMinimap}
             on:change={(e) => updateSettings((s) => (s.showMinimap = e.target.checked))}
           />
-          <span style="font-size:12px;color:var(--text-strong)">Show Minimap radar HUD on canvas (Toggle with <b>M</b> key)</span>
+          <span style="font-size:12px;color:var(--text-strong);line-height:1.35">Show Minimap radar HUD on canvas (Toggle with <b>M</b> key)</span>
         </label>
       </div>
 
@@ -243,13 +245,14 @@
           </span>
         </div>
         <div class="hint">Floating "ALL AREAS" summary target pill and dashed links on the canvas (off by default).</div>
-        <label class="setting-check-row" style="margin-top:6px;display:flex;align-items:center;gap:10px;cursor:pointer">
+        <label class="setting-check-row" style="margin-top:6px;display:flex;align-items:flex-start;gap:10px;cursor:pointer">
           <input
             type="checkbox"
+            style="margin-top:2px;flex-shrink:0;cursor:pointer"
             checked={$settings.showAllPill}
             on:change={(e) => updateSettings((s) => (s.showAllPill = e.target.checked))}
           />
-          <span style="font-size:12px;color:var(--text-strong)">Show &lt;ALL&gt; summary target pill on canvas</span>
+          <span style="font-size:12px;color:var(--text-strong);line-height:1.35">Show &lt;ALL&gt; summary target pill on canvas</span>
         </label>
       </div>
 
@@ -263,13 +266,14 @@
           </span>
         </div>
         <div class="hint">Only draw connection lines touching currently selected or focused nodes, greatly improving performance on large maps with hundreds of areas.</div>
-        <label class="setting-check-row" style="margin-top:6px;display:flex;align-items:center;gap:10px;cursor:pointer">
+        <label class="setting-check-row" style="margin-top:6px;display:flex;align-items:flex-start;gap:10px;cursor:pointer">
           <input
             type="checkbox"
+            style="margin-top:2px;flex-shrink:0;cursor:pointer"
             checked={$settings.hideLinesUnlessFocused}
             on:change={(e) => updateSettings((s) => (s.hideLinesUnlessFocused = e.target.checked))}
           />
-          <span style="font-size:12px;color:var(--text-strong)">Hide connection lines unless node or edge is selected/focused</span>
+          <span style="font-size:12px;color:var(--text-strong);line-height:1.35">Hide connection lines unless node or edge is selected/focused</span>
         </label>
       </div>
 
@@ -316,6 +320,7 @@
   .settings-modal {
     width: 480px;
     max-width: 95vw;
+    box-sizing: border-box;
   }
 
   .settings-list {
@@ -330,6 +335,7 @@
     border: 1px solid var(--line);
     border-radius: var(--radius);
     padding: 10px 12px;
+    box-sizing: border-box;
   }
 
   .setting-header {
@@ -337,12 +343,15 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 2px;
+    gap: 8px;
+    flex-wrap: wrap;
   }
 
   .setting-title {
     font-weight: 700;
     font-size: 13px;
     color: var(--text-strong);
+    min-width: 0;
   }
 
   .setting-val {
@@ -353,6 +362,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    flex-shrink: 0;
   }
 
   .default-tag {
@@ -363,6 +373,8 @@
     border: 1px solid var(--line);
     border-radius: 3px;
     padding: 0 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .slider-row {
@@ -374,13 +386,14 @@
 
   .slider-row input[type="range"] {
     flex: 1;
+    min-width: 0;
   }
 
   .range-bound {
     font-size: 10px;
     color: var(--dim);
-    flex: none;
-    min-width: 58px;
+    flex-shrink: 0;
+    white-space: nowrap;
   }
 
   .range-bound:last-child {
@@ -392,21 +405,25 @@
     border: 1px solid var(--line);
     border-radius: var(--radius);
     padding: 8px 12px;
+    box-sizing: border-box;
   }
 
   .style-btn-group {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
     margin-top: 8px;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .style-choice-btn {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 2px;
-    padding: 8px 6px;
+    padding: 8px 4px;
     background: var(--panel2);
     border: 1.5px solid var(--line);
     border-radius: var(--radius);
@@ -414,6 +431,10 @@
     cursor: pointer;
     transition: all 0.15s ease;
     text-align: center;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
   }
 
   .style-choice-btn:hover {
@@ -433,11 +454,32 @@
     font-weight: 900;
     line-height: 1;
     color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .style-choice-btn b {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11.5px;
+    line-height: 1.2;
   }
 
   .choice-sub {
     font-size: 9.5px;
     color: var(--dim);
-    margin-top: 1px;
+    margin-top: 2px;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.2;
+    padding: 0 2px;
+    box-sizing: border-box;
   }
 </style>

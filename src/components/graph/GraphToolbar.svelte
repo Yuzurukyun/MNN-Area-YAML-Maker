@@ -340,6 +340,7 @@
     flex-direction: column;
     gap: 1px;
     line-height: 1.2;
+    min-width: 0;
   }
   .link-opt-text b {
     font-size: 12px;
@@ -348,6 +349,7 @@
   .link-opt-desc {
     font-size: 10px;
     color: var(--dim);
+    word-break: break-word;
   }
   .link-check {
     font-size: 11px;
@@ -405,6 +407,7 @@
     flex-direction: column;
     gap: 1px;
     line-height: 1.25;
+    min-width: 0;
   }
   .view-check-row b {
     font-size: 11.5px;
@@ -413,6 +416,7 @@
   .view-check-row .check-desc {
     font-size: 10px;
     color: var(--dim);
+    word-break: break-word;
   }
   .toolbar-sep {
     color: var(--line2);
@@ -467,6 +471,7 @@
     flex-direction: column;
     gap: 1px;
     line-height: 1.25;
+    min-width: 0;
   }
   .arrange-check-row b {
     font-size: 11.5px;
@@ -475,6 +480,7 @@
   .arrange-check-row .check-desc {
     font-size: 10px;
     color: var(--dim);
+    word-break: break-word;
   }
   .arrange-menu-action {
     border-top: 1px solid var(--line);

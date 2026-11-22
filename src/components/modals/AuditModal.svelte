@@ -644,7 +644,11 @@
     border: 1px solid var(--line);
     padding: 1px 6px;
     border-radius: 3px;
-    flex-shrink: 0;
+    flex-shrink: 1;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .focus-btn {

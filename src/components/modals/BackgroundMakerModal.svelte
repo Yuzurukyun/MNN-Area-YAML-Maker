@@ -4988,9 +4988,10 @@
 
   .nav-head-actions {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 6px;
     width: 100%;
+    box-sizing: border-box;
   }
 
   .nav-head-actions .mini-btn {
@@ -5000,6 +5001,8 @@
     font-size: 11px;
     white-space: nowrap;
     text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .nav-search-box {
@@ -5306,6 +5309,8 @@
     flex-direction: column;
     gap: 8px;
     min-height: 148px;
+    min-width: 0;
+    box-sizing: border-box;
     transition: border-color 0.12s ease;
   }
   .slot-card:hover {

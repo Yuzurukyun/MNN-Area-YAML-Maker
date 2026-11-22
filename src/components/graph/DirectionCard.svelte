@@ -125,6 +125,10 @@
     border-radius: var(--radius);
     padding: 2px 7px;
     white-space: nowrap;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
   }
   .dc-note {
     margin-top: 6px;

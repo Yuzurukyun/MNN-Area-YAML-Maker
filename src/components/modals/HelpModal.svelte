@@ -185,6 +185,9 @@
   }
   .help-body :global(table) {
     width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    display: block;
     border-collapse: collapse;
     margin: 8px 0 12px;
     font-size: 12.5px;

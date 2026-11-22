@@ -1067,6 +1067,7 @@
     flex-direction: column;
     gap: 1px;
     line-height: 1.25;
+    min-width: 0;
   }
 
   .menu-check-row b {
@@ -1077,6 +1078,7 @@
   .menu-check-row .check-desc {
     font-size: 10px;
     color: var(--dim);
+    word-break: break-word;
   }
 
   .link-mode-menu {
@@ -1116,6 +1118,7 @@
     flex-direction: column;
     gap: 1px;
     line-height: 1.2;
+    min-width: 0;
   }
 
   .link-opt-text b {
@@ -1126,6 +1129,7 @@
   .link-opt-desc {
     font-size: 9.5px;
     color: var(--dim);
+    word-break: break-word;
   }
 
   .link-check {

@@ -260,6 +260,7 @@
 
   .deck-card {
     flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -267,6 +268,7 @@
     border: 1px solid var(--line);
     border-radius: var(--radius);
     padding: 6px 10px;
+    box-sizing: border-box;
   }
 
   .deck-lbl {

@@ -212,11 +212,11 @@
     {#if q}<button class="mini-btn" title="Clear search filter" on:click={() => update((s) => (s.query = ''), { skipHistory: true })}>Clear</button>{/if}
   </div>
   <div class="hint" style="margin-top:2px" title="The list position IS the Area ID written to YAML">Index = Area ID (file order) · Ctrl+drag or ↑/↓ reorders</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0 2px;position:relative">
-    <button class="mini-btn tb-btn" title="Create a new area using the selected template below" on:click={onAddArea}>
+  <div style="display:grid;grid-template-columns:minmax(0, 1fr) minmax(0, 1fr);gap:6px;margin:8px 0 2px;position:relative">
+    <button class="mini-btn tb-btn" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="Create a new area using the selected template below" on:click={onAddArea}>
       <Icon name="plus" /> Add Area
     </button>
-    <button class="mini-btn tb-btn" title="Merge areas from an external YAML or JSON file into this project" on:click|stopPropagation={() => (addMenu = !addMenu)}>
+    <button class="mini-btn tb-btn" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="Merge areas from an external YAML or JSON file into this project" on:click|stopPropagation={() => (addMenu = !addMenu)}>
       <Icon name="plus" /> Merge ▾
     </button>
     {#if addMenu}
