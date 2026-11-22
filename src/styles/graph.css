@@ -125,12 +125,14 @@ rect.mask {
   stroke: none;
 }
 
-.node.sel {
+.node.sel,
+.node.multi {
   transform-origin: 102px 33px;
   transform: scale(1.04);
 }
 
-.node.sel rect.body {
+.node.sel rect.body,
+.node.multi rect.body {
   stroke: var(--accent);
   stroke-width: 2px;
   filter: drop-shadow(0 0 18px color-mix(in srgb, var(--accent) 35%, transparent));
@@ -147,19 +149,20 @@ rect.mask {
   stroke: var(--danger);
 }
 
-.node.multi rect.body {
-  stroke: var(--node-multi);
-  stroke-width: 1.8;
-}
-
 .node text {
   fill: var(--text);
   pointer-events: none;
 }
 
-.node.sel text.title {
+.node.sel text.title,
+.node.multi text.title {
   fill: var(--text-strong);
   font-weight: 700;
+}
+
+.node.sel .node-accent,
+.node.multi .node-accent {
+  fill: var(--accent);
 }
 
 .node .sub {

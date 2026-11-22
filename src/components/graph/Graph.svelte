@@ -179,13 +179,14 @@
       )
     : [];
 
-  $: focusOn = $state.focus && !!$state.selectedId;
+  $: focusOn = $state.focus && Boolean($state.selectedId || ($state.selectedIds && $state.selectedIds.size > 0));
   $: neighbours = (() => {
-    const s = new Set([$state.selectedId]);
+    const seeds = $state.selectedIds && $state.selectedIds.size ? $state.selectedIds : new Set($state.selectedId ? [$state.selectedId] : []);
+    const s = new Set(seeds);
     if (focusOn) {
       pairs.forEach((p) => {
-        if (p.x === $state.selectedId) s.add(p.y);
-        if (p.y === $state.selectedId) s.add(p.x);
+        if (seeds.has(p.x)) s.add(p.y);
+        if (seeds.has(p.y)) s.add(p.x);
       });
     }
     return s;

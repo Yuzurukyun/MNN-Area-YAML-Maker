@@ -93,10 +93,37 @@
     ? $state.selectedIds.size
     : 1;
   $: isMulti = multiCount > 1;
+  $: selectedAreas = isMulti
+    ? P.areas.filter((x) => $state.selectedIds.has(x.id))
+    : [];
+
+  function deselectArea(id) {
+    update((s) => {
+      s.selectedIds.delete(id);
+      s.selectedIds = new Set(s.selectedIds);
+      if (s.selectedId === id) {
+        s.selectedId = [...s.selectedIds][0] || null;
+      }
+    });
+  }
+
+  function focusSingleArea(id) {
+    update((s) => {
+      s.selectedId = id;
+      s.selectedIds = new Set([id]);
+    });
+  }
+
+  function clearAllMultiSelection() {
+    update((s) => {
+      s.selectedId = null;
+      s.selectedIds = new Set();
+    });
+  }
 
   function setNodeColor(c) {
     update((s) => {
-      const targetIds = s.selectedIds && s.selectedIds.size > 1 && s.selectedIds.has(s.selectedId)
+      const targetIds = s.selectedIds && s.selectedIds.size > 1
         ? s.selectedIds
         : new Set([s.selectedId]);
       s.project.areas.forEach((ar) => {
@@ -221,13 +248,96 @@
 
 <svelte:window on:click={() => (variantMenuOpen = false)} on:keydown={(e) => { if (e.key === 'Escape') variantMenuOpen = false; }} />
 
-{#if a}
+{#if isMulti}
+  <!-- Multi-Node Selection View: Shows selected nodes list and batch colour picker -->
+  <div class="insp-head multi-insp-head">
+    <div class="insp-title" style="align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="insp-id" title="Number of selected areas">{selectedAreas.length}</span>
+        <h2 title="Multiple areas selected">Selected Areas</h2>
+      </div>
+      <button class="mini-btn" title="Clear selection" on:click={clearAllMultiSelection}>Clear</button>
+    </div>
+    <div class="hint" style="margin-top:2px">
+      {selectedAreas.length} nodes selected on map. Choose a colour below to batch style.
+    </div>
+
+    <!-- Node Colour Swatches -->
+    <div class="node-style-row" style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span class="hint" title="Apply custom colour to all selected nodes">Batch Colour ({selectedAreas.length} nodes)</span>
+        <button class="mini-btn" title="Reset all selected nodes to theme default" on:click={() => setNodeColor('')}>Reset</button>
+      </div>
+      <div class="swatch-bar">
+        {#each [
+          ['#ef4444', 'Red'],
+          ['#f97316', 'Orange'],
+          ['#f59e0b', 'Amber'],
+          ['#10b981', 'Green'],
+          ['#06b6d4', 'Teal'],
+          ['#3b82f6', 'Blue'],
+          ['#8b5cf6', 'Purple'],
+          ['#ec4899', 'Pink'],
+          ['#64748b', 'Slate'],
+        ] as [c, cname]}
+          <button
+            class="c-swatch"
+            style="background:{c}"
+            title="{cname} (apply to all {selectedAreas.length} areas)"
+            on:click={() => setNodeColor(c)}
+          ></button>
+        {/each}
+        <label class="c-swatch-custom" title="Custom color picker (apply to all {selectedAreas.length} areas)">
+          <input
+            type="color"
+            value="#8b5cf6"
+            on:input={(e) => setNodeColor(e.target.value)}
+          />
+          <Icon name="palette" />
+        </label>
+      </div>
+    </div>
+
+    <!-- Selected Areas List -->
+    <div class="multi-nodes-section" style="margin-top:14px;padding-top:10px;border-top:1px solid var(--line)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span class="hint" style="text-transform:uppercase;font-size:10px;letter-spacing:0.5px">Nodes in selection</span>
+        <span class="hint" style="font-size:11px">{selectedAreas.length} total</span>
+      </div>
+      <div class="multi-nodes-list" style="display:flex;flex-direction:column;gap:5px;max-height:calc(100vh - 280px);overflow-y:auto;padding-right:2px">
+        {#each selectedAreas as ar}
+          {@const arIdx = P.areas.indexOf(ar)}
+          <div class="multi-node-item">
+            <button
+              type="button"
+              class="node-jump-btn"
+              title="Click to inspect this area individually"
+              on:click={() => focusSingleArea(ar.id)}
+            >
+              <span class="insp-id">#{arIdx}</span>
+              {#if ar.color}
+                <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:{ar.color};flex-shrink:0" title="Custom color: {ar.color}"></span>
+              {/if}
+              <span style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)">
+                {ar.area || 'Unnamed'}
+              </span>
+            </button>
+            <button
+              type="button"
+              class="remove-node-btn"
+              title="Remove #{arIdx} {ar.area || 'Unnamed'} from selection"
+              on:click|stopPropagation={() => deselectArea(ar.id)}
+            >✕</button>
+          </div>
+        {/each}
+      </div>
+    </div>
+  </div>
+{:else if a}
   <div class="insp-head">
     <div class="insp-title">
       <span class="insp-id" title="Area ID (list index)">#{P.areas.indexOf(a)}</span>
-      <h2 title="Currently selected area" use:autoscroll>
-        {a.area || 'Unnamed'}{#if isMulti} <span style="font-size:12px;opacity:0.75;font-weight:normal">(+{multiCount - 1} more)</span>{/if}
-      </h2>
+      <h2 title="Currently selected area" use:autoscroll>{a.area || 'Unnamed'}</h2>
     </div>
     <div class="hint" title="Template snapshot last applied to this area">
       {#if tpl}Template: <b style="color:var(--text)">{tpl.name}</b>{:else}No template assigned{/if}
@@ -266,9 +376,7 @@
 
     <div class="node-style-row" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--line)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <span class="hint" title="Custom color for this area node on the map">
-          Node Colour{isMulti ? ` (${multiCount} selected)` : ''}
-        </span>
+        <span class="hint" title="Custom color for this area node on the map">Node Colour</span>
         {#if a.color}
           <button class="mini-btn" title="Reset to current theme default" on:click={() => setNodeColor('')}>Reset</button>
         {/if}
@@ -288,11 +396,11 @@
           <button
             class="c-swatch {a.color === c ? 'active' : ''}"
             style="background:{c}"
-            title="{cname}{isMulti ? ` (apply to all ${multiCount} areas)` : ''}"
+            title={cname}
             on:click={() => setNodeColor(c)}
           ></button>
         {/each}
-        <label class="c-swatch-custom" title="Custom color picker{isMulti ? ` (apply to all ${multiCount} areas)` : ''}">
+        <label class="c-swatch-custom" title="Custom color picker">
           <input
             type="color"
             value={a.color || '#64748b'}

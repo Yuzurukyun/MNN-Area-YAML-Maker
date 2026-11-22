@@ -159,9 +159,10 @@
 
   {#each sortedAreas as a (a.id)}
     {@const isSel = a.id === selectedId}
-    {@const isMulti = selectedIds.has(a.id) && !isSel}
+    {@const isMulti = selectedIds && selectedIds.has(a.id) && !isSel}
+    {@const isSelected = isSel || isMulti}
     {@const isNeighbour = neighbours && neighbours.has(a.id)}
-    {@const inViewport = isSel || isMulti || isNeighbour || isNodeInViewport(a, viewportBox)}
+    {@const inViewport = isSelected || isNeighbour || isNodeInViewport(a, viewportBox)}
     {#if inViewport && !hiddenIds.has(a.id) && (!inFocus || focusIds.has(a.id))}
       {@const idx = P.areas.indexOf(a)}
       {@const nodeImg = resolveNodeImageUrl(a, bgStoreState)}
@@ -184,15 +185,15 @@
         <rect class="mask" x="-4" y="-4" width={NW + 8} height={NH + 8} rx="6" />
         <g
           class="node {idx === 0 ? 'hub' : ''} {isSel ? 'sel' : ''} {isMulti ? 'multi' : ''} {dups.has(M.strip(a.area)) ? 'dup' : ''} {dragOverNodeId === a.id ? 'drag-over' : ''}"
-          opacity={focusOn && !neighbours.has(a.id) ? 0.17 : 1}
+          opacity={focusOn && !isSelected && !isNeighbour ? 0.17 : 1}
         >
           <rect
             class="body"
             width={NW}
             height={NH}
             rx="5"
-            style={isSel
-              ? `stroke: ${a.color || 'var(--accent)'}; stroke-width: 2px; fill: ${a.color ? `color-mix(in srgb, ${a.color} 14%, var(--node-bg))` : 'var(--node-bg)'}; filter: drop-shadow(0 0 18px color-mix(in srgb, ${a.color || 'var(--accent)'} 35%, transparent));`
+            style={isSelected
+              ? `stroke: ${a.color || 'var(--accent)'}; stroke-width: 2px; fill: ${a.color ? `color-mix(in srgb, ${a.color} 16%, var(--node-bg))` : 'color-mix(in srgb, var(--accent) 12%, var(--node-bg))'}; filter: drop-shadow(0 0 18px color-mix(in srgb, ${a.color || 'var(--accent)'} 35%, transparent));`
               : (a.color ? `stroke: ${a.color}; fill: color-mix(in srgb, ${a.color} 14%, var(--node-bg));` : '')}
           />
           <rect
@@ -202,7 +203,7 @@
             width="3.5"
             height={NH - 12}
             rx="1.5"
-            style={a.color ? `fill: ${a.color};` : ''}
+            style={a.color ? `fill: ${a.color};` : (isSelected ? 'fill: var(--accent);' : '')}
           />
           {#if hasImg}
             <image

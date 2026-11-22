@@ -946,24 +946,32 @@
     - Removed `filter: drop-shadow(...)` and CSS transitions from base unselected `.edge`, `.edge.oneway`, and `.edge.oneway-in`.
     - Eliminates hundreds of expensive offscreen GPU rasterization passes per frame in Chromium during panning, zooming, and node dragging.
     - Retains full glowing drop-shadows and pulse animations on selected edges (`.edge.sel`) and active routes (`.edge.route-active`).
-- **Multi-Node Batch Colour Application (`src/components/panels/Inspector.svelte`, `src/components/graph/Graph.svelte`, `src/components/panels/AreaList.svelte`):**
-    - When multiple areas are selected (`selectedIds.size > 1`), picking any color swatch, custom color picker value, or pressing Reset in the Inspector simultaneously applies the color to all selected areas in a single undoable history transaction.
-    - Inspector header displays area count `(+N more)` and Node Colour header displays `Node Colour (N selected)` when multi-selection is active.
-    - Right-click node context menu preserves multi-selection and offers batch color updates with toast feedback (*"Changed colour for N areas."*).
-    - Fixed Set reactivity in `Graph.svelte` and `AreaList.svelte` to reassign `selectedIds = new Set(...)` on selection changes so all components update reactively.
+- **Multi-Node Batch Colour Application & Dedicated Selection Inspector (`src/components/panels/Inspector.svelte`, `src/components/graph/NodeLayer.svelte`, `src/components/graph/Graph.svelte`, `src/components/panels/AreaList.svelte`, `src/styles/panels.css`, `src/styles/graph.css`):**
+    - **Dedicated Multi-Selection Inspector:** When multiple areas are selected (`selectedIds.size > 1`), replaces the single-area edit form with a clean, focused multi-selection workspace:
+        - Displays header `Selected Areas (N)` with total area count and a `Clear` button to deselect all.
+        - Displays full `Batch Colour (N nodes)` swatches, reset button, and custom color picker to style all selected nodes simultaneously in a single undoable history transaction.
+        - Displays scrollable `Nodes in selection` list showing every selected area's `#ID` badge, current color indicator dot, and area name.
+        - Provides a per-node `✕` removal button on each row to quickly drop individual nodes from the selection, automatically reverting to the single-area inspector when 1 node remains.
+        - Clicking any node row in the selection list focuses that individual area.
+        - Completely omits single-area form fields (names, backgrounds, template dropdowns, walkable corridors, access locks) while multi-selection is active.
+    - **Uniform Graph Canvas Node Highlighting:**
+        - All selected nodes in `selectedIds` on the graph canvas receive full selection styling (`transform: scale(1.04)`, 2px custom/accent stroke, glowing drop-shadow `filter: drop-shadow(0 0 18px ...)`, accent bar fill, and bold text).
+        - In Focus mode (`focusOn`), all selected nodes stay 100% opaque alongside their neighbours while unselected nodes dim.
+    - **Set Reactivity:** Reassigns `selectedIds = new Set(...)` across `Graph.svelte` and `AreaList.svelte` on all selection operations so Inspector and canvas updates propagate reactively without stale references.
 
 ### Verification
 
 - `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **408 passed, 0 failed** (all unit and integration tests passing, including 14 new tests for `hideLinesUnlessFocused` default settings, multi-node batch color application, and focus edge filtering).
 - `npm run build:both`: Successfully compiled all production distributions with 0 errors:
-    - Singlefile full distribution: `export/yuzu_area_maker.html` (5319 KB).
-    - Singlefile no-music distribution: `export/yuzu_area_maker_nomusic.html` (666 KB).
-    - GitHub Pages distribution: `docs/index.html` (666 KB).
+    - Singlefile full distribution: `export/yuzu_area_maker.html` (5324 KB).
+    - Singlefile no-music distribution: `export/yuzu_area_maker_nomusic.html` (670 KB).
+    - GitHub Pages distribution: `docs/index.html` (670 KB).
     - Embed assets: `docs/og-image.png`, `public/og-image.png`, and `export/og-image.png` synchronized.
 - **Headless Chrome Visual Verification:**
+    - Dedicated Multi-Node Selection Inspector & Canvas Highlighting ([verified_v220_multi_node_selected_list.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_multi_node_selected_list.png)): Confirmed multi-selection displays `Selected Areas` header, batch color swatches, and the `Nodes in selection` list with ID badges, color indicators, and remove buttons. Confirmed all selected nodes on the canvas are uniformly highlighted with 2px stroke and drop-shadow glow.
     - Viewport Culling Active Rendering ([verified_v220_viewport_culling_active.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_viewport_culling_active.png)): Confirmed connection lines, one-way markers, direction tags, selection borders, and radar minimap render cleanly without visual degradation.
     - Connection Line Focus Hiding ([verified_v220_hide_lines_focus.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_hide_lines_focus.png)): Confirmed enabling "Hide lines (focus only)" in `View ▾` hides background connection lines, rendering only lines touching the focused/selected node while keeping the canvas clean.
-    - Multi-Node Batch Color ([verified_v220_multi_node_batch_color.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_multi_node_batch_color.png)): Confirmed selecting multiple nodes updates Inspector header to `(+2 more)` and `Node Colour (3 selected)`, and clicking a swatch updates all selected nodes simultaneously on canvas, minimap, and sidebar.
+    - Multi-Node Batch Color ([verified_v220_multi_node_batch_color.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_multi_node_batch_color.png)): Confirmed selecting multiple nodes updates the color across all selected nodes simultaneously on canvas, minimap, and sidebar.
     - Base Edge GPU Filter Strip: Confirmed unselected `.edge` computed style returns `filter: none`, eliminating redundant Chromium GPU composite layers.
     - Inspector Variant Dropdown ([verified_v220_inspector_variant_custom_dropdown.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_inspector_variant_custom_dropdown.png)): Confirmed Area Inspector variant dropdown opens cleanly without self-item, listing shared pool variants with active checkmarks and inward boundary alignment.
     - Subfolder Custom Dropdown ([verified_v220_subfolder_custom_dropdown.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_subfolder_custom_dropdown.png)): Confirmed directory path dropdown displays custom styled directory list with folder icons without self-item.
