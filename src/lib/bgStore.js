@@ -101,7 +101,12 @@ function loadInitialBackgrounds() {
   ];
 }
 
-function saveToStorage() {
+let _saveStorageTimer = null;
+export function flushSaveToStorage() {
+  if (_saveStorageTimer) {
+    clearTimeout(_saveStorageTimer);
+    _saveStorageTimer = null;
+  }
   try {
     if (typeof localStorage !== 'undefined') {
       const raw = localStorage.getItem(LS_KEY);
@@ -116,6 +121,15 @@ function saveToStorage() {
   } catch {
     /* ignore */
   }
+}
+
+function saveToStorage() {
+  if (typeof localStorage === 'undefined') return;
+  if (_saveStorageTimer) clearTimeout(_saveStorageTimer);
+  _saveStorageTimer = setTimeout(() => {
+    _saveStorageTimer = null;
+    flushSaveToStorage();
+  }, 350);
 }
 
 // Reactive store pattern (matching state.js in project)
@@ -340,12 +354,36 @@ export const bgStore = {
     notify();
     return defaultBg;
   },
-  updateActiveBg(updater) {
+  updateActiveBg(updater, { invalidateAssets = false } = {}) {
     const idx = backgrounds.findIndex((b) => b.id === selectedBgId);
     if (idx === -1) return;
     backgrounds[idx] = updater({ ...backgrounds[idx] });
-    invalidateRefCache();
+    if (invalidateAssets) {
+      invalidateRefCache();
+    }
     notify();
+  },
+
+  /**
+   * Returns a sorted list of unique state variant names used across all library backgrounds.
+   * State variants are shared across backgrounds, opt-in per background.
+   */
+  getSharedStateVariantNames(extraVariants = []) {
+    const BUILTIN_STATES = ['crowded', 'empty', 'night', 'dim', 'rainy', 'damaged', 'festive', 'ruined', 'clean'];
+    const set = new Set(BUILTIN_STATES);
+    for (const bg of backgrounds) {
+      if (bg && bg.states && typeof bg.states === 'object') {
+        for (const k of Object.keys(bg.states)) {
+          if (k && k !== 'default') set.add(k);
+        }
+      }
+    }
+    if (Array.isArray(extraVariants)) {
+      for (const v of extraVariants) {
+        if (v && v !== 'default') set.add(v);
+      }
+    }
+    return Array.from(set).sort();
   },
 
   // Backgrounds Library Management

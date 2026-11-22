@@ -1209,20 +1209,108 @@
     (t) => t.structure?.positions && Object.keys(t.structure.positions).length > 0
   );
 
-  function updateBg(mutator) {
+  let animatePreview = false;
+  try {
+    animatePreview = localStorage.getItem('areamaker_animate_preview') === '1';
+  } catch {}
+
+  let hoveredAssetCardId = null;
+
+  // Cached first-frame snapshots for animated WebP assets
+  const _staticFrameCache = new Map();
+  function renderStaticFrame(canvasNode, srcUrl) {
+    let currentUrl = srcUrl;
+    let cancelled = false;
+
+    function draw(url) {
+      if (!url) {
+        canvasNode.width = 1;
+        canvasNode.height = 1;
+        const ctx = canvasNode.getContext('2d');
+        ctx?.clearRect(0, 0, 1, 1);
+        return;
+      }
+      if (_staticFrameCache.has(url)) {
+        const cached = _staticFrameCache.get(url);
+        canvasNode.width = cached.width;
+        canvasNode.height = cached.height;
+        const ctx = canvasNode.getContext('2d');
+        ctx?.drawImage(cached.canvas, 0, 0);
+        return;
+      }
+
+      const img = new Image();
+      img.onload = () => {
+        if (cancelled || currentUrl !== url) return;
+        const w = img.naturalWidth || 320;
+        const h = img.naturalHeight || 180;
+        const offscreen = document.createElement('canvas');
+        offscreen.width = w;
+        offscreen.height = h;
+        const octx = offscreen.getContext('2d');
+        octx?.drawImage(img, 0, 0, w, h);
+        _staticFrameCache.set(url, { width: w, height: h, canvas: offscreen });
+        if (_staticFrameCache.size > 300) {
+          const firstKey = _staticFrameCache.keys().next().value;
+          _staticFrameCache.delete(firstKey);
+        }
+
+        canvasNode.width = w;
+        canvasNode.height = h;
+        const ctx = canvasNode.getContext('2d');
+        ctx?.drawImage(offscreen, 0, 0);
+      };
+      img.src = url;
+    }
+
+    draw(srcUrl);
+
+    return {
+      update(newUrl) {
+        if (newUrl !== currentUrl) {
+          currentUrl = newUrl;
+          draw(newUrl);
+        }
+      },
+      destroy() {
+        cancelled = true;
+      },
+    };
+  }
+
+  function updateBg(mutator, { invalidateAssets = false } = {}) {
     bgStore.updateActiveBg((bg) => {
       mutator(bg);
       return bg;
-    });
+    }, { invalidateAssets });
   }
 
+  $: sharedStateVariants = bgStore.getSharedStateVariantNames($state?.project?.areas?.map((x) => x.background_variant) || []);
+  $: unassignedSharedVariants = sharedStateVariants.filter((v) => !activeBg?.states?.[v]);
+
   // State variant actions
-  function openAddStateModal() {
+  function openAddStateModal(prefillState = '') {
     const existing = new Set(Object.keys(activeBg?.states || {}).map((k) => k.toLowerCase()));
-    const common = ['crowded', 'festive', 'rainy', 'damaged', 'ruined', 'empty', 'dim', 'night', 'clean'];
-    newStateName = common.find((c) => !existing.has(c)) || '';
-    stateCopySource = activeStateKey || 'default';
+    const sharedPool = bgStore.getSharedStateVariantNames();
+    newStateName = prefillState || sharedPool.find((c) => !existing.has(c.toLowerCase())) || '';
+    stateCopySource = 'blank'; // Default to blank empty slots per spec
     showAddStateModal = true;
+  }
+
+  function addVariantFromPool(vName) {
+    const clean = (vName || '').trim();
+    if (!clean || clean.toLowerCase() === 'default') return;
+    updateBg((bg) => {
+      if (!bg.states) bg.states = {};
+      if (!bg.states[clean]) {
+        bg.states[clean] = createStateVariant(clean, {
+          background: '',
+          usePositions: false,
+        });
+      }
+      bg.activeState = clean;
+    });
+    notify(`Added state variant "${clean}" (empty slot).`, 'info');
   }
 
   function confirmAddState() {
@@ -2673,7 +2761,31 @@
                     {stKey}{stKey === 'default' ? ' ★' : ''}
                   </button>
                 {/each}
-                <button class="mini-btn add-btn" title="Add alternative state variant (e.g. crowded, festive)" on:click={openAddStateModal}>+ State</button>
+                <div class="add-variant-group">
+                  <select
+                    class="mini-btn add-btn variant-pool-select"
+                    title="Add state variant from shared pool or create new"
+                    on:change={(e) => {
+                      const val = e.target.value;
+                      if (val === '__new__') {
+                        openAddStateModal();
+                      } else if (val) {
+                        addVariantFromPool(val);
+                      }
+                      e.target.value = '';
+                    }}
+                  >
+                    <option value="">+ Variant ▾</option>
+                    <option value="__new__">+ New variant…</option>
+                    {#if unassignedSharedVariants.length > 0}
+                      <optgroup label="Shared Variant Pool">
+                        {#each unassignedSharedVariants as sv}
+                          <option value={sv}>{sv}</option>
+                        {/each}
+                      </optgroup>
+                    {/if}
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -3139,6 +3251,24 @@
         <div class="stage-monitor">
           <div class="monitor-header">
             <span class="mon-title">LIVE STAGE MONITOR</span>
+            <label
+              class="animate-preview-pill"
+              title="Doesn't affect the export, just whether it's played on the live stage monitor"
+            >
+              <input
+                type="checkbox"
+                class="sr-only"
+                checked={animatePreview}
+                on:change={(e) => {
+                  animatePreview = e.target.checked;
+                  try {
+                    localStorage.setItem('areamaker_animate_preview', animatePreview ? '1' : '0');
+                  } catch {}
+                }}
+              />
+              <span class="pill-dot" class:active={animatePreview}></span>
+              <span class="pill-text">Animate Preview</span>
+            </label>
             <span class="mon-live">LIVE</span>
           </div>
 
@@ -3203,14 +3333,22 @@
             on:contextmenu|preventDefault|stopPropagation={openStageContextMenu}
           >
             {#if resolvedBgUrl}
-              <img
-                draggable="false"
-                src={resolvedBgUrl}
-                alt="Background"
-                class="stage-bg-layer"
-                style="object-fit:{stageFitMode}"
-                on:load={onStageImageLoad}
-              />
+              {#if animatePreview}
+                <img
+                  draggable="false"
+                  src={resolvedBgUrl}
+                  alt="Background"
+                  class="stage-bg-layer"
+                  style="object-fit:{stageFitMode}"
+                  on:load={onStageImageLoad}
+                />
+              {:else}
+                <canvas
+                  use:renderStaticFrame={resolvedBgUrl}
+                  class="stage-bg-layer static-stage-canvas"
+                  style="object-fit:{stageFitMode}"
+                ></canvas>
+              {/if}
             {:else}
               <div class="stage-fallback">
                 <span class="stage-msg">No image assigned</span>
@@ -3219,13 +3357,21 @@
             {/if}
 
             {#if resolvedFgUrl}
-              <img
-                draggable="false"
-                src={resolvedFgUrl}
-                alt="Foreground"
-                class="stage-fg-layer"
-                style="object-fit:{stageFitMode}"
-              />
+              {#if animatePreview}
+                <img
+                  draggable="false"
+                  src={resolvedFgUrl}
+                  alt="Foreground"
+                  class="stage-fg-layer"
+                  style="object-fit:{stageFitMode}"
+                />
+              {:else}
+                <canvas
+                  use:renderStaticFrame={resolvedFgUrl}
+                  class="stage-fg-layer static-stage-canvas"
+                  style="object-fit:{stageFitMode}"
+                ></canvas>
+              {/if}
             {/if}
 
             <div class="stage-expand-hint" title="Click to view full screen">
@@ -3440,8 +3586,20 @@
                 on:dblclick|stopPropagation={() => triggerRenameAsset(asset)}
               >
                 {#if asset.type === 'image'}
-                  <div class="card-thumb-wrap">
-                    <img draggable="false" loading="lazy" src={asset.url} alt={asset.name} class="asset-img" />
+                  <!-- svelte-ignore a11y_no_static_element_interactions -->
+                  <div
+                    class="card-thumb-wrap"
+                    on:mouseenter={() => (hoveredAssetCardId = asset.id)}
+                    on:mouseleave={() => { if (hoveredAssetCardId === asset.id) hoveredAssetCardId = null; }}
+                  >
+                    {#if hoveredAssetCardId === asset.id}
+                      <img draggable="false" loading="lazy" src={asset.url} alt={asset.name} class="asset-img" />
+                    {:else}
+                      <canvas
+                        use:renderStaticFrame={asset.url}
+                        class="asset-img static-asset-canvas"
+                      ></canvas>
+                    {/if}
                   </div>
                 {:else}
                   <div class="card-thumb-wrap audio">
@@ -4280,7 +4438,7 @@
     box-sizing: border-box;
     flex-shrink: 0;
     gap: 4px;
-    transition: all 0.15s ease;
+    transition: border-color 0.12s ease, box-shadow 0.12s ease;
   }
   .maker-path-strip:focus-within {
     border-color: var(--line2);
@@ -4368,7 +4526,7 @@
     cursor: pointer;
     flex-shrink: 0;
     max-width: 140px;
-    transition: all 0.15s ease;
+    transition: border-color 0.12s ease, color 0.12s ease;
   }
   .subfolder-dropdown:hover {
     border-color: var(--accent);
@@ -4554,7 +4712,7 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    transition: all 0.15s ease;
+    transition: border-color 0.12s ease, box-shadow 0.12s ease;
   }
   .icon-tool-btn:hover {
     border-color: var(--line2);
@@ -4691,7 +4849,7 @@
     cursor: pointer;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    transition: all 0.12s ease;
+    transition: color 0.1s ease, border-color 0.1s ease;
   }
   .nav-clear-bgs-btn:hover {
     color: var(--accent);
@@ -5043,7 +5201,7 @@
     max-width: 105px;
     cursor: pointer;
     outline: none;
-    transition: all 0.15s ease;
+    transition: border-color 0.1s ease, color 0.1s ease;
   }
   .mini-slot-picker:hover {
     border-color: var(--accent);
@@ -5277,8 +5435,7 @@
 
   .submodal-scrim {
     z-index: 100 !important;
-    background: rgba(0, 0, 0, 0.65);
-    backdrop-filter: blur(5px);
+    background: rgba(10, 14, 20, 0.85);
   }
   .submodal-card {
     width: min(520px, 94vw);
@@ -6037,7 +6194,7 @@
     cursor: pointer;
     line-height: 1;
     color: var(--dim);
-    transition: all 0.12s ease;
+    transition: background 0.1s ease, border-color 0.1s ease, color 0.1s ease;
   }
   .slot-rename-btn:hover {
     background: var(--sel);
@@ -6737,7 +6894,7 @@
     border: 1px solid var(--accent);
     color: var(--accent);
     cursor: pointer;
-    transition: all 0.12s ease;
+    transition: background 0.1s ease, color 0.1s ease;
   }
 
   .mini-btn-table:hover {
@@ -6753,8 +6910,7 @@
   :global(.import-loading-overlay) {
     position: absolute;
     inset: 0;
-    background: rgba(10, 14, 20, 0.82);
-    backdrop-filter: blur(4px);
+    background: rgba(10, 14, 20, 0.9);
     z-index: 2000;
     display: flex;
     align-items: center;
@@ -6796,5 +6952,62 @@
     font-size: 11.5px;
     color: var(--text);
     font-family: var(--font-mono);
+  }
+
+  /* Static Canvas Thumbnails & Animate Preview styles */
+  .static-asset-canvas {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .static-stage-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .animate-preview-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--input-bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 2px 6px;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease;
+  }
+  .animate-preview-pill:hover {
+    border-color: var(--accent);
+    color: var(--text-strong);
+  }
+  .animate-preview-pill .pill-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--dim);
+    transition: background 0.14s ease, box-shadow 0.14s ease;
+  }
+  .animate-preview-pill .pill-dot.active {
+    background: #10b981;
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+  }
+  .variant-pool-select {
+    padding: 3px 6px;
+    font-size: 11px;
+    height: 24px;
+    width: auto;
+  }
+  .add-variant-group {
+    display: inline-flex;
+    align-items: center;
   }
 </style>

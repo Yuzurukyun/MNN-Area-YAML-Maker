@@ -10,6 +10,7 @@ export function blankArea(name) {
     id: uid(),
     area: name || 'New Area',
     background: '',
+    background_variant: '',
     default_description: '',
     tod: [],
     afk_delay: 0,

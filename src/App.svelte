@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { update, uiScale, undo, redo, selectOnly } from './lib/state.js';
   import * as M from './lib/core.js';
+  import { bgStore } from './lib/bgStore.js';
   import Header from './components/Header.svelte';
   import ToastHost from './components/ToastHost.svelte';
   import AreaList from './components/panels/AreaList.svelte';
@@ -122,9 +123,15 @@
     };
     window.addEventListener('bg-asset-renamed', onBgAssetRenamed);
 
+    let isMakerOpen = false;
+    const unsubBg = bgStore.subscribe((s) => {
+      isMakerOpen = Boolean(s.isMakerOpen);
+    });
+
     return () => {
       window.removeEventListener('resize', fit);
       window.removeEventListener('bg-asset-renamed', onBgAssetRenamed);
+      unsubBg();
     };
   });
 </script>
@@ -139,7 +146,7 @@
     <div class="resizer" id="resizeLeft" title="Drag to resize sidebar"></div>
   </aside>
 
-  <section id="centre">
+  <section id="centre" class:under-modal={$bgStore.isMakerOpen}>
     <Graph />
   </section>
 

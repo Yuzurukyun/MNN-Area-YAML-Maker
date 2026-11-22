@@ -30,6 +30,7 @@
   let bgStoreState = bgStore.get();
   onMount(() => {
     return bgStore.subscribe((s) => {
+      if (s.isMakerOpen) return;
       bgStoreState = s;
     });
   });
@@ -64,7 +65,8 @@
     filter === 'all' ? true : filter === 'rarely' ? g === 'rarely' : M.GROUP_RANK[g] <= (filter === 'common' ? 0 : 1);
   const showK = (k) => showG(grpOf(k));
 
-  $: showBasics = ['area', 'background', 'background_tod', 'default_description'].some(showK);
+  $: sharedStateVariants = bgStore.getSharedStateVariantNames(P?.areas?.map((x) => x.background_variant).filter(Boolean) || []);
+  $: showBasics = ['area', 'background', 'background_variant', 'background_tod', 'default_description'].some(showK);
   $: showLinks = ['reachable_areas', 'visible_areas', 'scream_range', 'restricted_chars'].some(showK);
   $: accessFields = M.BOOL_FIELDS.filter((f) => f[1] === 'access');
   $: behBools = M.BOOL_FIELDS.filter((f) => f[1] === 'behaviour');
@@ -385,6 +387,47 @@
                   <Icon name="image-plus" /> Maker…
                 </button>
               </div>
+            </div>
+          </Field>
+        {/if}
+        {#if showK('background_variant')}
+          <Field fkey="background_variant">
+            <div style="display:flex;gap:6px;align-items:center">
+              <input
+                type="text"
+                style="flex:1"
+                title="Active state variant for this background (empty = default, omitted on export)"
+                placeholder="default (omitted)"
+                value={a.background_variant || ''}
+                on:input={inputStr('background_variant')}
+                on:change={trimStr('background_variant')}
+              />
+              <select
+                class="mini-btn"
+                style="width:auto;max-width:130px;padding:4px 6px;font-size:11px"
+                title="Pick an existing state variant from library"
+                on:change={(e) => {
+                  const val = e.target.value;
+                  if (val === '__clear__') {
+                    update((s) => {
+                      const cur = s.project.areas.find((x) => x.id === a.id);
+                      if (cur) cur.background_variant = '';
+                    });
+                  } else if (val) {
+                    update((s) => {
+                      const cur = s.project.areas.find((x) => x.id === a.id);
+                      if (cur) cur.background_variant = val;
+                    });
+                  }
+                  e.target.value = '';
+                }}
+              >
+                <option value="">Variants ▾</option>
+                <option value="__clear__">(Clear / default)</option>
+                {#each sharedStateVariants as v}
+                  <option value={v}>{v}</option>
+                {/each}
+              </select>
             </div>
           </Field>
         {/if}

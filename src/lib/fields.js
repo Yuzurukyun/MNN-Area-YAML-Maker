@@ -38,6 +38,7 @@ export const EXTRA_KEYS = [
 export const DESC = {
   area: 'Name of the area.',
   background: 'Default background of the area.',
+  background_variant: 'Active state variant of the background (e.g. crowded, empty). Empty is "default" (omitted on export).',
   background_tod: 'Backgrounds per time of day.',
   default_description: 'Output of /look in the area if no custom description is in place via /look_set.',
   afk_delay: 'If a positive number, the number of seconds that must pass to mark an inactive player as AFK and kick them to afk_sendto. If 0, no such AFK kicks take place.',
@@ -143,6 +144,7 @@ export function allTemplates(P) {
 export const FIELD_GROUP = {
   area: 'common',
   background: 'common',
+  background_variant: 'common',
   background_tod: 'common',
   reachable_areas: 'common',
   scream_range: 'common',
@@ -183,6 +185,7 @@ export function capFirst(s) {
 export const SHORT_DESC = {
   area: 'Name of the area',
   background: 'Default background of the area',
+  background_variant: 'State variant of the background (empty = default)',
   background_tod: 'Backgrounds per time of day',
   default_description: 'What /look shows by default',
   reachable_areas: 'Areas you can walk to from here',

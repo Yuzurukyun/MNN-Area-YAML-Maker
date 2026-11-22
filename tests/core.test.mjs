@@ -19,7 +19,9 @@ import {
   BUILTIN_BG_TEMPLATES,
   extractBgTemplateStructure,
   applyBgTemplate,
+  serializeBackgroundObject,
 } from '../src/lib/bgSchema.js';
+import { exportYaml, parseYaml } from '../src/lib/yaml.js';
 import { resolveNodeImageUrl, getAreaBgUrl, bgStore, ensureUniqueBgFolder } from '../src/lib/bgStore.js';
 import { dbSaveAssets, dbLoadAllAssets, dbDeleteAssets, dbClearAssets } from '../src/lib/assetDb.js';
 import { buildZip, readZip } from '../src/lib/zip.js';
@@ -1465,6 +1467,52 @@ eq(mockState.isolateSelection, true, 'isolateSelection remains true');
 exitFocusView(mockState);
 eq(mockState.isolateSelection, false, 'exitFocusView turns off isolateSelection');
 eq(mockState.focusViewIds, null, 'exitFocusView clears focusViewIds');
+
+/* ---- background_variant YAML Export & Import ---- */
+const pVar = M.blankProject();
+const a1 = M.addArea(pVar, { name: 'Courtroom' });
+a1.background = 'Apollo/Courtroom';
+a1.background_variant = 'crowded';
+a1.tod = [['night', 'Apollo/Courtroom_Night']];
+
+const yamlOut = exportYaml(pVar);
+ok(yamlOut.includes('background: Apollo/Courtroom'), 'exports background');
+ok(yamlOut.includes('background_variant: crowded'), 'exports background_variant when non-empty');
+const bgIdx = yamlOut.indexOf('background: Apollo/Courtroom');
+const varIdx = yamlOut.indexOf('background_variant: crowded');
+const todIdx = yamlOut.indexOf('background_tod:');
+ok(bgIdx < varIdx && varIdx < todIdx, 'background_variant is exported BEFORE background_tod');
+
+// Verify empty or default background_variant is omitted
+a1.background_variant = '';
+const yamlEmpty = exportYaml(pVar);
+ok(!yamlEmpty.includes('background_variant:'), 'omits empty background_variant');
+
+a1.background_variant = 'default';
+const yamlDef = exportYaml(pVar);
+ok(!yamlDef.includes('background_variant:'), 'omits default background_variant');
+
+// YAML import parses background_variant
+const parsedAreas = parseYaml(`- area: Lobby\n  background: Hotel/Lobby\n  background_variant: rainy\n  background_tod:\n    night: Hotel/Lobby_Night\n`);
+eq(parsedAreas.length, 1, 'parsed 1 area');
+eq(parsedAreas[0].background_variant, 'rainy', 'parsed background_variant: rainy');
+
+/* ---- Shared State Variants Pool & Empty Variant Omission ---- */
+const sharedPool = bgStore.getSharedStateVariantNames(['custom_trial']);
+ok(sharedPool.includes('crowded'), 'shared pool includes crowded');
+ok(sharedPool.includes('custom_trial'), 'shared pool includes extra area variant');
+
+const testBgWithVariants = createBackground('Library/TestRoom');
+testBgWithVariants.states = {
+  default: { name: 'default', background: 'default.webp' },
+  empty_slot: { name: 'empty_slot', background: '', foreground: '', ambience: '' },
+  crowded: { name: 'crowded', background: 'crowded.webp', foreground: '', ambience: '' },
+};
+
+const serializedBg = serializeBackgroundObject(testBgWithVariants);
+ok(serializedBg.default !== undefined, 'exports default state');
+ok(serializedBg.crowded !== undefined, 'exports populated crowded state');
+eq(serializedBg.empty_slot, undefined, 'omits unfilled state variant from export');
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

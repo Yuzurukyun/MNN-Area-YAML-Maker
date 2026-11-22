@@ -7,6 +7,11 @@
   min-width: 0;
 }
 
+#centre.under-modal {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 #graphBar {
   display: flex;
   gap: 6px;

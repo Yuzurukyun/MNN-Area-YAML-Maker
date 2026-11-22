@@ -69,6 +69,10 @@ export function exportYaml(P) {
   P.areas.forEach((a) => {
     lines.push('- area: ' + yamlScalar(a.area));
     lines.push('  background: ' + yamlScalar(a.background));
+    const variant = strip(a.background_variant);
+    if (variant && variant.toLowerCase() !== 'default') {
+      lines.push('  background_variant: ' + yamlScalar(variant));
+    }
     const tod = (a.tod || []).map(([k, v]) => [strip(k), strip(v)]).filter(([k, v]) => k && v);
     if (tod.length) {
       lines.push('  background_tod:');
@@ -420,6 +424,7 @@ export function parseYamlWithReport(text) {
   const areas = rawAreas.map((r) => {
     const a = blankArea(strip(r.area || 'Unnamed'));
     a.background = strip(r.background || '');
+    a.background_variant = strip(r.background_variant || '');
     a.default_description = strip(decodeDesc(r.default_description || ''));
     a.tod = (r.tod || []).map(([k, v]) => [strip(k), strip(v)]);
     BOOL_FIELDS.forEach(([k]) => {

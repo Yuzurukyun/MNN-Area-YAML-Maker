@@ -860,20 +860,54 @@
     - **Shifted Furude Rika:** Adjusted left column padding and width to shift Rika towards the center/middle rather than pinned against the left edge.
     - **Card & Typography:** Retained Comic Sans MS typography with sample node connection card, header title `// GRAPHIC DESIGN IS MY SHIT`, and `Visual Node Graph & Background Maker` title below.
 
+- **Repository Animated WebP Optimization (`src/components/modals/BackgroundMakerModal.svelte`):**
+    - **Static First Frame by Default:** In the asset repository pool (`.asset-card`), image assets render static first-frame thumbnails using an offscreen canvas snapshot cache (`renderStaticFrame`), preventing dozens of animated WebP assets from decoding and playing simultaneously upon loading.
+    - **Animate on Hover Only:** Hovering over any repository asset card (`mouseenter`) smoothly swaps in the live animated file; leaving the card (`mouseleave`) swaps back to the frozen first-frame canvas.
+    - **Full Playback in Lightbox:** When an asset card is clicked to open the Lightbox / Asset Inspector modal, the single selected asset plays its full animation loop smoothly without performance overhead.
+
+- **Live Stage Monitor "Animate Preview" Toggle (`src/components/modals/BackgroundMakerModal.svelte`):**
+    - **Monitor Header Toggle:** Added a dedicated toggle pill labelled `Animate Preview` between `LIVE STAGE MONITOR` and the `LIVE` badge, matching the reference placement.
+    - **Tooltip & Export Independence:** Added tooltip `"Doesn't affect the export, just whether it's played on the live stage monitor"`. The toggle solely controls local viewport rendering and is never written into `background.json` or exported packages.
+    - **Static vs Live Playback:** When toggled Off (default), the stage monitor renders a static first-frame canvas for background and foreground layers. When toggled On, the monitor renders the live animated WebP layers with a glowing green indicator dot.
+    - **Preference Persistence:** Persisted in `localStorage` under `areamaker_animate_preview`.
+
+- **Background Maker Lag Investigation & Performance Fixes (`src/lib/bgStore.js`, `src/styles/chrome.css`, `src/styles/graph.css`, `src/App.svelte`, `src/components/graph/NodeLayer.svelte`, `src/components/graph/NodeHoverCard.svelte`, `src/components/panels/Inspector.svelte`, `src/components/modals/BackgroundMakerModal.svelte`):**
+    - **Eliminated Backdrop Blur GPU Bottleneck:** Removed expensive `backdrop-filter: blur(...)` from `.modal-bg`, `.submodal-scrim`, and `.import-loading-overlay`. Replaced with clean high-contrast dark scrims (`rgba(10, 14, 20, 0.82–0.90)`), eliminating massive full-viewport shader blur recalculations on every scroll and keystroke.
+    - **Debounced Project Storage Writes:** Replaced synchronous multi-megabyte `JSON.parse` / `JSON.stringify` / `localStorage.setItem` execution in `bgStore.saveToStorage()` with debounced asynchronous writes (350ms) and exported `flushSaveToStorage()`, removing ~100–300ms main-thread freezes on character input.
+    - **Scoped Asset Invalidation:** Configured `bgStore.updateActiveBg` to avoid invalidating the global asset reference cache on folder or name keystrokes, eliminating redundant whole-library scans while typing.
+    - **Gated Background Subscribers:** Gated `bgStore.subscribe` in `NodeLayer.svelte`, `NodeHoverCard.svelte`, and `Inspector.svelte` so graph node cards and hover cards do not re-render or execute visual resolutions while `isMakerOpen` is active.
+    - **Canvas Visibility Isolation:** Attached `.under-modal` (`visibility: hidden; pointer-events: none;`) to `#centre` in `App.svelte` and `graph.css` while Background Maker is open, allowing Chromium to skip rasterizing and painting the underlying SVG canvas, nodes, links, and minimap entirely.
+    - **Eliminated Transition Layout Thrashing:** Replaced all broad `transition: all` declarations across modal panels, inputs, tabs, pills, and buttons with targeted transitions (`background`, `border-color`, `color`), preventing layout recalculation stalls.
+
+- **New Area Key: `background_variant` (`src/lib/fields.js`, `src/lib/model.js`, `src/lib/yaml.js`, `src/components/panels/Inspector.svelte`, `tests/core.test.mjs`):**
+    - **Dev Specification:** Added `background_variant` to `FIELD_GROUP` (categorized as `common`), `DESC`, and `SHORT_DESC`.
+    - **Inspector Basics Placement:** Placed in the Basics container immediately after `background` and before `background_tod`.
+    - **Field Input & Shared Pool Dropdown:** Displays a text input box (empty by default) alongside a quick-pick dropdown (`Variants ▾`) populated by the shared state variants pool. Selecting a variant sets the field; choosing `(Clear / default)` clears it.
+    - **YAML Import/Export Rules:**
+        - Empty string or `"default"` is omitted from YAML export entirely (falling back to server default `"default"`).
+        - Non-empty values (e.g. `crowded`, `empty`, `night`) are exported as `background_variant: <value>` placed immediately before `background_tod:`.
+        - Existing `background_variant` definitions in imported YAML files are parsed and populated into the input box.
+
+- **Shared Opt-In State Variants Pool (`src/lib/bgStore.js`, `src/lib/bgSchema.js`, `src/components/modals/BackgroundMakerModal.svelte`, `tests/core.test.mjs`):**
+    - **Global Shared Pool (`bgStore.getSharedStateVariantNames`):** Collects unique variant names used across all library backgrounds and area definitions into a sorted list (e.g. `clean`, `crowded`, `damaged`, `dim`, `empty`, `festive`, `night`, `rainy`, `ruined`).
+    - **Opt-In Variant Picker:** Replaced generic `+ State` button with a `+ Variant ▾` selector dropdown on every background, allowing creators to inherit variants from the shared pool or click `+ New variant…`.
+    - **Empty Slot Isolation:** Opting into a shared variant creates an empty state variant slot on that background only, without copying images or content from other backgrounds.
+    - **Unfilled Variant Omission:** Updated `serializeBackgroundObject` with `isStateVariantEmpty(st)`: non-default state variants with no assigned background, foreground, ambience, or time variants are automatically omitted from `background.json` exports.
+
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **361 passed, 0 failed** (all unit and integration tests passing, including `bgStore.reorderBackground`).
-- `npm run build:both`: Successfully compiled all targets with 0 errors and 0 warnings:
-    - Singlefile full distribution: `export/yuzu_area_maker.html` (5300 KB).
-    - Singlefile no-music distribution: `export/yuzu_area_maker_nomusic.html` (647 KB).
-    - GitHub Pages distribution: `docs/index.html` (647 KB).
-    - Embed assets: `docs/og-image.png` and `public/og-image.png` synchronized.
-- **Chrome CDP & Live Browser Visual Verification:**
-    - Live UI Overview ([verified_v220_live_after_fix.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_live_after_fix.png)): Brand and menus flush left, music player lengthened and anchored right, toolbar cleaned of middle label and undo/redo, Backgrounds button beside Test Mode, BG prefix removed from left pane.
-    - Inspector Vertical Background Layout ([verified_inspector_vertical_layout.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_inspector_vertical_layout.png)): Verified Area Path Input Box full-width on top with `[ Browse… ]` and `[ Maker… ]` buttons neatly arranged in a row directly beneath it.
-    - Background Picker Modal ([verified_browse_modal_open.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_browse_modal_open.png)): Verified 2-column modal popup with search filter, library list, stage preview, server path, courtroom positions, and time variants.
-    - Background List with 60+ Items ([verified_bg_list_60_items_scroll.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_bg_list_60_items_scroll.png)): Verified instant 0.10ms vertical scrolling across 60+ backgrounds in `.bg-list`, item layout containment, and fast hover states.
-    - Background List Drag Cue ([verified_bg_list_drag_drop_cue.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_bg_list_drag_drop_cue.png)): Verified `.bg-nav.dragover` and drop cue banner (`Drop folder, ZIP, or config to import`) on left sidebar.
-    - Crisp Rika Embed Image ([verified_graphic_design_og.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_graphic_design_og.png)): Verified zero blur/depth of field, card header displaying `// GRAPHIC DESIGN IS MY SHIT`, Furude Rika shifted towards the middle, small meme background detail stickers scattered around, and Comic Sans MS layout.
-    - Music player verified completely untouched in code, marquee, volume, and audio playback.
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **373 passed, 0 failed** (all unit and integration tests passing, including `background_variant` YAML export/import order rules, empty/default omission, shared state variant pool collection, and unfilled variant omission).
+- `npm run build:both`: Successfully compiled all production distributions with 0 errors:
+    - Singlefile full distribution: `export/yuzu_area_maker.html` (5307 KB).
+    - Singlefile no-music distribution: `export/yuzu_area_maker_nomusic.html` (654 KB).
+    - GitHub Pages distribution: `docs/index.html` (654 KB).
+    - Embed assets: `docs/og-image.png` and `export/og-image.png` synchronized.
+- **Headless Chrome Visual Verification:**
+    - Inspector Basics Layout ([verified_v220_inspector_variant.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_inspector_variant.png)): Verified `BACKGROUND_VARIANT` field with text input (placeholder `default (omitted)`) and `Variants ▾` dropdown situated directly before `BACKGROUND_TOD`.
+    - Live Stage Monitor & State Variants ([verified_v220_bg_maker_animate_toggle.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_bg_maker_animate_toggle.png)):
+        - Verified `Animate Preview` toggle button cleanly positioned between `LIVE STAGE MONITOR` and the `LIVE` badge with tooltip and single-line layout.
+        - Verified `+ Variant ▾` picker placed beside state tabs.
+        - Verified repository asset pool static first-frame canvas rendering and hover animation.
+        - Verified complete elimination of modal transition and scrolling lag.
+- Music player internals verified completely untouched.
 

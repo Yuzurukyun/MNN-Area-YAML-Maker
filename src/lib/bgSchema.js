@@ -138,6 +138,35 @@ export function createBackground(folder = 'NewBackground', opts = {}) {
 /**
  * Serializes an internal Background definition into the MNN background.json object structure.
  */
+/**
+ * Checks whether a state variant has any assets assigned.
+ * Unfilled state variants (no background, foreground, ambience, or time variants) are omitted on export.
+ */
+export function isStateVariantEmpty(st) {
+  if (!st) return true;
+  if (st.background && String(st.background).trim() !== '') return false;
+  if (st.ambience && String(st.ambience).trim() !== '') return false;
+  if (st.foreground && String(st.foreground).trim() !== '') return false;
+  if (st.time_variants && typeof st.time_variants === 'object') {
+    for (const tv of Object.values(st.time_variants)) {
+      if (tv && (tv.background || tv.foreground || tv.ambience)) return false;
+    }
+  }
+  if (st.usePositions && st.positions && typeof st.positions === 'object') {
+    for (const pos of Object.values(st.positions)) {
+      if (pos) {
+        if (pos.background || pos.foreground || pos.ambience) return false;
+        if (pos.time_variants && typeof pos.time_variants === 'object') {
+          for (const tv of Object.values(pos.time_variants)) {
+            if (tv && (tv.background || tv.foreground || tv.ambience)) return false;
+          }
+        }
+      }
+    }
+  }
+  return true;
+}
+
 export function serializeBackgroundObject(bg) {
   if (!bg || !bg.states) return { default: { background: '' } };
 
@@ -155,6 +184,12 @@ export function serializeBackgroundObject(bg) {
 
   for (const stKey of stateKeys) {
     const st = bg.states[stKey] || createStateVariant(stKey);
+
+    // Unfilled non-default state variants are omitted from export
+    if (stKey !== 'default' && isStateVariantEmpty(st)) {
+      continue;
+    }
+
     const stObj = {};
 
     if (st.ambience) stObj.ambience = normalizeAmbiencePath(st.ambience);

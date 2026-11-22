@@ -12,6 +12,7 @@
   let bgStoreState = bgStore.get();
   onMount(() => {
     return bgStore.subscribe((s) => {
+      if (s.isMakerOpen) return;
       bgStoreState = s;
     });
   });
