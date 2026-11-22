@@ -3,6 +3,7 @@
   import { bgStore } from '../../lib/bgStore.js';
   import { autoscroll } from '../../lib/autoscroll.js';
   import * as M from '../../lib/core.js';
+  import Icon from '../Icon.svelte';
 
   export let onAddArea;
 
@@ -18,22 +19,7 @@
     .map((a, i) => ({ a, i }))
     .filter(({ a }) => !q || a.area.toLowerCase().includes(q) || String(i) === q);
 
-  $: knownPrefixes = (() => {
-    const set = new Set();
-    for (const a of P.areas) {
-      if (a.background && a.background.includes('/')) {
-        const idx = a.background.lastIndexOf('/');
-        set.add(a.background.slice(0, idx + 1));
-      }
-    }
-    for (const bg of $bgStore.backgrounds) {
-      if (bg.folder && bg.folder.includes('/')) {
-        const idx = bg.folder.lastIndexOf('/');
-        set.add(bg.folder.slice(0, idx + 1));
-      }
-    }
-    return Array.from(set).sort();
-  })();
+
 
   function badges(a, i) {
     const out = [];
@@ -222,12 +208,20 @@
   </div>
   <div class="hint" style="margin-top:2px" title="The list position IS the Area ID written to YAML">Index = Area ID (file order) · Ctrl+drag or ↑/↓ reorders</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0 2px;position:relative">
-    <button class="mini-btn primary" title="Create a new area using the selected template below" on:click={onAddArea}>＋ Add Area</button>
-    <button class="mini-btn" title="Merge areas from an external YAML or JSON file into this project" on:click|stopPropagation={() => (addMenu = !addMenu)}>＋ Merge ▾</button>
+    <button class="mini-btn tb-btn" title="Create a new area using the selected template below" on:click={onAddArea}>
+      <Icon name="plus" /> Add Area
+    </button>
+    <button class="mini-btn tb-btn" title="Merge areas from an external YAML or JSON file into this project" on:click|stopPropagation={() => (addMenu = !addMenu)}>
+      <Icon name="plus" /> Merge ▾
+    </button>
     {#if addMenu}
       <div class="drop-menu" style="left:auto;right:0;top:calc(100% + 4px);min-width:195px">
-        <button title="Append areas from an areas.yaml file" on:click={() => { addMenu = false; fileYamlAdd.click(); }}>From a YAML file…</button>
-        <button title="Append areas from a saved JSON project file" on:click={() => { addMenu = false; fileJsonAdd.click(); }}>From a JSON file…</button>
+        <button title="Append areas from an areas.yaml file" on:click={() => { addMenu = false; fileYamlAdd.click(); }}>
+          <Icon name="file-up" /> From a YAML file…
+        </button>
+        <button title="Append areas from a saved JSON project file" on:click={() => { addMenu = false; fileJsonAdd.click(); }}>
+          <Icon name="file-text" /> From a JSON file…
+        </button>
       </div>
     {/if}
   </div>
@@ -244,50 +238,7 @@
       {/each}
     </select>
   </div>
-  <div class="tpl-row" style="margin-top:4px">
-    <span class="hint" title="Background folder prefix automatically applied to new areas (e.g. topic/topic/topic/topic/)">BG Prefix</span>
-    <div style="flex:1;display:flex;gap:3px;align-items:center;min-width:0">
-      <input
-        type="text"
-        placeholder="e.g. series/subfolder/"
-        style="flex:1;font-size:11px;padding:2px 5px;min-width:0;background:var(--input-bg);color:var(--text);border:1px solid var(--line);border-radius:var(--radius)"
-        title="Background prefix automatically applied when creating areas (e.g. topic/topic/topic/topic/)"
-        value={$state.activeBgPrefix || ''}
-        list="known-area-prefixes"
-        on:input={(e) => update((s) => (s.activeBgPrefix = e.target.value), { skipHistory: true })}
-      />
-      {#if knownPrefixes.length > 0}
-        <select
-          style="width:20px;padding:0 2px;font-size:11px;background:var(--input-bg);color:var(--dim);border:1px solid var(--line);border-radius:var(--radius);cursor:pointer"
-          title="Pick from known series folder prefixes"
-          on:change={(e) => {
-            if (e.target.value) {
-              update((s) => (s.activeBgPrefix = e.target.value), { skipHistory: true });
-            }
-            e.target.value = '';
-          }}
-        >
-          <option value="">▾</option>
-          {#each knownPrefixes as p}
-            <option value={p}>{p}</option>
-          {/each}
-        </select>
-      {/if}
-      {#if $state.activeBgPrefix}
-        <button
-          class="mini-btn"
-          style="padding:1px 4px;font-size:10px"
-          title="Clear active background prefix"
-          on:click={() => update((s) => (s.activeBgPrefix = ''), { skipHistory: true })}
-        >✕</button>
-      {/if}
-    </div>
-  </div>
-  <datalist id="known-area-prefixes">
-    {#each knownPrefixes as p}
-      <option value={p}></option>
-    {/each}
-  </datalist>
+
   <input type="file" accept=".yaml,.yml,.txt" hidden bind:this={fileYamlAdd} on:change={mergeYaml} />
   <input type="file" accept=".json" hidden bind:this={fileJsonAdd} on:change={mergeJson} />
 </div>
@@ -333,7 +284,7 @@
       </div>
       {#if badges(a, i).length || M.drifted(P, a)}
         <div class="li-tags">
-          {#if M.drifted(P, a)}<span class="badge" style="color:var(--warn);border-color:var(--warn)">⚠ template differs</span>{/if}
+          {#if M.drifted(P, a)}<span class="badge" style="color:var(--warn);border-color:var(--warn);display:inline-flex;align-items:center;gap:4px"><Icon name="alert-triangle" /> template differs</span>{/if}
           {#each badges(a, i) as b}<span class={b.cls}>{b.t}</span>{/each}
         </div>
       {/if}

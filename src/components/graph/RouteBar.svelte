@@ -2,6 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   import { findShortestPath } from '../../lib/pathAudit.js';
   import { copyText, notify } from '../../lib/state.js';
+  import Icon from '../Icon.svelte';
 
   export let project;
   export let fromId = null;
@@ -53,7 +54,7 @@
       const idx = areas.indexOf(a);
       return `#${idx} ${a?.area || id}`;
     });
-    const text = names.join(' ➔ ');
+    const text = names.join(' → ');
     const ok = await copyText(text);
     if (ok) {
       notify('Copied route steps to clipboard.', 'ok');
@@ -73,7 +74,7 @@
   <!-- Top Header Bar -->
   <div class="route-header">
     <div class="route-title-group">
-      <span class="compass-icon">🧭</span>
+      <span class="compass-icon"><Icon name="route" /></span>
       <b>ROUTE FINDER</b>
       <span class="rule-badge">Explicit paths only · Excludes &lt;ALL&gt;</span>
     </div>
@@ -137,7 +138,7 @@
             <span class="hops-count">{result.stepCount} {result.stepCount === 1 ? 'exit' : 'exits'} ({result.path.length} rooms)</span>
           </div>
           <div class="banner-actions">
-            <button class="mini-btn route-act-btn" title="Frame all path areas on canvas" on:click={frameAll}>⌖ Frame route</button>
+            <button class="mini-btn route-act-btn" title="Frame all path areas on canvas" on:click={frameAll}><Icon name="crosshair" /> Frame route</button>
             <button class="mini-btn route-act-btn" title="Copy room sequence to clipboard" on:click={copyRoute}>Copy path</button>
           </div>
         </div>
@@ -161,13 +162,13 @@
             </div>
 
             {#if i < result.path.length - 1}
-              <div class="step-arrow">➔</div>
+              <div class="step-arrow">→</div>
             {/if}
           {/each}
         </div>
       {:else}
         <div class="result-banner warn">
-          <div class="warn-icon">⚠</div>
+          <div class="warn-icon"><Icon name="alert-triangle" /></div>
           <div class="warn-text">
             <b>No walkable path found.</b>
             <div class="warn-hint">
@@ -180,7 +181,7 @@
   </div>
 
   <div class="route-footer-hint">
-    <span>💡 Tip: Right-click any node on the map to set as <b>Start</b> or <b>Destination</b>.</span>
+    <span>Tip: Right-click any node on the map to set as <b>Start</b> or <b>Destination</b>.</span>
   </div>
 </div>
 

@@ -7,7 +7,7 @@
 	$: full = M.DESC[fkey] || apt;
 </script>
 
-<div class="field" data-group={grp} title={full}>
+<div class="field" data-group={grp} data-fkey={fkey} title={full}>
 	<div class="fline">
 		<span class="gsym {grp}" title={M.GROUP_LABEL[grp]}></span>
 		<div class="ftext">

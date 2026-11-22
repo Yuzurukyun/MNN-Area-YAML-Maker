@@ -120,10 +120,15 @@ rect.mask {
   stroke: none;
 }
 
+.node.sel {
+  transform-origin: 102px 33px;
+  transform: scale(1.04);
+}
+
 .node.sel rect.body {
   stroke: var(--accent);
-  stroke-width: 2;
-  filter: drop-shadow(0 0 12px var(--glow));
+  stroke-width: 2px;
+  filter: drop-shadow(0 0 18px color-mix(in srgb, var(--accent) 35%, transparent));
 }
 
 .node.drag-over rect.body {
@@ -149,6 +154,7 @@ rect.mask {
 
 .node.sel text.title {
   fill: var(--text-strong);
+  font-weight: 700;
 }
 
 .node .sub {

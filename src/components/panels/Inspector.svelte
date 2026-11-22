@@ -4,6 +4,8 @@
   import Field from './Field.svelte';
   import Bool from './Bool.svelte';
   import LinkEditor from './LinkEditor.svelte';
+  import Icon from '../Icon.svelte';
+  import BgPickerModal from '../modals/BgPickerModal.svelte';
   import { onMount } from 'svelte';
   import { bgStore, getAreaBgUrl } from '../../lib/bgStore.js';
   import { resolveActiveVisual, normalizeBgPath, hasTimeVariants } from '../../lib/bgSchema.js';
@@ -16,6 +18,7 @@
   let todPresetName = '';
   let armDelete = false;
   let armFor = null;
+  let showBgPicker = false;
   $: imageDisplayMode = a?.imageMode || (a?.image ? 'node' : (currentBgUrl ? 'scene' : 'node'));
 
   function setImageMode(mode) {
@@ -40,23 +43,7 @@
   $: hub = P.areas[0];
   $: isHub = !!(a && hub && a.id === hub.id);
   $: tpl = a ? M.templateById(P, a.templateId) : null;
-  $: effectivePrefix = $state.activeBgPrefix || tpl?.bg_prefix || '';
-  $: knownPrefixes = (() => {
-    const set = new Set();
-    for (const ar of P.areas) {
-      if (ar.background && ar.background.includes('/')) {
-        const idx = ar.background.lastIndexOf('/');
-        set.add(ar.background.slice(0, idx + 1));
-      }
-    }
-    for (const bg of bgStoreState.backgrounds) {
-      if (bg.folder && bg.folder.includes('/')) {
-        const idx = bg.folder.lastIndexOf('/');
-        set.add(bg.folder.slice(0, idx + 1));
-      }
-    }
-    return Array.from(set).sort();
-  })();
+
   $: isDrifted = a ? M.drifted(P, a) : false;
   $: isDup = a ? M.dupNames(P).has(M.strip(a.area)) : false;
   $: allPresets = M.BUILTIN_TOD_PRESETS.concat(P.todPresets || []);
@@ -224,16 +211,16 @@
     <div class="insp-mode-pills" style="display:flex;gap:4px;margin-top:8px">
       <button
         class="mini-btn insp-tier-btn {inspectorMode === 'essentials' ? 'active-tier' : ''}"
-        style="flex:1;font-size:11px;padding:3px 6px"
+        style="flex:1;font-size:11px;padding:3px 6px;display:inline-flex;align-items:center;justify-content:center;gap:6px"
         title="Focused view: Name, Color, Preview, Background and Walkable Corridors"
         on:click={() => (inspectorMode = 'essentials')}
-      >⚡ Essentials</button>
+      ><Icon name="zap" /> Essentials</button>
       <button
         class="mini-btn insp-tier-btn {inspectorMode === 'full' ? 'active-tier' : ''}"
-        style="flex:1;font-size:11px;padding:3px 6px"
+        style="flex:1;font-size:11px;padding:3px 6px;display:inline-flex;align-items:center;justify-content:center;gap:6px"
         title="Advanced view: Access locks, behaviour, and server permissions"
         on:click={() => (inspectorMode = 'full')}
-      >🛠️ Full Server Spec</button>
+      ><Icon name="wrench" /> Full Server Spec</button>
     </div>
 
     <div class="btn-row" style="margin:8px 0 0;align-items:center">
@@ -280,10 +267,10 @@
         <label class="c-swatch-custom" title="Custom color picker">
           <input
             type="color"
-            value={a.color || '#3b82f6'}
+            value={a.color || '#64748b'}
             on:input={(e) => withArea((s, ar) => (ar.color = e.target.value))}
           />
-          <span>🎨</span>
+          <Icon name="palette" />
         </label>
       </div>
 
@@ -315,7 +302,7 @@
             <button class="mini-btn" title="Replace area icon" on:click={() => iconInput.click()}>Replace</button>
             <button class="mini-btn" title="Remove area icon" on:click={() => withArea((s, ar) => { ar.image = ''; ar.imageMode = 'scene'; })}>✕</button>
           {:else}
-            <button class="mini-btn" title="Attach custom area icon" on:click={() => iconInput.click()}>＋ Attach Icon</button>
+            <button class="mini-btn" style="display:inline-flex;align-items:center;gap:6px" title="Attach custom area icon" on:click={() => iconInput.click()}><Icon name="plus" /> Attach Icon</button>
           {/if}
         </div>
       </div>
@@ -334,9 +321,9 @@
           </div>
         {:else}
           <div style="margin-top:5px;display:flex;gap:4px">
-            <button class="mini-btn" style="flex:1;padding:4px" on:click={() => iconInput.click()}>＋ Attach Node Icon</button>
+            <button class="mini-btn" style="flex:1;padding:4px;display:inline-flex;align-items:center;justify-content:center;gap:6px" on:click={() => iconInput.click()}><Icon name="plus" /> Attach Node Icon</button>
             {#if a.background}
-              <button class="mini-btn" style="padding:4px 8px" title="Configure in Background Maker" on:click={() => bgStore.openMaker(a.background)}>🖼 Open BG</button>
+              <button class="mini-btn" style="padding:4px 8px;display:inline-flex;align-items:center;gap:6px" title="Configure in Background Maker" on:click={() => bgStore.openMaker(a.background)}><Icon name="image-plus" /> Open BG</button>
             {/if}
           </div>
         {/if}
@@ -347,7 +334,7 @@
 
   {#if isDrifted}
     <div class="drift-box" title="One or more fields have changed since applying this template">
-      <span>⚠ Settings differ from template.</span>
+      <span style="display:inline-flex;align-items:center;gap:6px"><Icon name="alert-triangle" /> Settings differ from template.</span>
       <button class="mini-btn" title="Reset template-covered fields back to the template values" on:click={sync}>Sync</button>
     </div>
   {/if}
@@ -370,82 +357,42 @@
         {/if}
         {#if showK('background')}
           <Field fkey="background" mandatory={true}>
-            <div style="display:flex;gap:4px">
+            <div style="display:flex;flex-direction:column;gap:6px">
               <input
                 type="text"
-                style="flex:1"
-                title="Background path relative to your server's backgrounds folder"
-                placeholder="e.g. DR/Hallway or series/subfolder/Room"
+                style="width:100%"
+                title="Path from your backgrounds folder, e.g. DR/Hallway or Umamusume/Cafeteria"
+                placeholder="e.g. DR/Hallway or Umamusume/Cafeteria"
                 value={a.background}
-                list="known-inspector-prefixes"
                 on:input={inputStr('background')}
                 on:change={trimStr('background')}
               />
-              <button class="mini-btn" title="Open in Background.json Maker" on:click={() => bgStore.openMaker(a.background)}>🖼 Maker…</button>
-            </div>
-            {#if effectivePrefix || knownPrefixes.length > 0}
-              <div style="display:flex;align-items:center;gap:4px;margin-top:4px;flex-wrap:wrap">
-                <span class="hint">Prefix:</span>
-                {#if effectivePrefix}
-                  <button
-                    class="mini-btn"
-                    style="font-size:10.5px;padding:2px 6px"
-                    title="Prepend '{effectivePrefix}' to '{a.area}'"
-                    on:click={() => withArea((s, ar) => (ar.background = M.resolveBgPattern(effectivePrefix, ar.area, true)))}
-                  >
-                    ⚡ {effectivePrefix}{a.area}
-                  </button>
-                {/if}
-                {#if knownPrefixes.length > 0}
-                  <select
-                    style="font-size:10.5px;padding:2px 4px;background:var(--input-bg);color:var(--dim);border:1px solid var(--line);border-radius:var(--radius);cursor:pointer"
-                    title="Apply a known folder prefix with this area's name"
-                    on:change={(e) => {
-                      if (e.target.value) {
-                        withArea((s, ar) => (ar.background = M.resolveBgPattern(e.target.value, ar.area, true)));
-                      }
-                      e.target.value = '';
-                    }}
-                  >
-                    <option value="">▾ Pick prefix…</option>
-                    {#each knownPrefixes as p}
-                      <option value={p}>{p}{a.area}</option>
-                    {/each}
-                  </select>
-                {/if}
-              </div>
-            {/if}
-            <datalist id="known-inspector-prefixes">
-              {#each knownPrefixes as p}
-                <option value="{p}{a.area}">{p}{a.area}</option>
-              {/each}
-            </datalist>
-            {#if bgStoreState.backgrounds.length > 0}
-              <div style="display:flex;align-items:center;gap:4px;margin-top:4px">
-                <span class="hint">Library:</span>
-                <select
-                  style="flex:1;font-size:11px;padding:2px 4px;background:var(--input-bg);border:1px solid var(--line);border-radius:var(--radius);color:var(--text)"
-                  value={normalizeBgPath(a.background)}
-                  on:change={(e) => {
-                    const chosen = e.target.value;
-                    if (chosen) withArea((s, ar) => (ar.background = chosen));
-                  }}
+              <div style="display:flex;gap:6px">
+                <button
+                  class="mini-btn"
+                  style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px"
+                  title="Browse and select from library backgrounds popup"
+                  on:click={() => (showBgPicker = true)}
                 >
-                  <option value="">— Pick from Library ({bgStoreState.backgrounds.length}) —</option>
-                  {#each bgStoreState.backgrounds as bgItem}
-                    <option value={bgItem.folder}>{bgItem.folder}</option>
-                  {/each}
-                </select>
+                  <Icon name="folder" /> Browse…
+                </button>
+                <button
+                  class="mini-btn"
+                  style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px"
+                  title="Open in Background.json Maker"
+                  on:click={() => bgStore.openMaker(a.background)}
+                >
+                  <Icon name="image-plus" /> Maker…
+                </button>
               </div>
-            {/if}
-            <div class="hint" style="margin-top:4px">Path from your backgrounds folder, e.g. <code>DR/Hallway</code> or <code>Umamusume/Cafeteria</code>.</div>
+            </div>
           </Field>
         {/if}
         {#if showK('background_tod')}
           <Field fkey="background_tod">
             {#if hasInternalTod}
               <div style="margin-bottom:8px;padding:6px 8px;border-radius:4px;background:color-mix(in srgb, #10b981 12%, transparent);border:1px solid color-mix(in srgb, #10b981 40%, transparent);color:#10b981;font-size:11px;display:flex;align-items:center;gap:6px">
-                <span>✓</span>
+                <Icon name="check" />
                 <span>Handled by <code>{currentBgDef.folder}/background.json</code> — separate <code>bg_tod</code> is optional.</span>
               </div>
             {/if}
@@ -456,7 +403,7 @@
                 <button class="mini-btn" title="Remove this time-of-day row" on:click={() => todRemove(i)}>✕</button>
               </div>
             {/each}
-            <button class="mini-btn" title="Add a new time-of-day background row" on:click={todAdd}>+ Add row</button>
+            <button class="mini-btn" style="display:inline-flex;align-items:center;gap:6px" title="Add a new time-of-day background row" on:click={todAdd}><Icon name="plus" /> Add row</button>
             <div class="btn-row">
               <select style="flex:1;width:auto" title="Choose a saved time-of-day key preset" bind:value={todPresetIdx}>
                 {#each allPresets as p, i}<option value={i}>{p.name} ({p.keys.join(', ')})</option>{/each}
@@ -493,7 +440,11 @@
     <details class="sec" open={open.access} on:toggle={(e) => (open.access = e.target.open)}>
       <summary title="Locks, lobby, and privacy flags">
         <span class="sum-title">Access & locks</span>
-        {#if accessMod}<span class="mod-pill" title="{accessMod} setting(s) differ from server defaults">{accessMod} modified</span>{/if}
+        {#if accessMod > 0}
+          <span class="mod-pill modified" title="{accessMod} setting(s) differ from server defaults">{accessMod} modified</span>
+        {:else}
+          <span class="mod-pill unchanged" title="All settings match server defaults">0 modified</span>
+        {/if}
       </summary>
       <div class="body">
         <div class="bool-grid">
@@ -507,7 +458,11 @@
     <details class="sec" open={open.behaviour} on:toggle={(e) => (open.behaviour = e.target.open)}>
       <summary title="Lights, weather, AFK timeout, and map transition visuals">
         <span class="sum-title">Behaviour</span>
-        {#if behMod}<span class="mod-pill" title="{behMod} setting(s) differ from server defaults">{behMod} modified</span>{/if}
+        {#if behMod > 0}
+          <span class="mod-pill modified" title="{behMod} setting(s) differ from server defaults">{behMod} modified</span>
+        {:else}
+          <span class="mod-pill unchanged" title="All settings match server defaults">0 modified</span>
+        {/if}
       </summary>
       <div class="body">
         <div class="bool-grid">
@@ -540,7 +495,11 @@
     <details class="sec" open={open.perms} on:toggle={(e) => (open.perms = e.target.open)}>
       <summary title="Player command permissions in this area">
         <span class="sum-title">Permissions</span>
-        {#if permMod}<span class="mod-pill" title="{permMod} setting(s) differ from server defaults">{permMod} modified</span>{/if}
+        {#if permMod > 0}
+          <span class="mod-pill modified" title="{permMod} setting(s) differ from server defaults">{permMod} modified</span>
+        {:else}
+          <span class="mod-pill unchanged" title="All settings match server defaults">0 modified</span>
+        {/if}
       </summary>
       <div class="body">
         <div class="bool-grid">
@@ -562,4 +521,12 @@
   {/if}
 {:else}
   <div class="empty">Select an area to edit it.</div>
+{/if}
+
+{#if showBgPicker && a}
+  <BgPickerModal
+    currentBg={a.background}
+    onSelect={(folder) => withArea((s, ar) => (ar.background = folder))}
+    onClose={() => (showBgPicker = false)}
+  />
 {/if}

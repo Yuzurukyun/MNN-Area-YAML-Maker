@@ -1,5 +1,6 @@
 <script>
   import { state, update, settings, updateSettings } from '../../lib/state.js';
+  import Icon from '../Icon.svelte';
 
   export let lt;
   export let hideHub;
@@ -49,16 +50,16 @@
       on:pointerdown|stopPropagation
       on:click|stopPropagation={() => (linkMenuOpen = !linkMenuOpen)}
     >
-      {#if lt === 'reachable'}🔗 Reachable
-      {:else if lt === 'visible'}👁️ Visible
-      {:else if lt === 'scream'}📢 Scream
+      {#if lt === 'reachable'}<Icon name="link" /> Reachable
+      {:else if lt === 'visible'}<Icon name="eye" /> Visible
+      {:else if lt === 'scream'}<Icon name="megaphone" /> Scream
       {/if} ▾
     </button>
     {#if linkMenuOpen}
       <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
       <div class="drop-menu link-mode-menu" on:pointerdown|stopPropagation on:click|stopPropagation>
         <button class="link-opt {lt === 'reachable' ? 'active' : ''}" on:click={() => { onSetTab('reachable'); linkMenuOpen = false; }}>
-          <span class="link-opt-icon">🔗</span>
+          <span class="link-opt-icon"><Icon name="link" /></span>
           <div class="link-opt-text">
             <b>Reachable</b>
             <span class="link-opt-desc">Walkable connections (reachable_areas)</span>
@@ -66,7 +67,7 @@
           {#if lt === 'reachable'}<span class="link-check">✓</span>{/if}
         </button>
         <button class="link-opt {lt === 'visible' ? 'active' : ''}" on:click={() => { onSetTab('visible'); linkMenuOpen = false; }}>
-          <span class="link-opt-icon">👁️</span>
+          <span class="link-opt-icon"><Icon name="eye" /></span>
           <div class="link-opt-text">
             <b>Visible</b>
             <span class="link-opt-desc">Visible passages even if unreachable (visible_areas)</span>
@@ -74,7 +75,7 @@
           {#if lt === 'visible'}<span class="link-check">✓</span>{/if}
         </button>
         <button class="link-opt {lt === 'scream' ? 'active' : ''}" on:click={() => { onSetTab('scream'); linkMenuOpen = false; }}>
-          <span class="link-opt-icon">📢</span>
+          <span class="link-opt-icon"><Icon name="megaphone" /></span>
           <div class="link-opt-text">
             <b>Scream</b>
             <span class="link-opt-desc">Areas that hear shouts (scream_range)</span>
@@ -92,7 +93,7 @@
       on:pointerdown|stopPropagation
       on:click|stopPropagation={() => (viewMenuOpen = !viewMenuOpen)}
     >
-      👁 View ▾
+      <Icon name="eye" /> View ▾
       {#if activeViewCount > 0}
         <span class="view-badge">{activeViewCount}</span>
       {/if}
@@ -164,13 +165,13 @@
   <div class="sp"></div>
 
   <button class="mini-btn {panTool ? 'primary' : ''}" title="Toggle drag-to-pan tool (Space + drag or Middle-mouse also pans)" on:click={onTogglePanTool}>
-    ✋ Pan
+    <Icon name="hand" /> Pan
   </button>
   <button class="mini-btn" title="Reset camera zoom & position to default 100% (Home or 0)" on:click={onResetCamera}>
     ⟲ Reset
   </button>
   <button class="mini-btn" title="Center camera on selected area without changing zoom (C)" on:click={onCenterSelected}>
-    ⌖ Center
+    <Icon name="center" /> Center
   </button>
 
   <span class="drop-wrap">
@@ -268,13 +269,13 @@
     class="mini-btn {routeActive ? 'primary' : ''}"
     title="Trace shortest walkable route between areas (or right-click an area)"
     on:click={onToggleRoute}
-  >🧭 Route</button>
+  ><Icon name="route" /> Route</button>
 
   <button
     class="mini-btn"
     title="Audit map network for isolated island rooms, dead ends, and one-way traps"
     on:click={onOpenAudit}
-  >🔍 Audit</button>
+  ><Icon name="clipboard-check" /> Audit</button>
 </div>
 
 <style>

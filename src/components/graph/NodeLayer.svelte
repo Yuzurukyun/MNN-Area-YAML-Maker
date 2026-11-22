@@ -36,6 +36,10 @@
 
   let dragOverNodeId = null;
 
+  $: sortedAreas = selectedId
+    ? [...P.areas].sort((a, b) => (a.id === selectedId ? 1 : b.id === selectedId ? -1 : 0))
+    : P.areas;
+
   function onNodeDragOver(e, a) {
     e.preventDefault();
     if (e.dataTransfer) {
@@ -147,7 +151,8 @@
     </g>
   {/if}
 
-  {#each P.areas as a, idx (a.id)}
+  {#each sortedAreas as a (a.id)}
+    {@const idx = P.areas.indexOf(a)}
     {@const nodeImg = resolveNodeImageUrl(a, bgStoreState)}
     {@const hasImg = Boolean(nodeImg)}
     {@const tags = tagText(P, a, idx, dups, lt, hasImg)}
@@ -178,7 +183,9 @@
             width={NW}
             height={NH}
             rx="5"
-            style={a.color ? `stroke: ${a.color}; fill: color-mix(in srgb, ${a.color} 14%, var(--node-bg)); ${isSel ? `filter: drop-shadow(0 0 10px ${a.color}); stroke-width: 2px;` : ''}` : ''}
+            style={isSel
+              ? `stroke: ${a.color || 'var(--accent)'}; stroke-width: 2px; fill: ${a.color ? `color-mix(in srgb, ${a.color} 14%, var(--node-bg))` : 'var(--node-bg)'}; filter: drop-shadow(0 0 18px color-mix(in srgb, ${a.color || 'var(--accent)'} 35%, transparent));`
+              : (a.color ? `stroke: ${a.color}; fill: color-mix(in srgb, ${a.color} 14%, var(--node-bg));` : '')}
           />
           <rect
             class="node-accent"

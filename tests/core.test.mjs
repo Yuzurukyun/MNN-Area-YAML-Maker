@@ -665,6 +665,14 @@ eq(bgStore.get().backgrounds.length, 3, 'loadBackgrounds in merge mode updates e
 const mergedLib = bgStore.get().backgrounds.find((b) => b.folder === 'Umamusume/School/Library');
 eq(mergedLib.states.default.background, 'library_v2.png', 'merge updated existing background state');
 
+// Test bgStore reorderBackground
+const bgsBefore = bgStore.get().backgrounds.map((b) => b.folder);
+bgStore.reorderBackground(0, 2);
+const bgsAfter = bgStore.get().backgrounds.map((b) => b.folder);
+eq(bgsAfter[2], bgsBefore[0], 'reorderBackground moved first item to index 2');
+bgStore.reorderBackground(2, 0); // revert back
+eq(bgStore.get().backgrounds.map((b) => b.folder)[0], bgsBefore[0], 'reorderBackground moved item back to index 0');
+
 // Test bgStore exportLibraryJson round-trip
 const libraryJsonStr = bgStore.exportLibraryJson();
 const parsedLibJson = JSON.parse(libraryJsonStr);

@@ -120,8 +120,8 @@ function saveToStorage() {
 
 // Reactive store pattern (matching state.js in project)
 const listeners = new Set();
-function notify() {
-  saveToStorage();
+function notify(shouldSave = true) {
+  if (shouldSave) saveToStorage();
   for (const fn of listeners) {
     try { fn(getStoreState()); } catch (e) { console.error(e); }
   }
@@ -283,11 +283,11 @@ export const bgStore = {
   },
   closeMaker() {
     isMakerOpen = false;
-    notify();
+    notify(false);
   },
   selectBg(id) {
     selectedBgId = id;
-    notify();
+    notify(false);
   },
   addBackground(folder = 'NewBackground') {
     const uniqueFolder = ensureUniqueBgFolder(folder);
@@ -297,6 +297,12 @@ export const bgStore = {
     invalidateRefCache();
     notify();
     return bg;
+  },
+  reorderBackground(fromIndex, toIndex) {
+    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= backgrounds.length || toIndex >= backgrounds.length) return;
+    const [moved] = backgrounds.splice(fromIndex, 1);
+    backgrounds.splice(toIndex, 0, moved);
+    notify();
   },
   duplicateBackground(id) {
     const orig = backgrounds.find((b) => b.id === id);
@@ -1177,7 +1183,7 @@ export const bgStore = {
 
   // Finds the most specific pool asset matching a background scene slot
   findAsset(nameOrPath, type = 'image', bg = null) {
-    if (!nameOrPath) return null;
+    if (!nameOrPath || !assetPool || assetPool.length === 0) return null;
     const clean = nameOrPath.split('/').pop().toLowerCase();
     const targetBg = bg || (backgrounds.find((b) => b.id === selectedBgId) || backgrounds[0]);
 
@@ -1545,13 +1551,17 @@ export function getAreaBgUrl(bgFolder, customStoreState) {
   if (bgFolder.startsWith('data:') || bgFolder.startsWith('blob:') || bgFolder.startsWith('http://') || bgFolder.startsWith('https://')) {
     return bgFolder;
   }
-  const isDefaultStore = !customStoreState;
-  if (isDefaultStore && _cachedAreaBgUrls.has(bgFolder)) {
+  if (_cachedAreaBgUrls.has(bgFolder)) {
     return _cachedAreaBgUrls.get(bgFolder);
   }
   const currentStore = customStoreState || getStoreState();
   const rawNorm = normalizeBgPath(bgFolder).toLowerCase();
   const rawClean = bgFolder.trim().toLowerCase();
+
+  function cacheAndReturn(result) {
+    _cachedAreaBgUrls.set(bgFolder, result);
+    return result;
+  }
 
   // 1. Match against registered background definitions
   const matched = (currentStore.backgrounds || []).find((b) => {
@@ -1566,7 +1576,7 @@ export function getAreaBgUrl(bgFolder, customStoreState) {
     const img1 = visual?.background || visual?.foreground;
     if (img1) {
       const url = bgStore.getAssetUrl(img1, 'image', matched);
-      if (url) return url;
+      if (url) return cacheAndReturn(url);
     }
 
     // 1b. Check default state first before other states
@@ -1574,22 +1584,22 @@ export function getAreaBgUrl(bgFolder, customStoreState) {
     if (defState) {
       if (defState.background) {
         const u = bgStore.getAssetUrl(defState.background, 'image', matched);
-        if (u) return u;
+        if (u) return cacheAndReturn(u);
       }
       if (defState.foreground) {
         const u = bgStore.getAssetUrl(defState.foreground, 'image', matched);
-        if (u) return u;
+        if (u) return cacheAndReturn(u);
       }
       if (defState.positions) {
         for (const pos of Object.values(defState.positions)) {
           if (!pos) continue;
           if (pos.background) {
             const u = bgStore.getAssetUrl(pos.background, 'image', matched);
-            if (u) return u;
+            if (u) return cacheAndReturn(u);
           }
           if (pos.foreground) {
             const u = bgStore.getAssetUrl(pos.foreground, 'image', matched);
-            if (u) return u;
+            if (u) return cacheAndReturn(u);
           }
         }
       }
@@ -1600,33 +1610,33 @@ export function getAreaBgUrl(bgFolder, customStoreState) {
       if (!st || stKey === 'default') continue;
       if (st.background) {
         const u = bgStore.getAssetUrl(st.background, 'image', matched);
-        if (u) return u;
+        if (u) return cacheAndReturn(u);
       }
       if (st.foreground) {
         const u = bgStore.getAssetUrl(st.foreground, 'image', matched);
-        if (u) return u;
+        if (u) return cacheAndReturn(u);
       }
       if (st.positions) {
         for (const pos of Object.values(st.positions)) {
           if (!pos) continue;
           if (pos.background) {
             const u = bgStore.getAssetUrl(pos.background, 'image', matched);
-            if (u) return u;
+            if (u) return cacheAndReturn(u);
           }
           if (pos.foreground) {
             const u = bgStore.getAssetUrl(pos.foreground, 'image', matched);
-            if (u) return u;
+            if (u) return cacheAndReturn(u);
           }
           if (pos.time_variants) {
             for (const tv of Object.values(pos.time_variants)) {
               if (!tv) continue;
               if (tv.background) {
                 const u = bgStore.getAssetUrl(tv.background, 'image', matched);
-                if (u) return u;
+                if (u) return cacheAndReturn(u);
               }
               if (tv.foreground) {
                 const u = bgStore.getAssetUrl(tv.foreground, 'image', matched);
-                if (u) return u;
+                if (u) return cacheAndReturn(u);
               }
             }
           }
@@ -1637,11 +1647,11 @@ export function getAreaBgUrl(bgFolder, customStoreState) {
           if (!tv) continue;
           if (tv.background) {
             const u = bgStore.getAssetUrl(tv.background, 'image', matched);
-            if (u) return u;
+            if (u) return cacheAndReturn(u);
           }
           if (tv.foreground) {
             const u = bgStore.getAssetUrl(tv.foreground, 'image', matched);
-            if (u) return u;
+            if (u) return cacheAndReturn(u);
           }
         }
       }
@@ -1652,7 +1662,7 @@ export function getAreaBgUrl(bgFolder, customStoreState) {
       for (const rawName of Object.values(matched.assetSources)) {
         if (rawName && typeof rawName === 'string' && rawName.match(/\.(png|webp|jpg|jpeg|gif|svg|avif)$/i)) {
           const u = bgStore.getAssetUrl(rawName, 'image', matched);
-          if (u) return u;
+          if (u) return cacheAndReturn(u);
         }
       }
     }
@@ -1660,36 +1670,37 @@ export function getAreaBgUrl(bgFolder, customStoreState) {
 
   // 2. Match against asset pool by directory path or fromFolder
   const pool = currentStore.assetPool || [];
-  const poolMatch = pool.find((a) => {
-    if (a.type !== 'image') return false;
-    const aFrom = (a.fromFolder || '').toLowerCase();
-    const aRel = (a.relPath || '').toLowerCase();
-    const aFull = (a.fullRelPath || '').toLowerCase();
-    return (
-      aFrom.includes(rawNorm) ||
-      aRel.includes(rawNorm) ||
-      aFull.includes(rawNorm) ||
-      (aFrom.length > 3 && rawNorm.includes(aFrom))
-    );
-  });
-  if (poolMatch && poolMatch.url) return poolMatch.url;
+  if (pool.length > 0) {
+    const poolMatch = pool.find((a) => {
+      if (a.type !== 'image') return false;
+      const aFrom = (a.fromFolder || '').toLowerCase();
+      const aRel = (a.relPath || '').toLowerCase();
+      const aFull = (a.fullRelPath || '').toLowerCase();
+      return (
+        aFrom.includes(rawNorm) ||
+        aRel.includes(rawNorm) ||
+        aFull.includes(rawNorm) ||
+        (aFrom.length > 3 && rawNorm.includes(aFrom))
+      );
+    });
+    if (poolMatch && poolMatch.url) return cacheAndReturn(poolMatch.url);
 
-  // 3. Fallback: match by last segment filename in asset pool
-  const last = bgFolder.split('/').pop().toLowerCase();
-  const lastMatch = pool.find((a) => {
-    if (a.type !== 'image') return false;
-    const aName = a.name.toLowerCase();
-    const aBase = aName.replace(/\.[^/.]+$/, '');
-    return aName === last || aBase === last || a.relPath?.toLowerCase().endsWith(`/${last}`);
-  });
-  if (lastMatch && lastMatch.url) {
-    if (isDefaultStore) _cachedAreaBgUrls.set(bgFolder, lastMatch.url);
-    return lastMatch.url;
+    // 3. Fallback: match by last segment filename in asset pool
+    const last = bgFolder.split('/').pop().toLowerCase();
+    const lastMatch = pool.find((a) => {
+      if (a.type !== 'image') return false;
+      const aName = a.name.toLowerCase();
+      const aBase = aName.replace(/\.[^/.]+$/, '');
+      return aName === last || aBase === last || a.relPath?.toLowerCase().endsWith(`/${last}`);
+    });
+    if (lastMatch && lastMatch.url) {
+      return cacheAndReturn(lastMatch.url);
+    }
   }
 
-  const res = bgStore.getAssetUrl(last, 'image') || '';
-  if (isDefaultStore) _cachedAreaBgUrls.set(bgFolder, res);
-  return res;
+  const lastSeg = bgFolder.split('/').pop().toLowerCase();
+  const res = bgStore.getAssetUrl(lastSeg, 'image') || '';
+  return cacheAndReturn(res);
 }
 
 if (typeof window !== 'undefined') {

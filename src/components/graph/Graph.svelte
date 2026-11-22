@@ -16,11 +16,11 @@
     notify,
     cameraCommand,
     settings,
+    graphView,
   } from '../../lib/state.js';
   import * as M from '../../lib/core.js';
   import { clamp } from '../../lib/util.js';
   import { pairCardPos } from '../../lib/graphGeom.js';
-  import GraphToolbar from './GraphToolbar.svelte';
   import GraphHud from './GraphHud.svelte';
   import EdgeLayer from './EdgeLayer.svelte';
   import NodeLayer from './NodeLayer.svelte';
@@ -81,10 +81,10 @@
   let band = null;
   let popPos = { left: 0, top: 0 };
   let selectionGrouped = false;
-  let hideHub = false;
-  let hideAll = false;
-  let showAllMesh = false;
-  let panTool = false;
+  $: hideHub = $graphView.hideHub;
+  $: hideAll = $graphView.hideAll;
+  $: showAllMesh = $graphView.showAllMesh;
+  $: panTool = $graphView.panTool;
   let spaceHeld = false;
   let menu = null;
   let editing = null;
@@ -95,6 +95,8 @@
   let hoveredArea = null;
   let hoverPos = { left: 0, top: 0 };
   let hoverTimer = null;
+
+  $: routeActive = $graphView.routeActive;
 
   $: P = $state.project;
   $: lt = $state.activeLink;
@@ -1388,34 +1390,6 @@
     );
   }
 </script>
-
-<GraphToolbar
-  {lt}
-  {hideHub}
-  {hideAll}
-  {showAllMesh}
-  {panTool}
-  layouts={P.layouts}
-  onSetTab={setTab}
-  onToggleHideHub={(v) => (hideHub = v)}
-  onToggleHideAll={(v) => (hideAll = v)}
-  onToggleAllMesh={(v) => (showAllMesh = v)}
-  onTogglePanTool={() => (panTool = !panTool)}
-  onResetCamera={resetCameraSmooth}
-  onCenterSelected={centerOnSelectedSmooth}
-  onToggleFocus={toggleFocus}
-  onSaveLayout={saveLayout}
-  onApplyLayout={applyLayout}
-  onDeleteLayout={deleteLayout}
-  onSortByGroup={() => (sortConfirmOpen = true)}
-  onArrange={arrange}
-  {routeActive}
-  onToggleRoute={() => {
-    routeActive = !routeActive;
-    if (!routeActive) activeRoutePath = [];
-  }}
-  onOpenAudit={() => (auditModalOpen = true)}
-/>
 
 <svelte:window on:keydown={onWinKey} on:keyup={onWinKeyUp} on:pointerdown={onWinDown} />
 

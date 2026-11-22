@@ -1,6 +1,7 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import { settings, updateSettings, DEFAULT_SETTINGS, notify } from '../../lib/state.js';
+  import Icon from '../Icon.svelte';
 
   const dispatch = createEventDispatcher();
 
@@ -40,7 +41,7 @@
 >
   <div class="modal settings-modal" on:mousedown|stopPropagation on:click|stopPropagation>
     <button class="modal-x" title="Close (Esc)" on:click={() => dispatch('close')}>✕</button>
-    <h3>⚙ Settings</h3>
+    <h3 style="display:flex;align-items:center;gap:6px"><Icon name="settings" /> Settings</h3>
     <div class="hint">Customize map layout parameters, connection line styling, and canvas glow.</div>
 
     <div class="settings-list">

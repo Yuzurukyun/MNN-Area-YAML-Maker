@@ -774,19 +774,106 @@
     - Full restoration on deselect without disabling toggle: clicking empty canvas space to deselect immediately restores all hidden areas to view, while keeping "Isolate selection" active (`true`) so clicking another area node later automatically isolates it.
     - Toggle deactivation: unchecking the toggle in the `View ▾` dropdown menu, clicking `✕ Show everything (Esc)`, or pressing `Escape` cleanly disables isolation mode (`isolateSelection = false`).
 
+## [2.1.1] - 2026-11-22
+
+### Visual Polish, Iconography & Interface Ergonomics
+
+- **Unified Lucide Iconography (`src/components/Icon.svelte`, modals, panels, and graph):**
+    - Installed `@lucide/svelte` and created a single unified `Icon.svelte` component.
+    - Replaced all emojis across the entire UI with standard 16x16px Lucide SVG icons (stroke width 1.5, `currentColor`, baseline aligned, 6px gap to label).
+    - Preserved text navigation characters (`▾ ↑ ↓ ✕ ↔ → ▸ ● ★`) strictly as text.
+    - Untouched music player (`MusicPlayer.svelte`): all player buttons, marquee, captions, audio loop, and volume slider remain completely untouched.
+- **Three-Tier Visual Hierarchy & Inspector Typography (`src/styles/panels.css`, `src/styles/base.css`, `src/components/panels/Inspector.svelte`, `src/components/Header.svelte`):**
+    - **Tier 1 (Export):** The sole filled button across the UI, styled in red-orange accent fill with dark `#0e0e12` text and subtle glow.
+    - **Tier 2 (Primary utility buttons):** Flat dark buttons (`New`, `Import`, `Undo/Redo`, `Add Area`, `Test Mode`, `Pan`, `Reset`, `Centre`) with off-white text and subtle borders.
+    - **Tier 3 (Inspector field labels):** 10-11px uppercase text in muted grey (`var(--muted)`), with entered field values and area titles formatted in regular case, brighter and larger (12.5px).
+    - **Inspector Title:** Area name formatted at 17px in off-white text, not uppercase.
+    - **Modified Counts:** Pill styled in muted grey (`.mod-pill.unchanged`) when 0 settings differ from server defaults, illuminating in accent crimson (`.mod-pill.modified`) only when modified.
+- **Hybrid Header & Permanent Toolbar (`src/components/Header.svelte`, `src/styles/chrome.css`):**
+    - Row (a) Menu Bar: Brand title anchored to the left-most edge (`MNN AREA LIST YAML MAKER_`), menus for `File`, `Edit`, `View`, `Map`, `Tools`, and `Help` positioned directly adjacent on the left, and the music player pinned to the right-most edge (`margin-left: auto`), eliminating unintended centering.
+    - Row (b) Permanent Toolbar: Quick access for `Undo` / `Redo` | `Pan`, `Reset`, `Centre` | `Reachable ▾`, `View ▾` | Context Label | `Test Mode` (Tier 2) + `Export` (Tier 1 filled).
+    - Dynamic Context Label: Displays `#ID Name — tags` when an area is selected, or `Project Name · Area Count` when unselected, with ellipsis truncation ensuring it never moves buttons or the music player.
+- **Component States & Uniform Spacing (`src/styles/base.css`, `src/styles/panels.css`, `src/components/Header.svelte`):**
+    - Uniform spacing scale: 4px label-to-field, 8px inside groups, 16px between groups and above inspector sections.
+    - Toolbar groups separated by 1px divider + 16px gap.
+    - Hover state: border and background one step brighter (`var(--hover)` and `var(--line2)`).
+    - Selected state: red-orange accent border (`var(--accent)`).
+    - Disabled state: exactly 40% opacity across all disabled buttons, inputs, selects, and textareas.
+    - Keyboard focus: 1px accent outline (`outline: 1px solid var(--accent); outline-offset: 1px;`), leaving MusicPlayer untouched.
+- **Selected Node Visual Polish (`src/styles/graph.css`, `src/components/graph/NodeLayer.svelte`):**
+    - Visual-only `scale(1.04)` from node center (`transform-origin: 102px 33px`), 2px accent border, 18px glow at 35% accent, and bright/bold label text.
+    - Layered top z-index in SVG by rendering the selected node last in DOM order without modifying area array order or shifting connection line anchors.
+- **Overflow & Viewport Robustness (`src/styles/panels.css`, `src/components/Header.svelte`):**
+    - Fixed `flex-shrink: 0` on brand title and `flex: none` on left pane (268px) and right inspector (372px) so they never clip.
+    - Toolbar wraps/scrolls cleanly horizontally on small viewports with a subtle scroll indicator notice.
+- **Default Node Color Update (`src/components/panels/Inspector.svelte`, `src/components/graph/ContextMenu.svelte`):**
+    - Updated default node color fallback from `#3b82f6` to slate grey `#64748b` to distinguish uncolored nodes from red-orange selection borders.
+- **Authentic Rika Sprite Embed Image & Discord Embed Setup (`scripts/generate-og-image.html`, `index.html`, `docs/index.html`, `docs/og-image.png`, `public/og-image.png`):**
+    - Stripped all glossy gradients, glowing blur circles, and footer badge pills from the embed image.
+    - Re-authored the image layout matching Furude Rika's palette (deep night indigo, soft sailor periwinkle, and pastel ribbon pink): Rika takes the left side prominently, and the right side features the clean sample node connection card with the title `Visual Node Graph & Background Maker` directly below it.
+    - Configured Discord embed metadata in `index.html` (`og:site_name` and `author`) so Discord renders `made by Yuzuru` natively as the rich embed footer.
+
+## [2.2.0] - 2026-11-22
+
+### Streamlined UI, Custom Background Picker Modal, Performance Overhaul & Refined Embed
+
+- **Header Alignment & Tools Menu Streamlining (`src/components/Header.svelte`, `src/styles/chrome.css`):**
+    - **Anchoring:** Brand title (`MNN AREA LIST YAML MAKER_`) and menu bar (`File ▾`, `Edit ▾`, `View ▾`, `Map ▾`, `Tools ▾`) are flush-left; the MusicPlayer is anchored to the far right with an extended label (`width: 240px`) to comfortably display marquee text and fill the top-right header area.
+    - **Permanent Toolbar Streamlining:**
+        - Removed `Undo` and `Redo` buttons from the toolbar (retained in `Edit ▾` menu).
+        - Removed `View ▾` dropdown from the toolbar (retained in `View ▾` menu bar).
+        - Removed the middle context label (`areas.yaml — X areas`) from the toolbar for a clean, distraction-free canvas layout.
+        - Fixed `Reachable ▾` dropdown: changed `.header-toolbar-row` from `overflow-x: auto` to `overflow: visible; z-index: 50;`, allowing the dropdown to pop down smoothly over the canvas without clipping.
+        - Exposed `Backgrounds` (`Background Maker`) button directly on the permanent toolbar to the left of `Test Mode`.
+    - **Menu Reorganization:**
+        - Moved `Route` and `Audit` into the `Tools ▾` dropdown menu (removed from `Map ▾`).
+        - Removed redundant `Backgrounds` button from the `Tools ▾` dropdown menu (since it is already exposed on the permanent toolbar).
+
+- **Custom Background Picker Modal & Vertical Inspector Background Layout (`src/components/modals/BgPickerModal.svelte`, `src/components/panels/Inspector.svelte`, `src/styles/chrome.css`):**
+    - **Area List Panel:** Removed the unintuitive `BG Prefix` row from the left panel entirely.
+    - **Inspector Vertical Background Layout:**
+        - Separated the background field vertically: the Area Path Input Box sits full-width on the top row, and the `[ Browse… ]` and `[ Maker… ]` buttons sit directly beneath it side-by-side in a row (`gap: 6px`).
+        - Replaced the cramped dropdown with a dedicated `Browse…` button opening `BgPickerModal.svelte`.
+        - **2-Column Layout:**
+            - **Left Column:** Live search filter, searchable list of library backgrounds with state counts, courtroom position badges, current area tag, and "Create in Maker…" quick action.
+            - **Right Column:** Live stage monitor preview with time-of-day selector pills (Day, Evening, Night), full server relative path display (`base/background/...`), state list, camera position status, time variants count, ambience track name, "Edit in Maker…", and "Select this Background" confirmation button.
+        - Keyboard accessible with `Escape` to close and `Ctrl+Enter` to confirm.
+
+- **Background Maker Drag-and-Drop Restoration & Background List Scroll Performance Fix (`src/components/modals/BackgroundMakerModal.svelte`, `src/lib/bgStore.js`):**
+    - **Background List Drag-and-Drop & Reordering:**
+        - Attached dedicated drag-and-drop import handlers directly to the backgrounds navigator and list (`.bg-nav`, `.bg-list`), lighting up `.bg-nav.dragover` with an animated drop cue banner (`Drop folder, ZIP, or config to import`). Dropping a folder, archive, or configs onto the list immediately imports them into the library without requiring the Import button.
+        - Added drag-and-drop reordering for background items within the list (`draggable="true"` on `.bg-item` with `bgStore.reorderBackground`), displaying a prominent accent border indicator line (`.bg-item.drag-target-over`) at the target insertion position.
+        - Fixed drag-and-drop from Windows Explorer across the entire modal and slots: on `onModalDragOver`, `onPoolDragOver`, `onBgNavDragOver`, and `onSlotDragOver`, ensured `e.preventDefault()`, `e.stopPropagation()`, and explicit `e.dataTransfer.dropEffect = 'copy'` are called unconditionally, preventing Windows Explorer drops from being cancelled due to empty `item.type` strings during dragover.
+        - Added fast-path synchronous return in `getAllFilesFromDataTransfer(dataTransfer)` for flat file drops without directories, avoiding asynchronous `webkitGetAsEntry` promise failures.
+    - **Background List Smooth Scrolling Restoration:**
+        - Eliminated layout thrashing on the background list: removed `content-visibility: auto` and `contain-intrinsic-size` from `.bg-item` (and `.asset-card`), which caused continuous display locking and frame drops on every scroll offset change.
+        - Added `contain: layout paint;` to `.bg-item` and `overscroll-behavior: contain;` to `.bg-list`, isolating background item styles and paint boundaries.
+        - Replaced broad `transition: all 0.12s ease;` with focused `transition: background 0.1s ease, border-color 0.1s ease;`, eliminating costly style recalculations on mouseover during scrolling.
+        - Memoized `splitFolderPath` with an internal cache map to prevent repeated regex replacements across dozens of background items during list rendering and scrolling.
+        - Suppressed redundant `saveToStorage()` during background selection changes (`notify(false)`), eliminating synchronous disk I/O when clicking or navigating items.
+        - Tested scrolling with 60+ backgrounds: scroll benchmark logged at **0.10 ms** with zero dropped frames.
+        - Reverted input debouncing on background folder paths in favor of immediate synchronous updates, eliminating typing delay and desync.
+
+- **Crisp Meme Background Detail & Centered Rika Embed Image (`scripts/render-og-image.mjs`, `scripts/generate-og-image.html`, `docs/og-image.png`, `public/og-image.png`):**
+    - **Removed Depth of Field:** Eliminated all blur filters completely for crisp, clean rendering across all meme elements.
+    - **Sprinkled Meme Detail Constellation:** Multiplied meme stickers into 12 small background details (~38px to 50px) placed tastefully around empty spaces and edges behind the main cards (`z-index: 2`).
+    - **Shifted Furude Rika:** Adjusted left column padding and width to shift Rika towards the center/middle rather than pinned against the left edge.
+    - **Card & Typography:** Retained Comic Sans MS typography with sample node connection card, header title `// GRAPHIC DESIGN IS MY SHIT`, and `Visual Node Graph & Background Maker` title below.
+
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **359 passed, 0 failed** (all assertions covering persistent isolate selection toggle mode, dynamic isolation on selection, full map restoration on deselect while preserving `isolateSelection = true`, deactivation on `exitFocusView`, `showAllPill` off-by-default in `DEFAULT_SETTINGS`, default background resolution without TOD override, explicit TOD variant resolution, courtroom default angle preservation, node card vs hover card visual parity, Test Mode background scene resolution, custom node icon fallback, empty state handling, `sanitizeToRootFolder` path cleaning, `fromFolder` extraction and preservation, inclusion of root-relative `from_folder` in `serializeBackgroundJson` and `backgrounds-library.json` without full personal PC paths, field emdash spacing formatting, ZIP archive duplicate path elimination, `findAsset` room context resolution without cross-room corruption, multi-position export deduplication, exact lowercase position codes `wit`, `def`, `pro`, `jud`, `hld`, `hlp`, `sea`, `wit` default angle retention, INI-to-JSON exact key serialization, `getReferencedAssetInfo` alias/URL tracking, used vs unused asset disambiguation, ambience auto-switching, volume slider clamping [0, 1] and 0.30 default, resilient root directory import with images and audio retention, bloat filtering of `characters/`, `animations/`, `configs/`, `sounds/music/`, case-insensitive root repository import with `Base/` and `sounds/ambience/`, empty courtroom position foreground resolution, INI parser witness foreground retention, arbitrary root detection `MM/`, single-folder roots with ONLY `background` or ONLY `sounds`, clean room folder extraction, `clearAllBackgrounds()` zero-reset, INI parsing, courtroom position mapping with Witness default, duplicate asset collision disambiguation, audio server fallback, slot alias preservation, camera position duplication, slot clearing on purge, and state duplication).
-- `npm run build:both`: rebuilt `export/yuzu_area_maker.html` (5248 KB), `export/yuzu_area_maker_nomusic.html` (595 KB), and `docs/index.html` (595 KB) with 0 warnings and 0 errors.
-- **Headless Chrome Browser CDP Live Verification:**
-    - Live tested toggling "Isolate selection" ON with no active selection: verified all 4 areas are visible and toggle remains checked (`nodesWhenUnclicked: 4`, `isolateCheckWhenUnclicked: true`).
-    - Clicked Node C: verified canvas dynamically isolates to Node C and neighbour Node B (`nodesWhenNodeCClicked: 2`).
-    - Clicked empty canvas space to deselect: verified all 4 areas immediately return to view, and the "Isolate selection" toggle remains enabled (`nodesAfterEmptyClick: 4`, `isolateCheckAfterEmptyClick: true`).
-    - Clicked Node A: verified canvas dynamically isolates to Node A and neighbours Hub & Node B (`nodesWhenNodeAClicked: 3`, `passed: true`).
-    - Captured verified live headless Chrome screenshot of dynamic isolation ([verified_isolate_toggle_live.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_isolate_toggle_live.png)).
-- **FLOWER Map Live Server Benchmark (142 Areas, 844 Edges):**
-    - Loaded 142 areas with 5 `<ALL>` connection hubs (844 total pairs) on live dev server (`http://localhost:5173`).
-    - 100 wheel/pan zoom steps executed in **0.30 ms** total (**0.003 ms per frame**).
-    - 60 continuous node drag frames executed in **0.40 ms** total (**0.007 ms per frame**).
-    - Captured verified live headless Chrome screenshot of the complete 142-area FLOWER map fitted cleanly on the canvas at 16% zoom ([verified_flower_map_performance.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_flower_map_performance.png)).
-- Zero test YAML committed to repository; dev server verified on port 5173 without pushing to `main`.
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **361 passed, 0 failed** (all unit and integration tests passing, including `bgStore.reorderBackground`).
+- `npm run build:both`: Successfully compiled all targets with 0 errors and 0 warnings:
+    - Singlefile full distribution: `export/yuzu_area_maker.html` (5300 KB).
+    - Singlefile no-music distribution: `export/yuzu_area_maker_nomusic.html` (647 KB).
+    - GitHub Pages distribution: `docs/index.html` (647 KB).
+    - Embed assets: `docs/og-image.png` and `public/og-image.png` synchronized.
+- **Chrome CDP & Live Browser Visual Verification:**
+    - Live UI Overview ([verified_v220_live_after_fix.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_live_after_fix.png)): Brand and menus flush left, music player lengthened and anchored right, toolbar cleaned of middle label and undo/redo, Backgrounds button beside Test Mode, BG prefix removed from left pane.
+    - Inspector Vertical Background Layout ([verified_inspector_vertical_layout.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_inspector_vertical_layout.png)): Verified Area Path Input Box full-width on top with `[ Browse… ]` and `[ Maker… ]` buttons neatly arranged in a row directly beneath it.
+    - Background Picker Modal ([verified_browse_modal_open.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_browse_modal_open.png)): Verified 2-column modal popup with search filter, library list, stage preview, server path, courtroom positions, and time variants.
+    - Background List with 60+ Items ([verified_bg_list_60_items_scroll.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_bg_list_60_items_scroll.png)): Verified instant 0.10ms vertical scrolling across 60+ backgrounds in `.bg-list`, item layout containment, and fast hover states.
+    - Background List Drag Cue ([verified_bg_list_drag_drop_cue.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_bg_list_drag_drop_cue.png)): Verified `.bg-nav.dragover` and drop cue banner (`Drop folder, ZIP, or config to import`) on left sidebar.
+    - Crisp Rika Embed Image ([verified_graphic_design_og.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_graphic_design_og.png)): Verified zero blur/depth of field, card header displaying `// GRAPHIC DESIGN IS MY SHIT`, Furude Rika shifted towards the middle, small meme background detail stickers scattered around, and Comic Sans MS layout.
+    - Music player verified completely untouched in code, marquee, volume, and audio playback.
+

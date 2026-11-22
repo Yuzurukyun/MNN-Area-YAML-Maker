@@ -1,5 +1,6 @@
 <script>
   import { copyText, notify } from '../../lib/state.js';
+  import Icon from '../Icon.svelte';
 
   export let x;
   export let y;
@@ -44,7 +45,7 @@
         {:else}
           {#if !it.isRange}
             <div class="zone-scattered-alert">
-              <span>⚠ IDs not consecutive. Run <b>Sort IDs</b> to arrange into a range.</span>
+              <span style="display:inline-flex;align-items:center;gap:6px"><Icon name="alert-triangle" /> IDs not consecutive. Run <b>Sort IDs</b> to arrange into a range.</span>
             </div>
           {/if}
 
@@ -91,9 +92,10 @@
           {#if !it.isRange && it.onSortIds}
             <button
               class="zone-sort-act-btn"
+              style="display:inline-flex;align-items:center;justify-content:center;gap:6px"
               title="Open Sort IDs modal to reorder areas into consecutive ranges"
               on:click={() => { onClose(); it.onSortIds(); }}
-            >⚡ Auto-sort IDs into range…</button>
+            ><Icon name="zap" /> Auto-sort IDs into range…</button>
           {/if}
         {/if}
       </div>
@@ -117,11 +119,11 @@
           <label class="ctx-swatch-custom" title="Custom colour picker">
             <input
               type="color"
-              value={it.current || '#3b82f6'}
+              value={it.current || '#64748b'}
               on:input={(e) => it.onSelect(e.target.value)}
               on:change={() => onClose()}
             />
-            <span>🎨</span>
+            <Icon name="palette" />
           </label>
         </div>
       </div>

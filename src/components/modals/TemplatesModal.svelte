@@ -2,6 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   import { state, update, download, notify } from '../../lib/state.js';
   import * as M from '../../lib/core.js';
+  import Icon from '../Icon.svelte';
 
   const dispatch = createEventDispatcher();
   let editingId = null;
@@ -175,7 +176,7 @@
     <h3>Templates</h3>
     <div class="hint">
       Templates capture field defaults and toggles (never name, background or description).
-      Areas keep their own snapshot and flag ⚠ if they drift later.
+      Areas keep their own snapshot and flag drift notices if they change later.
     </div>
     <div style="margin-top:10px">
       {#each all as t}
@@ -184,7 +185,7 @@
             <b>{t.name}</b>
             <span class="hint">
               {t.include.length} fields{t.builtin ? ' · built-in' : ''}{#if driftCount(t)} ·
-                <span style="color:var(--warn)">⚠ {driftCount(t)} differ</span>{/if}
+                <span style="color:var(--warn);display:inline-flex;align-items:center;gap:3px"><Icon name="alert-triangle" /> {driftCount(t)} differ</span>{/if}
             </span>
           </span>
           <button title="Apply '{t.name}' values to the currently selected area" on:click={() => apply(t)}>Apply to selected</button>

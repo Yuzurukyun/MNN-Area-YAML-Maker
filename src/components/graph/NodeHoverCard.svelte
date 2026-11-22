@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import * as M from '../../lib/core.js';
   import { bgStore, resolveNodeImageUrl } from '../../lib/bgStore.js';
+  import Icon from '../Icon.svelte';
 
   export let area;
   export let idx;
@@ -38,7 +39,7 @@
     area.environment_darkness && 'Darkness',
     M.strip(area.weather) && `Weather: ${area.weather}`,
     area.afk_delay > 0 && `AFK: ${area.afk_delay}s → #${area.afk_sendto}`,
-    dups.has(M.strip(area.area)) && '⚠ DUPLICATE',
+    dups.has(M.strip(area.area)) && 'DUPLICATE',
   ].filter(Boolean);
 </script>
 
@@ -71,17 +72,19 @@
   </div>
 
   <div class="card-links">
-    <span class="link-pill" title="Reachable connections">🚶 {reachTxt}</span>
-    <span class="link-pill" title="Visible connections">👁 {visTxt}</span>
+    <span class="link-pill" title="Reachable connections"><Icon name="route" /> {reachTxt}</span>
+    <span class="link-pill" title="Visible connections"><Icon name="eye" /> {visTxt}</span>
     {#if screamL?.mode !== 'none'}
-      <span class="link-pill" title="Scream hearing range">📢 {screamTxt}</span>
+      <span class="link-pill" title="Scream hearing range"><Icon name="megaphone" /> {screamTxt}</span>
     {/if}
   </div>
 
   {#if flags.length}
     <div class="card-tags">
       {#each flags as fl}
-        <span class="flag-tag {fl.includes('⚠') ? 'warn' : ''}">{fl}</span>
+        <span class="flag-tag {fl === 'DUPLICATE' ? 'warn' : ''}">
+          {#if fl === 'DUPLICATE'}<Icon name="alert-triangle" /> {/if}{fl}
+        </span>
       {/each}
     </div>
   {/if}

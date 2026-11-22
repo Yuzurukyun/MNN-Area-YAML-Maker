@@ -215,7 +215,7 @@ button {
 
 button:hover:not(:disabled) {
   background: var(--hover);
-  border-color: color-mix(in srgb, var(--accent) 55%, var(--line2));
+  border-color: var(--line2);
   color: var(--text-strong);
 }
 
@@ -223,8 +223,11 @@ button:active:not(:disabled) {
   transform: scale(0.975) translateY(0.5px);
 }
 
-button:disabled {
-  opacity: 0.38;
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.40 !important;
   cursor: not-allowed;
 }
 
@@ -396,13 +399,10 @@ input[type="range"]::-moz-range-thumb {
   border: 2px solid var(--panel2);
 }
 
-/* ---------- Focus rings (keyboard only) ---------- */
-button:focus-visible,
-input[type="checkbox"]:focus-visible,
-input[type="range"]:focus-visible,
-summary:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
+/* ---------- Focus rings (keyboard only: 1px accent outline, music player untouched) ---------- */
+*:focus-visible:not(.player-container *):not(.audio-strip *) {
+  outline: 1px solid var(--accent) !important;
+  outline-offset: 1px !important;
 }
 
 /* ---------- Generic helpers ---------- */

@@ -3,6 +3,7 @@
   import { auditMap } from '../../lib/pathAudit.js';
   import { state, update, notify } from '../../lib/state.js';
   import { autoscroll } from '../../lib/autoscroll.js';
+  import Icon from '../Icon.svelte';
 
   export let project;
   export let onFocusArea;
@@ -68,11 +69,11 @@
 
     <div class="modal-hdr-row">
       <div class="hdr-title-wrap">
-        <span class="audit-icon-mark">🔍</span>
+        <span class="audit-icon-mark"><Icon name="clipboard-check" /></span>
         <h3>Map Network Audit</h3>
       </div>
       {#if totalNotices === 0}
-        <span class="status-pill ok">✓ Clean Topology</span>
+        <span class="status-pill ok" style="display:inline-flex;align-items:center;gap:4px"><Icon name="check" /> Clean Topology</span>
       {:else}
         <span class="status-pill warn">{totalNotices} notice{totalNotices === 1 ? '' : 's'}</span>
       {/if}
@@ -102,7 +103,7 @@
         aria-selected={activeTab === 'deadEnds'}
         on:click={() => (activeTab = 'deadEnds')}
       >
-        <span>🛑 Dead Ends</span>
+        <span><Icon name="circle-slash" /> Dead Ends</span>
         <span class="pill-badge {audit.deadEnds.length > 0 ? 'danger' : 'zero'}">{audit.deadEnds.length}</span>
       </button>
       <button
@@ -111,7 +112,7 @@
         aria-selected={activeTab === 'oneWayTrips'}
         on:click={() => (activeTab = 'oneWayTrips')}
       >
-        <span>🚪 One-Way Trips</span>
+        <span><Icon name="arrow-right" /> One-Way Trips</span>
         <span class="pill-badge {audit.oneWayTrips.length > 0 ? 'warn' : 'zero'}">{audit.oneWayTrips.length}</span>
       </button>
       <button
@@ -120,7 +121,7 @@
         aria-selected={activeTab === 'disconnected'}
         on:click={() => (activeTab = 'disconnected')}
       >
-        <span>🏝️ Disconnected</span>
+        <span><Icon name="unlink" /> Disconnected</span>
         <span class="pill-badge {audit.disconnected.length > 0 ? 'danger' : 'zero'}">{audit.disconnected.length}</span>
       </button>
       <button
@@ -129,7 +130,7 @@
         aria-selected={activeTab === 'noIncoming'}
         on:click={() => (activeTab = 'noIncoming')}
       >
-        <span>🚶 No Way In</span>
+        <span style="display:inline-flex;align-items:center;gap:6px"><Icon name="route" /> No Way In</span>
         <span class="pill-badge {audit.noIncoming.length > 0 ? 'info' : 'zero'}">{audit.noIncoming.length}</span>
       </button>
     </div>
@@ -137,7 +138,7 @@
     <!-- Search & Filter Controls Toolbar (Dedicated Row Below) -->
     <div class="audit-toolbar-row">
       <div class="search-box">
-        <span class="search-icon">🔍</span>
+        <span class="search-icon"><Icon name="search" /></span>
         <input
           type="search"
           class="audit-search-input"
@@ -162,7 +163,7 @@
     <div class="audit-content">
       {#if totalNotices === 0}
         <div class="clean-box">
-          <div class="clean-icon">✓</div>
+          <div class="clean-icon"><Icon name="check" /></div>
           <div class="clean-title">Network topology is balanced!</div>
           <div class="hint">No completely isolated areas, dead ends without exits, or unreturnable one-way traps detected.</div>
         </div>
@@ -174,7 +175,7 @@
             <div class="issue-section">
               <div class="issue-title">
                 <div class="title-left">
-                  <span class="section-tag danger">🛑 Dead Ends</span>
+                  <span class="section-tag danger" style="display:inline-flex;align-items:center;gap:4px"><Icon name="circle-slash" /> Dead Ends</span>
                   <span class="section-count">({filtered.length})</span>
                 </div>
                 <span class="issue-desc">Rooms entered from the network with 0 outgoing exits (&lt;ALL&gt; areas excluded)</span>
@@ -193,7 +194,7 @@
                           <span class="area-bg-chip" use:autoscroll>{a.background}</span>
                         {/if}
                       </div>
-                      <button class="mini-btn focus-btn" title="Center camera on area" on:click={() => jumpTo(a)}>⌖ View Node</button>
+                      <button class="mini-btn focus-btn" title="Center camera on area" on:click={() => jumpTo(a)}><Icon name="crosshair" /> View Node</button>
                     </div>
                   {/each}
                 </div>
@@ -209,7 +210,7 @@
             <div class="issue-section">
               <div class="issue-title">
                 <div class="title-left">
-                  <span class="section-tag warn">🚪 One-Way Trips</span>
+                  <span class="section-tag warn" style="display:inline-flex;align-items:center;gap:4px"><Icon name="arrow-right" /> One-Way Trips</span>
                   <span class="section-count">({filtered.length})</span>
                 </div>
                 <span class="issue-desc">Rooms entered from the network, but with no return route back to Hub or any &lt;ALL&gt; area</span>
@@ -228,7 +229,7 @@
                           <span class="area-bg-chip" use:autoscroll>{a.background}</span>
                         {/if}
                       </div>
-                      <button class="mini-btn focus-btn" title="Center camera on area" on:click={() => jumpTo(a)}>⌖ View Node</button>
+                      <button class="mini-btn focus-btn" title="Center camera on area" on:click={() => jumpTo(a)}><Icon name="crosshair" /> View Node</button>
                     </div>
                   {/each}
                 </div>
@@ -244,7 +245,7 @@
             <div class="issue-section">
               <div class="issue-title">
                 <div class="title-left">
-                  <span class="section-tag danger">🏝️ Disconnected</span>
+                  <span class="section-tag danger" style="display:inline-flex;align-items:center;gap:4px"><Icon name="unlink" /> Disconnected</span>
                   <span class="section-count">({filtered.length})</span>
                 </div>
                 <span class="issue-desc">Completely isolated areas with zero incoming and zero outgoing walkable corridors</span>
@@ -263,7 +264,7 @@
                           <span class="area-bg-chip" use:autoscroll>{a.background}</span>
                         {/if}
                       </div>
-                      <button class="mini-btn focus-btn" title="Center camera on area" on:click={() => jumpTo(a)}>⌖ View Node</button>
+                      <button class="mini-btn focus-btn" title="Center camera on area" on:click={() => jumpTo(a)}><Icon name="crosshair" /> View Node</button>
                     </div>
                   {/each}
                 </div>
@@ -279,7 +280,7 @@
             <div class="issue-section">
               <div class="issue-title">
                 <div class="title-left">
-                  <span class="section-tag info">🚶 No Way In</span>
+                  <span class="section-tag info" style="display:inline-flex;align-items:center;gap:4px"><Icon name="route" /> No Way In</span>
                   <span class="section-count">({filtered.length})</span>
                 </div>
                 <span class="issue-desc">Rooms with exits, but 0 incoming links from other rooms (accessible only via &lt;ALL&gt; or script)</span>
@@ -298,7 +299,7 @@
                           <span class="area-bg-chip" use:autoscroll>{a.background}</span>
                         {/if}
                       </div>
-                      <button class="mini-btn focus-btn" title="Center camera on area" on:click={() => jumpTo(a)}>⌖ View Node</button>
+                      <button class="mini-btn focus-btn" title="Center camera on area" on:click={() => jumpTo(a)}><Icon name="crosshair" /> View Node</button>
                     </div>
                   {/each}
                 </div>
@@ -310,7 +311,7 @@
     </div>
 
     <div class="modal-footer">
-      <span class="footer-hint">Click "⌖ View Node" on any entry to jump directly to it on the canvas.</span>
+      <span class="footer-hint">Click "View Node" on any entry to jump directly to it on the canvas.</span>
       <button class="primary" on:click={() => dispatch('close')}>Close</button>
     </div>
   </div>

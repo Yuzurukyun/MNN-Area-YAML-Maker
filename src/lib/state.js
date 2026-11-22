@@ -303,6 +303,91 @@ export function exitFocusView(s) {
   s.focusViewIds = null;
 }
 
+/* ================= graph view & layout controls ================= */
+export const graphView = writable({
+  hideHub: false,
+  hideAll: false,
+  showAllMesh: false,
+  panTool: false,
+  routeActive: false,
+  auditModalOpen: false,
+});
+
+export function saveLayout(name) {
+  let finalName = '';
+  update((s) => {
+    finalName = M.strip(name) || 'Layout ' + ((s.project.layouts?.length || 0) + 1);
+    if (!Array.isArray(s.project.layouts)) s.project.layouts = [];
+    s.project.layouts.push({
+      id: M.uid(),
+      name: finalName,
+      positions: Object.fromEntries(s.project.areas.map((a) => [a.id, [a.x, a.y]])),
+      groups: JSON.parse(JSON.stringify(s.project.groups || [])),
+      images: JSON.parse(JSON.stringify(s.project.images || [])),
+    });
+  });
+  notify(`Saved layout "${finalName}".`, 'ok');
+}
+
+export function applyLayout(l) {
+  if (!l || !l.positions) return;
+  update((s) => {
+    s.project.areas.forEach((a) => {
+      const pos = l.positions[a.id];
+      if (pos) {
+        a.x = pos[0];
+        a.y = pos[1];
+      }
+    });
+    s.project.groups = JSON.parse(JSON.stringify(l.groups || []));
+    s.project.images = JSON.parse(JSON.stringify(l.images || []));
+  });
+  notify(`Applied layout "${l.name}".`, 'info');
+}
+
+export function deleteLayout(id) {
+  update((s) => {
+    if (Array.isArray(s.project.layouts)) {
+      s.project.layouts = s.project.layouts.filter((l) => l.id !== id);
+    }
+  });
+}
+
+export function sortByGroup() {
+  update((s) => M.sortAreasByGroups(s.project));
+  notify('Sorted area IDs by board groups.', 'ok');
+}
+
+export function duplicateSelectedArea() {
+  update((s) => {
+    if (!s.selectedId) return;
+    const copy = M.duplicateArea(s.project, s.selectedId);
+    if (copy) {
+      s.selectedId = copy.id;
+      s.selectedIds = new Set([copy.id]);
+      s.selectedEdge = null;
+    }
+  });
+}
+
+export function deleteSelectedArea() {
+  update((s) => {
+    if (!s.selectedId) return;
+    const id = s.selectedId;
+    if (s.project.areas[0] && s.project.areas[0].id === id) {
+      notify('Area 0 is the hub — it cannot be deleted.', 'warn');
+      return;
+    }
+    M.deleteArea(s.project, id);
+    s.selectedIds.delete(id);
+    if (s.selectedId === id || !s.project.areas.some((x) => x.id === s.selectedId)) {
+      s.selectedId = s.project.areas[0].id;
+    }
+    if (!s.selectedIds.size) s.selectedIds.add(s.selectedId);
+    s.selectedEdge = null;
+  });
+}
+
 /* ================= camera command bus ================= */
 export const cameraCommand = writable(null);
 

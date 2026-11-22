@@ -15,7 +15,7 @@
     sanitizeToRootFolder,
   } from '../../lib/bgSchema.js';
   import { bgStore, ensureUniqueBgFolder } from '../../lib/bgStore.js';
-  import { autoscroll } from '../../lib/autoscroll.js';
+  import Icon from '../Icon.svelte';
 
   const dispatch = createEventDispatcher();
 
@@ -486,7 +486,7 @@
   // Global Asset Renaming
   function triggerRenameAsset(asset) {
     openRenameDialog({
-      title: '✏️ Rename Asset (Global)',
+      title: 'Rename Asset (Global)',
       label: 'Asset Filename:',
       hint: `Renaming "${asset.name}" will update all backgrounds, states, and area nodes referencing it.`,
       placeholder: 'e.g. hallway_dark.png',
@@ -514,7 +514,7 @@
     const sourceName = activeBg.assetSources?.[currentVal] || currentVal;
 
     openRenameDialog({
-      title: `✏️ Rename Export Filename (${slotType}${todKey ? ' @ ' + todKey : ''})`,
+      title: `Rename Export Filename (${slotType}${todKey ? ' @ ' + todKey : ''})`,
       label: 'Export Filename for this Background:',
       hint: `Customizes the filename written into background.json and package ZIP for this background only. The asset "${sourceName}" in the pool is unchanged.`,
       placeholder: 'e.g. cafeteria_night.png',
@@ -579,48 +579,48 @@
     openContextMenu(e, [
       {
         label: 'Rename Asset (Global)…',
-        icon: '✏️',
+        icon: 'pencil',
         run: () => triggerRenameAsset(asset),
       },
       {
         label: 'Inspect in Repository (Usages)…',
-        icon: '🔍',
+        icon: 'search',
         run: () => openRepoAssetInspector(asset),
       },
       { separator: true },
       {
         label: 'Assign as Background Image',
-        icon: '🖼️',
+        icon: 'image',
         disabled: !isImg,
         run: () => assignSlotAsset('background', asset.name),
       },
       {
         label: 'Assign as Foreground Overlay',
-        icon: '🌫️',
+        icon: 'cloud',
         disabled: !isImg,
         run: () => assignSlotAsset('foreground', asset.name),
       },
       {
         label: 'Assign as Ambience Audio',
-        icon: '🎵',
+        icon: 'music',
         disabled: !isAud,
         run: () => assignSlotAsset('ambience', asset.name),
       },
       { separator: true },
       {
         label: 'Copy Filename',
-        icon: '📋',
+        icon: 'copy',
         run: () => { copyText(asset.name); notify(`Copied "${asset.name}".`, 'ok'); },
       },
       {
         label: 'Copy Server Path',
-        icon: '📋',
+        icon: 'copy',
         run: () => { copyText(serverPath); notify(`Copied path.`, 'ok'); },
       },
       { separator: true },
       {
         label: 'Delete from Pool',
-        icon: '🗑️',
+        icon: 'trash',
         danger: true,
         run: async () => {
           await bgStore.deleteAsset(asset.id);
@@ -644,30 +644,30 @@
     if (hasAsset) {
       items.push({
         label: 'Rename Export Filename…',
-        icon: '✏️',
+        icon: 'pencil',
         run: () => triggerRenameSlotExport(slotType, todKey),
       });
       if (hasAlias) {
         items.push({
           label: `Reset to Asset Name (${sourceName})`,
-          icon: '🔄',
+          icon: 'rotate-ccw',
           run: () => resetSlotToSourceName(slotType, todKey),
         });
       }
       items.push({
         label: 'Inspect Asset Preview',
-        icon: '🔍',
+        icon: 'search',
         run: () => inspectAsset(sourceName, curVal, isAudio ? 'audio' : 'image'),
       });
       items.push({ separator: true });
       items.push({
         label: 'Copy Filename',
-        icon: '📋',
+        icon: 'copy',
         run: () => { copyText(curVal); notify(`Copied "${curVal}".`, 'ok'); },
       });
       items.push({
         label: 'Copy Server Path',
-        icon: '📋',
+        icon: 'copy',
         run: () => {
           const path = isAudio ? `base/sounds/ambient/${curVal}` : `base/background/${activeBg?.folder || 'Background'}/${curVal}`;
           copyText(path);
@@ -695,7 +695,7 @@
       });
       items.push({
         label: 'Upload File to this Slot…',
-        icon: '📥',
+        icon: 'file-up',
         run: () => fileInputGeneral && fileInputGeneral.click(),
       });
     }
@@ -708,15 +708,15 @@
     openContextMenu(e, [
       {
         label: 'Duplicate Background',
-        icon: '📋',
+        icon: 'copy',
         run: () => bgStore.duplicateBackground(bg.id),
       },
       {
         label: 'Rename Folder Path…',
-        icon: '✏️',
+        icon: 'pencil',
         run: () => {
           openRenameDialog({
-            title: '✏️ Rename Background Folder',
+            title: 'Rename Background Folder',
             label: 'Folder Path (e.g. Umamusume/Library):',
             hint: 'Server folder path relative to base/background/.',
             placeholder: 'Series/Room',
@@ -728,7 +728,7 @@
       { separator: true },
       {
         label: 'Export background.json',
-        icon: '💾',
+        icon: 'download',
         run: () => {
           const json = serializeBackgroundJson(bg);
           const blob = new Blob([json], { type: 'application/json' });
@@ -742,20 +742,20 @@
       },
       {
         label: 'Export Package (.zip)',
-        icon: '📦',
+        icon: 'archive',
         run: () => handleExportZip(bg.id),
       },
       { separator: true },
       {
         label: 'Delete Background',
-        icon: '🗑️',
+        icon: 'trash',
         danger: true,
         disabled: backgrounds.length <= 1,
         run: () => removeBackground(bg.id),
       },
       {
         label: 'Clear All Backgrounds…',
-        icon: '🗑️',
+        icon: 'trash',
         danger: true,
         run: () => {
           clearBgsAlsoPurgeAssets = false;
@@ -770,17 +770,17 @@
     openContextMenu(e, [
       {
         label: 'Duplicate State Variant',
-        icon: '📋',
+        icon: 'copy',
         run: () => bgStore.duplicateState(activeBg.id, stKey),
       },
       {
         label: 'Rename State…',
-        icon: '✏️',
+        icon: 'pencil',
         disabled: isDefault,
         title: isDefault ? 'The default state cannot be renamed.' : '',
         run: () => {
           openRenameDialog({
-            title: `✏️ Rename State "${stKey}"`,
+            title: `Rename State "${stKey}"`,
             label: 'New State Key:',
             hint: 'Alternative visual state key in background.json (e.g. crowded, dark, festive).',
             placeholder: 'e.g. night_festive',
@@ -801,7 +801,7 @@
       { separator: true },
       {
         label: 'Delete State',
-        icon: '🗑️',
+        icon: 'trash',
         danger: true,
         disabled: isDefault,
         title: isDefault ? 'The default state cannot be deleted.' : '',
@@ -814,15 +814,15 @@
     openContextMenu(e, [
       {
         label: 'Duplicate Time Variant',
-        icon: '📋',
+        icon: 'copy',
         run: () => bgStore.duplicateTimeVariant(activeBg.id, activeStateKey, activePosKey, todKey),
       },
       {
         label: 'Rename Time Variant Key…',
-        icon: '✏️',
+        icon: 'pencil',
         run: () => {
           openRenameDialog({
-            title: `✏️ Rename Time of Day "${todKey}"`,
+            title: `Rename Time of Day "${todKey}"`,
             label: 'Time Key:',
             hint: 'Time-of-day key in background.json (e.g. day, evening, night, morning).',
             placeholder: 'e.g. midnight',
@@ -860,7 +860,7 @@
       { separator: true },
       {
         label: 'Delete Time Variant',
-        icon: '🗑️',
+        icon: 'trash',
         danger: true,
         run: () => removeTimeVariant(todKey),
       },
@@ -871,7 +871,7 @@
     openContextMenu(e, [
       {
         label: stageFitMode === 'contain' ? 'Switch to Fit: Cover (Fill Screen)' : 'Switch to Fit: Contain (Letterbox)',
-        icon: '🖼️',
+        icon: 'image',
         run: () => {
           stageFitMode = stageFitMode === 'contain' ? 'cover' : 'contain';
           notify(`Stage fit mode: ${stageFitMode}`, 'info');
@@ -879,14 +879,14 @@
       },
       {
         label: 'Inspect Stage Image Preview',
-        icon: '🔍',
+        icon: 'search',
         disabled: !resolvedVisual.background,
         run: () => inspectAsset(resolvedVisual.background, `${activeBg?.folder || 'Scene'} [${stageTod}]`, 'image'),
       },
       { separator: true },
       {
         label: 'Copy Live Visual Config JSON',
-        icon: '📋',
+        icon: 'copy',
         run: () => {
           copyText(JSON.stringify(resolvedVisual, null, 2));
           notify('Copied resolved visual JSON to clipboard.', 'ok');
@@ -1038,22 +1038,24 @@
   $: activeAmbienceVal = usePositions ? activePos?.ambience : activeState?.ambience;
   $: activeTimeVariants = usePositions ? (activePos?.time_variants || {}) : (activeState?.time_variants || {});
 
-  // Folder splitting & smart prefix management
+  // Folder splitting & smart prefix management (memoized for fast list rendering)
+  const _splitFolderCache = new Map();
   function splitFolderPath(folder) {
     if (!folder || typeof folder !== 'string') {
       return { subfolder: '', name: '' };
     }
+    const cached = _splitFolderCache.get(folder);
+    if (cached) return cached;
     let s = folder.trim().replace(/\\/g, '/');
     s = s.replace(/^(\.\/)?(base\/)?background\//i, '');
     s = s.replace(/^\/+/, '');
     const lastSlash = s.lastIndexOf('/');
-    if (lastSlash === -1) {
-      return { subfolder: '', name: s };
-    }
-    return {
-      subfolder: s.slice(0, lastSlash),
-      name: s.slice(lastSlash + 1),
-    };
+    const res = lastSlash === -1
+      ? { subfolder: '', name: s }
+      : { subfolder: s.slice(0, lastSlash), name: s.slice(lastSlash + 1) };
+    if (_splitFolderCache.size > 500) _splitFolderCache.clear();
+    _splitFolderCache.set(folder, res);
+    return res;
   }
 
   $: currentFolderParts = splitFolderPath(activeBg?.folder || '');
@@ -1376,7 +1378,7 @@
 
   function triggerRenamePosition(posKey) {
     openRenameDialog({
-      title: '🎥 Rename Camera Position',
+      title: 'Rename Camera Position',
       label: 'Position Name:',
       hint: `Change camera angle label from "${posKey}".`,
       placeholder: 'e.g. wit, def, pro, jud',
@@ -1446,23 +1448,23 @@
     openContextMenu(e, [
       {
         label: 'Duplicate Position',
-        icon: '📋',
+        icon: 'copy',
         run: () => duplicatePosition(posKey),
       },
       {
         label: 'Rename Position…',
-        icon: '✏️',
+        icon: 'pencil',
         run: () => triggerRenamePosition(posKey),
       },
       {
         label: 'Clear Slot Overrides',
-        icon: '🧹',
+        icon: 'eraser',
         run: () => clearPositionSlots(posKey),
       },
       { separator: true },
       {
         label: 'Delete Position',
-        icon: '🗑️',
+        icon: 'trash',
         danger: true,
         disabled: !canDelete,
         title: !canDelete ? 'Cannot delete the only camera position.' : '',
@@ -1604,6 +1606,7 @@
 
   function onSlotDragOver(e, slotType, tod = null) {
     e.preventDefault();
+    e.stopPropagation();
     const slotKey = tod ? `${slotType}:${tod}` : slotType;
     dragOverSlot = slotKey;
 
@@ -1614,22 +1617,16 @@
     if (draggedAsset) {
       if (isImgSlot) isValid = isImageAsset(draggedAsset);
       else if (isAmbSlot) isValid = isAudioAsset(draggedAsset);
-    } else if (e.dataTransfer?.items?.length) {
-      if (e.dataTransfer.items.length > 1) {
-        // Multi-file drag is treated as general import, not single-slot drop
-        isValid = false;
-      } else {
-        const item = e.dataTransfer.items[0];
-        if (isImgSlot) isValid = item.type.startsWith('image/');
-        else if (isAmbSlot) isValid = item.type.startsWith('audio/') || item.type === '';
-      }
     } else {
+      // Dragging from OS/file manager:
+      // Note: in Windows Explorer, item.type is frequently empty string during dragover.
+      // Therefore, do not reject file dragover; allow drop and validate on drop.
       isValid = true;
     }
 
     dragOverSlotValid = isValid;
     if (e.dataTransfer) {
-      e.dataTransfer.dropEffect = isValid ? 'copy' : 'none';
+      e.dataTransfer.dropEffect = 'copy';
     }
   }
 
@@ -1662,6 +1659,11 @@
 
     if (entries.length === 0) {
       return Array.from(dataTransfer.files || []);
+    }
+
+    const hasDirectory = entries.some((e) => e.isDirectory);
+    if (!hasDirectory && dataTransfer.files && dataTransfer.files.length > 0) {
+      return Array.from(dataTransfer.files);
     }
 
     async function traverseEntry(entry, path = '') {
@@ -1780,7 +1782,11 @@
 
   function onModalDragOver(e) {
     e.preventDefault();
-    if (!draggedAsset && e.dataTransfer?.types?.includes('Files')) {
+    e.stopPropagation();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
+    if (!draggedAsset) {
       isDraggingOverModal = true;
     }
   }
@@ -1790,6 +1796,7 @@
   }
   async function onModalDrop(e) {
     e.preventDefault();
+    e.stopPropagation();
     isDraggingOverModal = false;
     dragOverSlot = null;
     dragOverSlotValid = false;
@@ -1808,10 +1815,98 @@
     }
   }
 
+  // Drag over backgrounds navigator & list (importing background directories/files or reordering)
+  let isDraggingOverBgNav = false;
+  let draggedBgId = null;
+  let dragOverBgId = null;
+
+  function onBgNavDragOver(e) {
+    if (draggedBgId) return; // Reordering within list
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
+    if (!draggedAsset) {
+      isDraggingOverBgNav = true;
+    }
+  }
+
+  function onBgNavDragLeave(e) {
+    if (e.currentTarget?.contains?.(e.relatedTarget)) return;
+    isDraggingOverBgNav = false;
+  }
+
+  async function onBgNavDrop(e) {
+    if (draggedBgId) return;
+    e.preventDefault();
+    e.stopPropagation();
+    isDraggingOverBgNav = false;
+
+    if (draggedAsset || e.dataTransfer?.types?.includes('application/x-area-maker-asset')) {
+      draggedAsset = null;
+      return;
+    }
+
+    if (e.dataTransfer) {
+      const files = await getAllFilesFromDataTransfer(e.dataTransfer);
+      if (files && files.length > 0) {
+        await handleFiles(files);
+      }
+    }
+  }
+
+  // Drag-and-drop to reorder backgrounds in .bg-list
+  function onBgDragStart(e, bg) {
+    draggedBgId = bg.id;
+    e.dataTransfer.setData('application/x-area-maker-bg-id', bg.id);
+    e.dataTransfer.effectAllowed = 'move';
+  }
+
+  function onBgItemDragOver(e, bg) {
+    if (draggedBgId && draggedBgId !== bg.id) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = 'move';
+      dragOverBgId = bg.id;
+    }
+  }
+
+  function onBgItemDragLeave(e, bg) {
+    if (dragOverBgId === bg.id) {
+      dragOverBgId = null;
+    }
+  }
+
+  function onBgItemDrop(e, targetBg) {
+    if (draggedBgId) {
+      e.preventDefault();
+      e.stopPropagation();
+      const fromIdx = backgrounds.findIndex((b) => b.id === draggedBgId);
+      const toIdx = backgrounds.findIndex((b) => b.id === targetBg.id);
+      draggedBgId = null;
+      dragOverBgId = null;
+      if (fromIdx !== -1 && toIdx !== -1 && fromIdx !== toIdx) {
+        bgStore.reorderBackground(fromIdx, toIdx);
+        notify(`Moved "${targetBg.folder}" in background list.`, 'ok');
+      }
+      return;
+    }
+  }
+
+  function onBgDragEnd() {
+    draggedBgId = null;
+    dragOverBgId = null;
+  }
+
   // Drag over pool
   function onPoolDragOver(e) {
     e.preventDefault();
-    if (!draggedAsset && e.dataTransfer?.types?.includes('Files')) {
+    e.stopPropagation();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
+    if (!draggedAsset) {
       isDraggingOverPool = true;
     }
   }
@@ -2044,15 +2139,15 @@
     return sanitizeToRootFolder(raw);
   }
 
-  // Referenced and unused asset counts (re-evaluated whenever storeState or assetPool updates)
-  $: referencedAssetInfo = (storeState, bgStore.getReferencedAssetInfo());
+  // Referenced and unused asset counts (re-evaluated only when asset pool exists)
+  $: referencedAssetInfo = assetPool.length > 0 ? (storeState, bgStore.getReferencedAssetInfo()) : null;
   $: referencedAssetNames = referencedAssetInfo?.keys || new Set();
-  $: usedAssetsCount = referencedAssetInfo ? assetPool.filter((a) => referencedAssetInfo.isReferenced(a)).length : 0;
+  $: usedAssetsCount = (referencedAssetInfo && assetPool.length > 0) ? assetPool.filter((a) => referencedAssetInfo.isReferenced(a)).length : 0;
   $: unusedAssetCount = Math.max(0, assetPool.length - usedAssetsCount);
 
   // Filtered assets in pool
-  $: filteredAssets = assetPool.filter((a) => {
-    const isUsed = referencedAssetInfo.isReferenced(a);
+  $: filteredAssets = assetPool.length === 0 ? [] : assetPool.filter((a) => {
+    const isUsed = referencedAssetInfo ? referencedAssetInfo.isReferenced(a) : false;
     if (assetFilter === 'used' && !isUsed) return false;
     if (assetFilter === 'unused' && isUsed) return false;
     if (assetFilter === 'image' && a.type !== 'image') return false;
@@ -2065,8 +2160,8 @@
   });
 
   // Available categorized assets for quick-picking
-  $: availableImages = assetPool.filter((a) => a.type === 'image');
-  $: availableAudios = assetPool.filter((a) => a.type === 'audio');
+  $: availableImages = assetPool.length === 0 ? [] : assetPool.filter((a) => a.type === 'image');
+  $: availableAudios = assetPool.length === 0 ? [] : assetPool.filter((a) => a.type === 'audio');
 </script>
 
 <svelte:window
@@ -2095,6 +2190,9 @@
   role="presentation"
   on:mousedown={onScrimMouseDown}
   on:click={(e) => handleScrimClose(e, () => dispatch('close'))}
+  on:dragover={onModalDragOver}
+  on:dragleave={onModalDragLeave}
+  on:drop={onModalDrop}
 >
   <div
     class="modal bg-maker-modal {isDraggingOverModal ? 'dragover' : ''}"
@@ -2165,7 +2263,7 @@
             title="Set background: '{activeBg?.folder}' on the currently inspected area"
             on:click={applyToCurrentArea}
           >
-            ✓ Apply to Area #{Math.max(0, $state.project.areas.indexOf(selectedArea))}
+            <Icon name="check" /> Apply to Area #{Math.max(0, $state.project.areas.indexOf(selectedArea))}
           </button>
         {/if}
       </div>
@@ -2177,7 +2275,7 @@
             title="Import background definitions, folders, positions.ini, or asset ZIPs"
             on:click|stopPropagation={() => (importMenuOpen = !importMenuOpen)}
           >
-            📥 Import ▾
+            <Icon name="file-up" /> Import ▾
           </button>
           {#if importMenuOpen}
             <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
@@ -2187,13 +2285,13 @@
                 title="Select and import a background folder from disk (auto-detects positions.ini or background.json)"
                 on:click={() => { importMenuOpen = false; fileInputFolder && fileInputFolder.click(); }}
               >
-                📁 Import Directory / Folder…
+                <Icon name="folder" /> Import Directory / Folder…
               </button>
               <button
                 title="Import a ZIP archive, positions.ini, or background.json file"
                 on:click={() => { importMenuOpen = false; fileInputLibrary && fileInputLibrary.click(); }}
               >
-                📦 Import ZIP, INI, or JSON File…
+                <Icon name="archive" /> Import ZIP, INI, or JSON File…
               </button>
             </div>
           {/if}
@@ -2207,7 +2305,7 @@
             notify('Copied background.json to clipboard');
           }}
         >
-          📋 Copy JSON
+          <Icon name="copy" /> Copy JSON
         </button>
         <button
           class="mini-btn"
@@ -2223,14 +2321,14 @@
             URL.revokeObjectURL(url);
           }}
         >
-          💾 Export JSON
+          <Icon name="download" /> Export JSON
         </button>
         <button
           class="mini-btn"
           title="Export complete package ZIP containing background.json, images and sounds"
           on:click={() => handleExportZip(activeBg?.id)}
         >
-          📦 Export Package (.zip)
+          <Icon name="archive" /> Export Package (.zip)
         </button>
         <span class="drop-wrap">
           <button
@@ -2238,7 +2336,7 @@
             title="Export full background library for sharing with collaborators"
             on:click|stopPropagation={() => (libraryMenuOpen = !libraryMenuOpen)}
           >
-            📚 Library ▾
+            <Icon name="archive" /> Library ▾
           </button>
           {#if libraryMenuOpen}
             <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
@@ -2248,20 +2346,20 @@
                 title="Download backgrounds-library.json backup containing all background definitions"
                 on:click={() => { libraryMenuOpen = false; bgStore.downloadLibraryJson(); }}
               >
-                💾 Export Library Backup (.json)
+                <Icon name="download" /> Export Library Backup (.json)
               </button>
               <button
                 title="Download comprehensive ZIP package with all background.json files and assets"
                 on:click={() => { libraryMenuOpen = false; handleExportAllZip(); }}
               >
-                📦 Export All Backgrounds & Assets (.zip)
+                <Icon name="archive" /> Export All Backgrounds & Assets (.zip)
               </button>
               <div class="menu-divider"></div>
               <button
                 title="Import single background.json, backgrounds-library.json, or package ZIP"
                 on:click={() => { libraryMenuOpen = false; fileInputLibrary && fileInputLibrary.click(); }}
               >
-                📥 Import Package or JSON (.json, .zip)…
+                <Icon name="file-up" /> Import Package or JSON (.json, .zip)…
               </button>
               {#if assetPool.length > 0}
                 <div class="menu-divider"></div>
@@ -2271,14 +2369,14 @@
                   title="Remove {unusedAssetCount} unreferenced assets from memory and cache"
                   on:click={() => openPurgeModal('unused')}
                 >
-                  🧹 Purge Unused Assets ({unusedAssetCount})
+                  <Icon name="eraser" /> Purge Unused Assets ({unusedAssetCount})
                 </button>
                 <button
                   class="danger-item"
                   title="Clear all {assetPool.length} imported assets from memory and cache"
                   on:click={() => openPurgeModal('all')}
                 >
-                  🗑 Purge All Assets ({assetPool.length})
+                  <Icon name="trash" /> Purge All Assets ({assetPool.length})
                 </button>
               {/if}
               <div class="menu-divider"></div>
@@ -2291,7 +2389,7 @@
                   showClearBgsConfirmModal = true;
                 }}
               >
-                🗑 Clear All Backgrounds ({backgrounds.length})
+                <Icon name="trash" /> Clear All Backgrounds ({backgrounds.length})
               </button>
             </div>
           {/if}
@@ -2302,7 +2400,7 @@
             title="Apply or manage background templates (courtroom positions, time-of-day cycles, trial states)"
             on:click|stopPropagation={() => (tplMenuOpen = !tplMenuOpen)}
           >
-            📋 Templates ▾
+            <Icon name="templates" /> Templates ▾
           </button>
           {#if tplMenuOpen}
             <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
@@ -2323,7 +2421,7 @@
                 title="Manage templates or save current background as a reusable template"
                 on:click={() => { tplMenuOpen = false; showManageTemplatesModal = true; }}
               >
-                ⚙ Manage & Save Templates…
+                <Icon name="settings" /> Manage &amp; Save Templates…
               </button>
             </div>
           {/if}
@@ -2387,27 +2485,28 @@
         </div>
 
         {#if isDuplicatePath}
-          <span class="path-dup-badge" title="Duplicate folder path! Another background shares this path. Renamed automatically on blur/export.">
-            ⚠️ Duplicate Path
+          <span class="path-dup-badge" style="display:inline-flex;align-items:center;gap:4px" title="Duplicate folder path! Another background shares this path. Renamed automatically on blur/export.">
+            <Icon name="alert-triangle" /> Duplicate Path
           </span>
         {/if}
 
         <!-- Copy button -->
         <button
           class="icon-tool-btn"
+          style="display:inline-flex;align-items:center;gap:4px"
           title="Copy relative folder path to clipboard"
           on:click={() => { copyText(activeBg?.folder || ''); notify('Copied background folder path'); }}
         >
-          📋 Copy
+          <Icon name="copy" /> Copy
         </button>
       </div>
 
       <!-- Small font label below input boxes displaying full path -->
       <div class="path-strip-full" title="Computed full server asset path">
         <span class="full-path-tag">FULL PATH:</span>
-        <code class="full-path-text" use:autoscroll>base/background/{normalizeBgPath(activeBg?.folder) || 'Untitled'}/background.json</code>
+        <code class="full-path-text" title="base/background/{normalizeBgPath(activeBg?.folder) || 'Untitled'}/background.json">base/background/{normalizeBgPath(activeBg?.folder) || 'Untitled'}/background.json</code>
         {#if isDuplicatePath}
-          <span class="full-path-dup-alert">⚠ Will be disambiguated on blur or export</span>
+          <span class="full-path-dup-alert" style="display:inline-flex;align-items:center;gap:4px"><Icon name="alert-triangle" /> Will be disambiguated on blur or export</span>
         {/if}
       </div>
 
@@ -2421,7 +2520,12 @@
     <!-- Main 3-Column Workspace -->
     <div class="maker-body">
       <!-- Left Column: Backgrounds Navigator -->
-      <aside class="bg-nav">
+      <aside
+        class="bg-nav {isDraggingOverBgNav ? 'dragover' : ''}"
+        on:dragover={onBgNavDragOver}
+        on:dragleave={onBgNavDragLeave}
+        on:drop={onBgNavDrop}
+      >
         <div class="nav-head">
           <div class="nav-head-title-row">
             <span class="nav-title">BACKGROUNDS ({filteredBackgrounds.length}{filteredBackgrounds.length !== backgrounds.length ? ` / ${backgrounds.length}` : ''})</span>
@@ -2444,7 +2548,7 @@
                 class="mini-btn icon-action-btn"
                 title="Import background directory, positions.ini, background.json, or package .zip"
                 on:click|stopPropagation={() => (navImportMenuOpen = !navImportMenuOpen)}
-              >📥 Import ▾</button>
+              ><Icon name="file-up" /> Import ▾</button>
               {#if navImportMenuOpen}
                 <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
                 <div class="drop-menu nav-import-drop-menu" on:pointerdown|stopPropagation on:click|stopPropagation>
@@ -2453,13 +2557,13 @@
                     title="Select and import a background folder from disk (auto-detects positions.ini or background.json)"
                     on:click={() => { navImportMenuOpen = false; fileInputFolder && fileInputFolder.click(); }}
                   >
-                    📁 Import Folder…
+                    <Icon name="folder" /> Import Folder…
                   </button>
                   <button
                     title="Import a ZIP archive, positions.ini, or background.json file"
                     on:click={() => { navImportMenuOpen = false; fileInputLibrary && fileInputLibrary.click(); }}
                   >
-                    📦 Import ZIP / File…
+                    <Icon name="archive" /> Import ZIP / File…
                   </button>
                 </div>
               {/if}
@@ -2480,6 +2584,12 @@
         </div>
 
         <div class="bg-list">
+          {#if isDraggingOverBgNav}
+            <div class="bg-nav-drop-cue">
+              <Icon name="file-up" />
+              <span>Drop folder, ZIP, or config to import</span>
+            </div>
+          {/if}
           {#if filteredBackgrounds.length === 0}
             <div class="empty-nav-search">
               <span>No backgrounds match "{bgSearchQuery}".</span>
@@ -2489,10 +2599,16 @@
             {#each filteredBackgrounds as bg (bg.id)}
               {@const parts = splitFolderPath(bg.folder)}
               <div
-                class="bg-item {bg.id === activeBg?.id ? 'active' : ''}"
+                class="bg-item {bg.id === activeBg?.id ? 'active' : ''} {dragOverBgId === bg.id ? 'drag-target-over' : ''}"
                 role="button"
                 tabindex="0"
-                title="Click to select; right-click for options"
+                draggable="true"
+                title="Click to select, drag to reorder; right-click for options"
+                on:dragstart={(e) => onBgDragStart(e, bg)}
+                on:dragover={(e) => onBgItemDragOver(e, bg)}
+                on:dragleave={(e) => onBgItemDragLeave(e, bg)}
+                on:drop={(e) => onBgItemDrop(e, bg)}
+                on:dragend={onBgDragEnd}
                 on:click={() => bgStore.selectBg(bg.id)}
                 on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && bgStore.selectBg(bg.id)}
                 on:contextmenu|preventDefault|stopPropagation={(e) => openBgContextMenu(e, bg)}
@@ -2502,7 +2618,7 @@
                     {#if parts.subfolder}
                       <span class="bg-subfolder-tag">{parts.subfolder}/</span>
                     {/if}
-                    <span class="bg-folder" use:autoscroll>{parts.name || bg.folder || 'Untitled'}</span>
+                    <span class="bg-folder" title={parts.name || bg.folder || 'Untitled'}>{parts.name || bg.folder || 'Untitled'}</span>
                   </div>
                   <div class="item-actions">
                     <button
@@ -2533,8 +2649,8 @@
       <main class="builder-col">
         <!-- View Mode Switcher -->
         <div class="view-tabs">
-          <button class="vtab {activeTab === 'builder' ? 'active' : ''}" on:click={() => (activeTab = 'builder')}>
-            🛠 Visual Builder
+          <button class="vtab {activeTab === 'builder' ? 'active' : ''}" style="display:inline-flex;align-items:center;gap:6px" on:click={() => (activeTab = 'builder')}>
+            <Icon name="wrench" /> Visual Builder
           </button>
           <button class="vtab {activeTab === 'json' ? 'active' : ''}" on:click={() => (activeTab = 'json')}>
             &lt;/&gt; Live background.json
@@ -2628,7 +2744,7 @@
                 </div>
                 {#if activeBgVal}
                   <div class="slot-head-actions">
-                    <button class="slot-rename-btn" title="Rename export filename for this background" on:click|stopPropagation={() => triggerRenameSlotExport('background')}>✏️</button>
+                    <button class="slot-rename-btn" title="Rename export filename for this background" on:click|stopPropagation={() => triggerRenameSlotExport('background')}><Icon name="pencil" /></button>
                     <button class="icon-btn" title="Clear image" on:click|stopPropagation={() => assignSlotAsset('background', '')}>✕</button>
                   </div>
                 {:else if availableImages.length > 0}
@@ -2667,14 +2783,14 @@
                       class="no-thumb-box clickable-preview"
                       title="Click to view & inspect in Lightbox"
                       on:click|stopPropagation={() => inspectAsset(activeBgVal, `${activeBg?.folder || 'Scene'} Background`, 'image', { slotType: 'background' })}
-                    >🖼</div>
+                    ><Icon name="image" /></div>
                   {/if}
                   <div
                     class="slot-name-col clickable-rename"
                     title="Click to rename export filename; right-click for options"
                     on:click|stopPropagation={() => triggerRenameSlotExport('background')}
                   >
-                    <span class="asset-filename" title={activeBgVal} use:autoscroll>{activeBgVal}</span>
+                    <span class="asset-filename" title={activeBgVal}>{activeBgVal}</span>
                     {#if activeBg?.assetSources?.[activeBgVal]}
                       <span class="alias-tag" title="Custom export filename (source: {activeBg.assetSources[activeBgVal]})">
                         alias of <em>{activeBg.assetSources[activeBgVal]}</em>
@@ -2708,7 +2824,7 @@
                 </div>
                 {#if activeFgVal}
                   <div class="slot-head-actions">
-                    <button class="slot-rename-btn" title="Rename export filename for this background" on:click|stopPropagation={() => triggerRenameSlotExport('foreground')}>✏️</button>
+                    <button class="slot-rename-btn" title="Rename export filename for this background" on:click|stopPropagation={() => triggerRenameSlotExport('foreground')}><Icon name="pencil" /></button>
                     <button class="icon-btn" title="Clear overlay" on:click|stopPropagation={() => assignSlotAsset('foreground', '')}>✕</button>
                   </div>
                 {:else if availableImages.length > 0}
@@ -2747,14 +2863,14 @@
                       class="no-thumb-box clickable-preview"
                       title="Click to view & inspect in Lightbox"
                       on:click|stopPropagation={() => inspectAsset(activeFgVal, `${activeBg?.folder || 'Scene'} Foreground`, 'image', { slotType: 'foreground' })}
-                    >🌫</div>
+                    ><Icon name="cloud" /></div>
                   {/if}
                   <div
                     class="slot-name-col clickable-rename"
                     title="Click to rename export filename; right-click for options"
                     on:click|stopPropagation={() => triggerRenameSlotExport('foreground')}
                   >
-                    <span class="asset-filename" title={activeFgVal} use:autoscroll>{activeFgVal}</span>
+                    <span class="asset-filename" title={activeFgVal}>{activeFgVal}</span>
                     {#if activeBg?.assetSources?.[activeFgVal]}
                       <span class="alias-tag" title="Custom export filename (source: {activeBg.assetSources[activeFgVal]})">
                         alias of <em>{activeBg.assetSources[activeFgVal]}</em>
@@ -2788,7 +2904,7 @@
                 </div>
                 {#if activeAmbienceVal}
                   <div class="slot-head-actions">
-                    <button class="slot-rename-btn" title="Rename export filename for this background" on:click|stopPropagation={() => triggerRenameSlotExport('ambience')}>✏️</button>
+                    <button class="slot-rename-btn" title="Rename export filename for this background" on:click|stopPropagation={() => triggerRenameSlotExport('ambience')}><Icon name="pencil" /></button>
                     <button class="icon-btn" title="Clear sound" on:click|stopPropagation={() => assignSlotAsset('ambience', '')}>✕</button>
                   </div>
                 {:else if availableAudios.length > 0}
@@ -2817,13 +2933,13 @@
                     class="no-thumb-box audio clickable-preview"
                     title="Click to view & play in Lightbox"
                     on:click|stopPropagation={() => inspectAsset(activeAmbienceVal, `${activeBg?.folder || 'Scene'} Ambience`, 'audio', { slotType: 'ambience' })}
-                  >🎵</div>
+                  ><Icon name="music" /></div>
                   <div
                     class="slot-name-col clickable-rename"
                     title="Click to rename export filename; right-click for options"
                     on:click|stopPropagation={() => triggerRenameSlotExport('ambience')}
                   >
-                    <span class="asset-filename" title={activeAmbienceVal} use:autoscroll>{activeAmbienceVal}</span>
+                    <span class="asset-filename" title={activeAmbienceVal}>{activeAmbienceVal}</span>
                     {#if activeBg?.assetSources?.[activeAmbienceVal] || (activeAmbienceVal && activeBg?.assetSources?.[activeAmbienceVal.split('/').pop()])}
                       <span class="alias-tag" title="Custom export filename">
                         alias of <em>{activeBg.assetSources[activeAmbienceVal] || activeBg.assetSources[activeAmbienceVal.split('/').pop()]}</em>
@@ -2888,7 +3004,7 @@
                         <span class="mslot-alias-dot" title="Alias of {activeBg.assetSources[tv.background]}">●</span>
                       {/if}
                       {#if tv.background}
-                        <button class="mslot-rename-btn" title="Rename export filename for this background" on:click|stopPropagation={() => triggerRenameSlotExport('background', todKey)}>✏️</button>
+                        <button class="mslot-rename-btn" title="Rename export filename for this background" on:click|stopPropagation={() => triggerRenameSlotExport('background', todKey)}><Icon name="pencil" /></button>
                         <button class="mslot-clear-btn" title="Clear background (fallback to base)" on:click|stopPropagation={() => assignSlotAsset('background', '', todKey)}>✕</button>
                       {/if}
                     </div>
@@ -2914,7 +3030,7 @@
                         <span class="mslot-alias-dot" title="Alias of {activeBg.assetSources[tv.foreground]}">●</span>
                       {/if}
                       {#if tv.foreground}
-                        <button class="mslot-rename-btn" title="Rename export filename for this background" on:click|stopPropagation={() => triggerRenameSlotExport('foreground', todKey)}>✏️</button>
+                        <button class="mslot-rename-btn" title="Rename export filename for this background" on:click|stopPropagation={() => triggerRenameSlotExport('foreground', todKey)}><Icon name="pencil" /></button>
                         <button class="mslot-clear-btn" title="Clear foreground" on:click|stopPropagation={() => assignSlotAsset('foreground', '', todKey)}>✕</button>
                       {/if}
                     </div>
@@ -2940,7 +3056,7 @@
                         <span class="mslot-alias-dot" title="Alias">●</span>
                       {/if}
                       {#if tv.ambience}
-                        <button class="mslot-rename-btn" title="Rename export filename for this background" on:click|stopPropagation={() => triggerRenameSlotExport('ambience', todKey)}>✏️</button>
+                        <button class="mslot-rename-btn" title="Rename export filename for this background" on:click|stopPropagation={() => triggerRenameSlotExport('ambience', todKey)}><Icon name="pencil" /></button>
                         <button class="mslot-clear-btn" title="Clear ambience (fallback to base)" on:click|stopPropagation={() => assignSlotAsset('ambience', '', todKey)}>✕</button>
                       {/if}
                     </div>
@@ -3003,7 +3119,7 @@
                   title="Copy formatted JSON to clipboard"
                   on:click={() => { copyText(bgJsonString); notify('Copied background.json to clipboard'); }}
                 >
-                  📋 Copy JSON
+                  <Icon name="copy" /> Copy JSON
                 </button>
               </div>
             </div>
@@ -3072,7 +3188,7 @@
                 title={stageFitMode === 'contain' ? 'Letterboxed with black bars (full image visible)' : 'Cropped to fill viewport'}
                 on:click={() => (stageFitMode = stageFitMode === 'contain' ? 'cover' : 'contain')}
               >
-                {stageFitMode === 'contain' ? '◼ Letterbox' : '⛶ Cover'}
+                {stageFitMode === 'contain' ? 'Letterbox' : 'Cover'}
               </button>
             </div>
           </div>
@@ -3113,7 +3229,7 @@
             {/if}
 
             <div class="stage-expand-hint" title="Click to view full screen">
-              <span>⛶ Click to expand</span>
+              <span><Icon name="maximize" /> Click to expand</span>
             </div>
           </div>
 
@@ -3122,9 +3238,9 @@
             <div class="ctrl-row">
               <span class="ctrl-label">Time of Day:</span>
               <div class="tod-pills">
-                <button class="tod-pill {stageTod === 'day' ? 'active' : ''}" on:click={() => (stageTod = 'day')}>☀ Day</button>
-                <button class="tod-pill {stageTod === 'evening' ? 'active' : ''}" on:click={() => (stageTod = 'evening')}>🌆 Evening</button>
-                <button class="tod-pill {stageTod === 'night' ? 'active' : ''}" on:click={() => (stageTod = 'night')}>🌙 Night</button>
+                <button class="tod-pill {stageTod === 'day' ? 'active' : ''}" on:click={() => (stageTod = 'day')}><Icon name="sun" /> Day</button>
+                <button class="tod-pill {stageTod === 'evening' ? 'active' : ''}" on:click={() => (stageTod = 'evening')}><Icon name="sunset" /> Evening</button>
+                <button class="tod-pill {stageTod === 'night' ? 'active' : ''}" on:click={() => (stageTod = 'night')}><Icon name="moon" /> Night</button>
               </div>
             </div>
 
@@ -3161,8 +3277,13 @@
                   class="play-btn {isPlayingAudio ? 'playing' : ''}"
                   on:click={toggleAudio}
                   title={isPlayingAudio ? 'Pause ambience audio' : 'Play ambience audio preview'}
+                  style="display:inline-flex;align-items:center;gap:6px"
                 >
-                  {isPlayingAudio ? '⏸ Pause' : '▶ Play Ambience'}
+                  {#if isPlayingAudio}
+                    Pause
+                  {:else}
+                    <Icon name="play" /> Play Ambience
+                  {/if}
                 </button>
               {:else}
                 <button
@@ -3170,7 +3291,7 @@
                   disabled
                   title="No ambience audio configured for active position/state"
                 >
-                  🔇 No Ambience
+                  No Ambience
                 </button>
               {/if}
 
@@ -3181,7 +3302,7 @@
                   on:click={toggleMute}
                   title={ambienceVolume === 0 ? 'Unmute ambience' : 'Mute ambience'}
                 >
-                  {ambienceVolume === 0 ? '🔇' : (ambienceVolume < 0.5 ? '🔉' : '🔊')}
+                  <Icon name={ambienceVolume === 0 ? "volume-x" : (ambienceVolume < 0.5 ? "volume-1" : "volume-2")} />
                 </button>
                 <input
                   type="range"
@@ -3264,7 +3385,7 @@
               disabled={assetPool.length === 0}
               on:click|stopPropagation={() => { purgeMenuOpen = !purgeMenuOpen; }}
             >
-              🧹 Purge ▾
+              <Icon name="eraser" /> Purge ▾
             </button>
             {#if purgeMenuOpen}
               <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
@@ -3275,7 +3396,7 @@
                   title="Remove unreferenced assets from memory and IndexedDB cache"
                   on:click={() => openPurgeModal('unused')}
                 >
-                  🧹 Purge Unused ({unusedAssetCount})
+                  <Icon name="eraser" /> Purge Unused ({unusedAssetCount})
                 </button>
                 <button
                   class="danger-item"
@@ -3283,7 +3404,7 @@
                   title="Clear all assets from memory and IndexedDB cache"
                   on:click={() => openPurgeModal('all')}
                 >
-                  🗑 Purge All ({assetPool.length})
+                  <Icon name="trash" /> Purge All ({assetPool.length})
                 </button>
               </div>
             {/if}
@@ -3324,10 +3445,10 @@
                   </div>
                 {:else}
                   <div class="card-thumb-wrap audio">
-                    <span>🎵</span>
+                    <span><Icon name="music" /></span>
                   </div>
                 {/if}
-                <span class="asset-card-name" use:autoscroll>{asset.relPath || asset.name}</span>
+                <span class="asset-card-name" title={asset.relPath || asset.name}>{asset.relPath || asset.name}</span>
               </div>
             {/each}
           {/if}
@@ -3342,7 +3463,7 @@
   <div class="modal-bg submodal-scrim" on:mousedown={onScrimMouseDown} on:click={(e) => handleScrimClose(e, () => (showAddTodModal = false))}>
     <div class="modal submodal-card" on:mousedown|stopPropagation on:click|stopPropagation>
       <button class="modal-x" title="Close (Esc)" on:click={() => (showAddTodModal = false)}>✕</button>
-      <h3>🕒 Add Time of Day Variant</h3>
+      <h3><Icon name="clock" /> Add Time of Day Variant</h3>
       <div class="hint">Configure a time-of-day visual variant for this {usePositions ? 'position' : 'state'}.</div>
 
       <div class="submodal-field">
@@ -3382,8 +3503,8 @@
           on:keydown={(e) => e.key === 'Enter' && confirmAddTod()}
         />
         {#if activeTimeVariants[newTodKey.trim().toLowerCase()]}
-          <div class="submodal-warn">
-            ⚠ A variant named "{newTodKey}" already exists on this {usePositions ? 'position' : 'state'}.
+          <div class="submodal-warn" style="display:inline-flex;align-items:center;gap:4px">
+            <Icon name="alert-triangle" /> A variant named "{newTodKey}" already exists on this {usePositions ? 'position' : 'state'}.
           </div>
         {/if}
       </div>
@@ -3408,7 +3529,7 @@
   <div class="modal-bg submodal-scrim" on:mousedown={onScrimMouseDown} on:click={(e) => handleScrimClose(e, () => (showAddStateModal = false))}>
     <div class="modal submodal-card" on:mousedown|stopPropagation on:click|stopPropagation>
       <button class="modal-x" title="Close (Esc)" on:click={() => (showAddStateModal = false)}>✕</button>
-      <h3>✨ Add State Variant</h3>
+      <h3><Icon name="sparkles" /> Add State Variant</h3>
       <div class="hint">Create an alternative scene state (e.g. crowded, festive, damaged, rainy).</div>
 
       <div class="submodal-field">
@@ -3450,8 +3571,8 @@
           on:keydown={(e) => e.key === 'Enter' && confirmAddState()}
         />
         {#if activeBg?.states?.[newStateName.trim()]}
-          <div class="submodal-warn">
-            ⚠ State "{newStateName}" already exists on this background.
+          <div class="submodal-warn" style="display:inline-flex;align-items:center;gap:4px">
+            <Icon name="alert-triangle" /> State "{newStateName}" already exists on this background.
           </div>
         {/if}
       </div>
@@ -3484,7 +3605,7 @@
   <div class="modal-bg submodal-scrim" on:mousedown={onScrimMouseDown} on:click={(e) => handleScrimClose(e, () => (showAddPositionModal = false))}>
     <div class="modal submodal-card" on:mousedown|stopPropagation on:click|stopPropagation>
       <button class="modal-x" title="Close (Esc)" on:click={() => (showAddPositionModal = false)}>✕</button>
-      <h3>🎥 Add Camera Position</h3>
+      <h3 style="display:flex;align-items:center;gap:6px"><Icon name="image" /> Add Camera Position</h3>
       <div class="hint">Configure a courtroom or scene camera angle (e.g. wit, def, pro, jud, hld).</div>
 
       <div class="submodal-field">
@@ -3520,8 +3641,8 @@
           on:keydown={(e) => e.key === 'Enter' && confirmAddPosition()}
         />
         {#if activeState?.positions?.[newPosName.trim()]}
-          <div class="submodal-warn">
-            ⚠ Camera position "{newPosName}" already exists on this state.
+          <div class="submodal-warn" style="display:inline-flex;align-items:center;gap:4px">
+            <Icon name="alert-triangle" /> Camera position "{newPosName}" already exists on this state.
           </div>
         {/if}
       </div>
@@ -3589,7 +3710,7 @@
   <div class="modal-bg submodal-scrim" on:mousedown={onScrimMouseDown} on:click={(e) => handleScrimClose(e, () => (showManageTemplatesModal = false))}>
     <div class="modal submodal-card bg-templates-dialog" on:mousedown|stopPropagation on:click|stopPropagation>
       <button class="modal-x" title="Close (Esc)" on:click={() => (showManageTemplatesModal = false)}>✕</button>
-      <h3>📋 Background Templates</h3>
+      <h3><Icon name="templates" /> Background Templates</h3>
       <div class="hint">Apply structural presets (courtroom positions, day/night cycles, trial states) or save custom templates.</div>
 
       <div class="tpl-list-scroll">
@@ -3649,7 +3770,7 @@
             bind:value={newTplDesc}
           />
           <button class="mini-btn" on:click={saveBgAsTemplate}>
-            💾 Save Template
+            <Icon name="download" /> Save Template
           </button>
         </div>
       </div>
@@ -3664,9 +3785,9 @@
       <button class="modal-x" title="Close (Esc)" on:click={() => (showPurgeConfirmModal = false)}>✕</button>
 
       {#if purgeTargetMode === 'all'}
-        <h3>🗑 Purge All Assets</h3>
+        <h3 style="display:flex;align-items:center;gap:6px"><Icon name="trash" /> Purge All Assets</h3>
         <div class="purge-warning-box">
-          <div class="purge-warning-badge">⚠️ Destructive Action</div>
+          <div class="purge-warning-badge" style="display:inline-flex;align-items:center;gap:4px"><Icon name="alert-triangle" /> Destructive Action</div>
           <div class="purge-warning-text">
             This will permanently remove <b>all {assetPool.length} imported asset(s)</b> from memory and browser storage (IndexedDB).
           </div>
@@ -3675,7 +3796,7 @@
           </div>
         </div>
       {:else}
-        <h3>🧹 Purge Unused Assets</h3>
+        <h3 style="display:flex;align-items:center;gap:6px"><Icon name="trash" /> Purge Unused Assets</h3>
         <div class="purge-info-box">
           <div class="purge-info-text">
             Remove <b>{unusedAssetCount} unreferenced asset(s)</b> from memory and browser storage (IndexedDB)?
@@ -3690,9 +3811,10 @@
         <button on:click={() => (showPurgeConfirmModal = false)}>Cancel</button>
         <button
           class="primary {purgeTargetMode === 'all' ? 'danger-btn' : ''}"
+          style="display:inline-flex;align-items:center;gap:6px"
           on:click={executePurge}
         >
-          {purgeTargetMode === 'all' ? `🗑 Yes, Purge All (${assetPool.length})` : `🧹 Purge (${unusedAssetCount})`}
+          <Icon name="trash" /> {purgeTargetMode === 'all' ? `Yes, Purge All (${assetPool.length})` : `Purge (${unusedAssetCount})`}
         </button>
       </div>
     </div>
@@ -3719,9 +3841,9 @@
     >
       <button class="modal-x" title="Close (Esc)" on:click={() => (showClearBgsConfirmModal = false)}>✕</button>
 
-      <h3>🗑 Clear All Backgrounds</h3>
+      <h3 style="display:flex;align-items:center;gap:6px"><Icon name="trash" /> Clear All Backgrounds</h3>
       <div class="purge-warning-box">
-        <div class="purge-warning-badge">⚠️ Destructive Action</div>
+        <div class="purge-warning-badge" style="display:inline-flex;align-items:center;gap:4px"><Icon name="alert-triangle" /> Destructive Action</div>
         <div class="purge-warning-text">
           This will permanently remove <b>all {backgrounds.length} background definition(s)</b> and reset the library to a clean <b>Default</b> background (starting from zero).
         </div>
@@ -3737,9 +3859,10 @@
         <button on:click={() => (showClearBgsConfirmModal = false)}>Cancel</button>
         <button
           class="primary danger-btn"
+          style="display:inline-flex;align-items:center;gap:6px"
           on:click={executeClearAllBackgrounds}
         >
-          🗑 Yes, Clear All ({backgrounds.length})
+          <Icon name="trash" /> Yes, Clear All ({backgrounds.length})
         </button>
       </div>
     </div>
@@ -3764,7 +3887,7 @@
           disabled={it.disabled}
           on:click={() => { closeContextMenu(); it.run?.(); }}
         >
-          {#if it.icon}<span class="ctx-item-icon">{it.icon}</span>{/if}
+          {#if it.icon}<span class="ctx-item-icon"><Icon name={it.icon} /></span>{/if}
           <span class="ctx-item-label">{it.label}</span>
         </button>
       {/if}
@@ -3859,15 +3982,15 @@
           <img src={inspectModalAsset.url} alt={inspectModalAsset.name} class="lightbox-img" />
         {:else}
           <div class="lightbox-audio-player">
-            <span class="lightbox-audio-icon">🎵</span>
+            <span class="lightbox-audio-icon"><Icon name="music" /></span>
             <audio src={inspectModalAsset.url} controls autoplay></audio>
           </div>
         {/if}
       </div>
       <div class="lightbox-meta">
-        <span>Path: <code title={inspectModalAsset.relPath || inspectModalAsset.name} use:autoscroll>{inspectModalAsset.relPath || inspectModalAsset.name}</code></span>
+        <span>Path: <code title={inspectModalAsset.relPath || inspectModalAsset.name}>{inspectModalAsset.relPath || inspectModalAsset.name}</code></span>
         {#if getFromFolderPath(inspectModalAsset)}
-          <span>From folder: <code title={getFromFolderPath(inspectModalAsset)} use:autoscroll>{getFromFolderPath(inspectModalAsset)}</code></span>
+          <span>From folder: <code title={getFromFolderPath(inspectModalAsset)}>{getFromFolderPath(inspectModalAsset)}</code></span>
         {/if}
         {#if inspectModalAsset.size}
           <span>Size: <code>{Math.round(inspectModalAsset.size / 1024)} KB</code></span>
@@ -3919,7 +4042,7 @@
               <img src={repoInspectAsset.url} alt={repoInspectAsset.name} class="repo-letterboxed-img" />
             {:else}
               <div class="lightbox-audio-player">
-                <span class="lightbox-audio-icon">🎵</span>
+                <span class="lightbox-audio-icon"><Icon name="music" /></span>
                 <audio src={repoInspectAsset.url} controls autoplay></audio>
               </div>
             {/if}
@@ -3959,7 +4082,7 @@
               {#if getFromFolderPath(repoInspectAsset)}
                 <div class="repo-unused-source-hint">
                   <span class="hint-label">Source folder on import:</span>
-                  <code class="font-mono" title={getFromFolderPath(repoInspectAsset)} use:autoscroll>{getFromFolderPath(repoInspectAsset)}</code>
+                  <code class="font-mono" title={getFromFolderPath(repoInspectAsset)}>{getFromFolderPath(repoInspectAsset)}</code>
                 </div>
               {/if}
             </div>
@@ -4048,9 +4171,9 @@
       <div class="stage-fs-footer">
         <div class="stage-fs-tod-pills">
           <span class="ctrl-label">Time of Day:</span>
-          <button class="tod-pill {stageTod === 'day' ? 'active' : ''}" on:click={() => (stageTod = 'day')}>☀ Day</button>
-          <button class="tod-pill {stageTod === 'evening' ? 'active' : ''}" on:click={() => (stageTod = 'evening')}>🌆 Evening</button>
-          <button class="tod-pill {stageTod === 'night' ? 'active' : ''}" on:click={() => (stageTod = 'night')}>🌙 Night</button>
+          <button class="tod-pill {stageTod === 'day' ? 'active' : ''}" on:click={() => (stageTod = 'day')}><Icon name="sun" /> Day</button>
+          <button class="tod-pill {stageTod === 'evening' ? 'active' : ''}" on:click={() => (stageTod = 'evening')}><Icon name="sunset" /> Evening</button>
+          <button class="tod-pill {stageTod === 'night' ? 'active' : ''}" on:click={() => (stageTod = 'night')}><Icon name="moon" /> Night</button>
         </div>
         <div class="stage-fs-meta">
           <span>Ratio: <code>{stageAspectW}:{stageAspectH}</code></span>
@@ -4511,6 +4634,26 @@
     background: var(--panel2);
     overflow: visible;
     position: relative;
+    transition: border-color 0.14s ease, background 0.14s ease;
+  }
+  .bg-nav.dragover {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 6%, var(--panel2));
+  }
+  .bg-nav-drop-cue {
+    padding: 10px 8px;
+    border: 1.5px dashed var(--accent);
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    pointer-events: none;
   }
 
   .nav-head {
@@ -4631,17 +4774,21 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    overscroll-behavior: contain;
   }
 
   .bg-item {
-    content-visibility: auto;
-    contain-intrinsic-size: 200px 52px;
     padding: 8px 10px;
     border-radius: var(--radius);
     background: transparent;
     border: 1px solid transparent;
     cursor: pointer;
-    transition: all 0.12s ease;
+    transition: background 0.1s ease, border-color 0.1s ease;
+    contain: layout paint;
+  }
+  .bg-item.drag-target-over {
+    border-top: 2px solid var(--accent);
+    background: color-mix(in srgb, var(--accent) 15%, var(--panel2));
   }
 
   .bg-item:hover {
@@ -5823,8 +5970,6 @@
   }
 
   .asset-card {
-    content-visibility: auto;
-    contain-intrinsic-size: 80px 76px;
     flex-shrink: 0;
     width: 80px;
     background: var(--input-bg);
