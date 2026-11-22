@@ -1464,6 +1464,8 @@
         onPickEdge={pickEdge}
         edgeStyle={$settings.edgeStyle || 'curved'}
         routeEdgeSet={activeRouteEdgeSet}
+        {view}
+        {wrapBounds}
       />
       <NodeLayer
         {P}
@@ -1484,6 +1486,8 @@
         onTitleDblClick={(e, a) => { e.stopPropagation(); startRename('area', a); }}
         onNodeEnter={handleNodeEnter}
         onNodeLeave={handleNodeLeave}
+        {view}
+        {wrapBounds}
       />
       <TagLayer pairs={activeTagPairs} {byId} selectedId={$state.selectedId} {showAllMesh} {inFocus} />
     </g>

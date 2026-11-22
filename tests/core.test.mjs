@@ -1,7 +1,7 @@
 // Core logic tests — run with `npm test` (plain Node, no dependencies).
 import { readFileSync } from 'node:fs';
 import * as M from '../src/lib/core.js';
-import { edgeEndpoints } from '../src/lib/graphGeom.js';
+import { edgeEndpoints, getViewportBox, isEdgeInViewport, isNodeInViewport } from '../src/lib/graphGeom.js';
 import { cameraCommand, centerCameraOn, resetCamera, fitCamera, DEFAULT_SETTINGS, enterFocusView, refocusView, exitFocusView, clearSelection, selectOnly } from '../src/lib/state.js';
 import { findShortestPath, auditMap } from '../src/lib/pathAudit.js';
 import {
@@ -1518,6 +1518,49 @@ const serializedBg = serializeBackgroundObject(testBgWithVariants);
 ok(serializedBg.default !== undefined, 'exports default state');
 ok(serializedBg.crowded !== undefined, 'exports populated crowded state');
 eq(serializedBg.empty_slot, undefined, 'omits unfilled state variant from export');
+
+/* ---- Viewport Culling & Graph Optimization Geometry ---- */
+const sampleView = { x: 0, y: 0, k: 1 };
+const sampleBounds = { w: 1000, h: 800 };
+const vBox = getViewportBox(sampleView, sampleBounds, 200);
+ok(vBox !== null, 'viewport box calculated');
+eq(vBox.minX, -200, 'minX includes buffer');
+eq(vBox.maxX, 1200, 'maxX includes width and buffer');
+eq(vBox.minY, -200, 'minY includes buffer');
+eq(vBox.maxY, 1000, 'maxY includes height and buffer');
+
+// Missing view or bounds fallback
+eq(getViewportBox(null, sampleBounds), null, 'null view returns null box');
+eq(getViewportBox(sampleView, null), null, 'null bounds returns null box');
+eq(getViewportBox(sampleView, { w: 0, h: 0 }), null, 'zero bounds returns null box');
+
+// isEdgeInViewport tests
+const nInside1 = { x: 100, y: 100 };
+const nInside2 = { x: 400, y: 300 };
+ok(isEdgeInViewport(nInside1, nInside2, vBox), 'edge with both nodes inside is in viewport');
+
+const nFarRight1 = { x: 2500, y: 300 };
+const nFarRight2 = { x: 2800, y: 400 };
+ok(!isEdgeInViewport(nFarRight1, nFarRight2, vBox), 'edge far to the right is culled');
+
+const nFarLeft1 = { x: -2000, y: 300 };
+const nFarLeft2 = { x: -1800, y: 400 };
+ok(!isEdgeInViewport(nFarLeft1, nFarLeft2, vBox), 'edge far to the left is culled');
+
+const nFarBottom1 = { x: 300, y: 3000 };
+const nFarBottom2 = { x: 400, y: 3200 };
+ok(!isEdgeInViewport(nFarBottom1, nFarBottom2, vBox), 'edge far below is culled');
+
+const nSpanLeft = { x: -600, y: 400 };
+const nSpanRight = { x: 1800, y: 400 };
+ok(isEdgeInViewport(nSpanLeft, nSpanRight, vBox), 'edge crossing completely through viewport is kept visible');
+
+ok(isEdgeInViewport(nFarRight1, nFarRight2, null), 'null viewport box always returns true (safe fallback)');
+
+// isNodeInViewport tests
+ok(isNodeInViewport(nInside1, vBox), 'node inside viewport returns true');
+ok(!isNodeInViewport(nFarRight1, vBox), 'node outside viewport returns false');
+ok(isNodeInViewport(nFarRight1, null), 'null box returns true for node (safe fallback)');
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

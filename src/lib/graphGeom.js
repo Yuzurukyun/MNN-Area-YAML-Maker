@@ -97,3 +97,55 @@ export function pairCardPos(byId, pair, view, bounds) {
   }
   return { left, top };
 }
+
+/**
+ * Calculates world-coordinate bounding box for the visible camera viewport with padding.
+ * @param {{x: number, y: number, k: number}} view
+ * @param {{w: number, h: number}} wrapBounds
+ * @param {number} [buffer]
+ * @returns {{minX: number, maxX: number, minY: number, maxY: number}|null}
+ */
+export function getViewportBox(view, wrapBounds, buffer = 280) {
+  if (!view || !wrapBounds || !wrapBounds.w || !wrapBounds.h) return null;
+  const k = Math.max(0.01, view.k || 1);
+  const pad = Math.max(buffer, (buffer * 0.9) / k);
+  return {
+    minX: -view.x / k - pad,
+    maxX: (wrapBounds.w - view.x) / k + pad,
+    minY: -view.y / k - pad,
+    maxY: (wrapBounds.h - view.y) / k + pad,
+  };
+}
+
+/**
+ * Checks whether an axis-aligned bounding box between node A and node B intersects the viewport box.
+ * @param {{x: number, y: number}} A
+ * @param {{x: number, y: number}} B
+ * @param {{minX: number, maxX: number, minY: number, maxY: number}|null} box
+ * @returns {boolean}
+ */
+export function isEdgeInViewport(A, B, box) {
+  if (!box || !A || !B) return true;
+  const minX = A.x < B.x ? A.x : B.x;
+  const maxX = (A.x > B.x ? A.x : B.x) + NODE_W;
+  if (maxX < box.minX || minX > box.maxX) return false;
+
+  const minY = A.y < B.y ? A.y : B.y;
+  const maxY = (A.y > B.y ? A.y : B.y) + NODE_H;
+  if (maxY < box.minY || minY > box.maxY) return false;
+
+  return true;
+}
+
+/**
+ * Checks whether node A intersects the viewport box.
+ * @param {{x: number, y: number}} A
+ * @param {{minX: number, maxX: number, minY: number, maxY: number}|null} box
+ * @returns {boolean}
+ */
+export function isNodeInViewport(A, box) {
+  if (!box || !A) return true;
+  if (A.x + NODE_W < box.minX || A.x > box.maxX) return false;
+  if (A.y + NODE_H < box.minY || A.y > box.maxY) return false;
+  return true;
+}

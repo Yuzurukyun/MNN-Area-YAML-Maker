@@ -4,6 +4,7 @@
   import { onMount } from 'svelte';
   import { bgStore, resolveNodeImageUrl } from '../../lib/bgStore.js';
   import { update, notify } from '../../lib/state.js';
+  import { getViewportBox, isNodeInViewport } from '../../lib/graphGeom.js';
 
   const NW = M.NODE_W;
   const NH = M.NODE_H;
@@ -26,6 +27,10 @@
   export let onTitleDblClick = () => {};
   export let onNodeEnter = () => {};
   export let onNodeLeave = () => {};
+  export let view = null;
+  export let wrapBounds = null;
+
+  $: viewportBox = getViewportBox(view, wrapBounds, 280);
 
   let bgStoreState = bgStore.get();
   onMount(() => {
@@ -153,14 +158,16 @@
   {/if}
 
   {#each sortedAreas as a (a.id)}
-    {@const idx = P.areas.indexOf(a)}
-    {@const nodeImg = resolveNodeImageUrl(a, bgStoreState)}
-    {@const hasImg = Boolean(nodeImg)}
-    {@const tags = tagText(P, a, idx, dups, lt, hasImg)}
     {@const isSel = a.id === selectedId}
     {@const isMulti = selectedIds.has(a.id) && !isSel}
-    {@const xOff = hasImg ? 60 : 13}
-    {#if !hiddenIds.has(a.id) && (!inFocus || focusIds.has(a.id))}
+    {@const isNeighbour = neighbours && neighbours.has(a.id)}
+    {@const inViewport = isSel || isMulti || isNeighbour || isNodeInViewport(a, viewportBox)}
+    {#if inViewport && !hiddenIds.has(a.id) && (!inFocus || focusIds.has(a.id))}
+      {@const idx = P.areas.indexOf(a)}
+      {@const nodeImg = resolveNodeImageUrl(a, bgStoreState)}
+      {@const hasImg = Boolean(nodeImg)}
+      {@const tags = tagText(P, a, idx, dups, lt, hasImg)}
+      {@const xOff = hasImg ? 60 : 13}
       <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
       <g
         class="node-wrap"
