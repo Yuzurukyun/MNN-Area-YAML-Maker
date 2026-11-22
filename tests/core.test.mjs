@@ -1562,5 +1562,52 @@ ok(isNodeInViewport(nInside1, vBox), 'node inside viewport returns true');
 ok(!isNodeInViewport(nFarRight1, vBox), 'node outside viewport returns false');
 ok(isNodeInViewport(nFarRight1, null), 'null box returns true for node (safe fallback)');
 
+/* ---- hideLinesUnlessFocused & Multi-Node Batch Color Tests ---- */
+eq(DEFAULT_SETTINGS.hideLinesUnlessFocused, false, 'hideLinesUnlessFocused is false by default');
+
+// Multi-node batch color update logic
+const batchTestProj = {
+  areas: [
+    { id: 'a1', area: 'Room 1', color: '#ef4444' },
+    { id: 'a2', area: 'Room 2', color: '#10b981' },
+    { id: 'a3', area: 'Room 3', color: '' },
+  ],
+};
+const selectedIds = new Set(['a1', 'a3']);
+const targetColor = '#3b82f6';
+batchTestProj.areas.forEach((ar) => {
+  if (selectedIds.has(ar.id)) ar.color = targetColor;
+});
+eq(batchTestProj.areas[0].color, '#3b82f6', 'first selected area color updated to blue');
+eq(batchTestProj.areas[1].color, '#10b981', 'unselected area color remains unchanged');
+eq(batchTestProj.areas[2].color, '#3b82f6', 'second selected area color updated to blue');
+
+// Reset multi-node color
+batchTestProj.areas.forEach((ar) => {
+  if (selectedIds.has(ar.id)) ar.color = '';
+});
+eq(batchTestProj.areas[0].color, '', 'first selected area color reset');
+eq(batchTestProj.areas[1].color, '#10b981', 'unselected area color still unchanged');
+eq(batchTestProj.areas[2].color, '', 'second selected area color reset');
+
+// Edge passesFocusFilter helper test
+function shouldRenderEdge({ p, selectedId, selectedIds, selectedEdge, routeEdgeSet, focusIds, inFocus, hideLinesUnlessFocused }) {
+  const touchesSelected = (selectedId && (selectedId === p.x || selectedId === p.y)) || (selectedIds && (selectedIds.has(p.x) || selectedIds.has(p.y)));
+  const isSel = selectedEdge && selectedEdge.x === p.x && selectedEdge.y === p.y;
+  const isRoute = routeEdgeSet && (routeEdgeSet.has(p.x + '->' + p.y) || routeEdgeSet.has(p.y + '->' + p.x));
+  const touchesFocus = inFocus && focusIds && (focusIds.has(p.x) || focusIds.has(p.y));
+  return !hideLinesUnlessFocused || touchesSelected || isSel || isRoute || touchesFocus;
+}
+
+const edge1 = { x: 'a1', y: 'a2' };
+const edge2 = { x: 'a2', y: 'a3' };
+ok(shouldRenderEdge({ p: edge1, selectedId: null, hideLinesUnlessFocused: false }), 'edge renders when hideLinesUnlessFocused is false');
+ok(!shouldRenderEdge({ p: edge1, selectedId: null, hideLinesUnlessFocused: true }), 'unselected edge is hidden when hideLinesUnlessFocused is true and no node selected');
+ok(shouldRenderEdge({ p: edge1, selectedId: 'a1', hideLinesUnlessFocused: true }), 'edge renders when touching selectedId');
+ok(shouldRenderEdge({ p: edge1, selectedIds: new Set(['a2']), hideLinesUnlessFocused: true }), 'edge renders when touching one of selectedIds');
+ok(!shouldRenderEdge({ p: edge2, selectedId: 'a1', hideLinesUnlessFocused: true }), 'non-touching edge remains hidden when another node is selected');
+ok(shouldRenderEdge({ p: edge1, selectedEdge: { x: 'a1', y: 'a2' }, hideLinesUnlessFocused: true }), 'selected edge always renders even if no node is selected');
+ok(shouldRenderEdge({ p: edge1, routeEdgeSet: new Set(['a1->a2']), hideLinesUnlessFocused: true }), 'route edge always renders even if no node is selected');
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

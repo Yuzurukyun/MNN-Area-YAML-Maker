@@ -253,6 +253,26 @@
         </label>
       </div>
 
+      <!-- 7. Hide Lines Unless Focused Toggle -->
+      <div class="setting-item">
+        <div class="setting-header">
+          <span class="setting-title">Hide Lines (Focus Only)</span>
+          <span class="setting-val">
+            {$settings.hideLinesUnlessFocused ? 'Enabled' : 'Disabled'}
+            {#if !$settings.hideLinesUnlessFocused}<span class="default-tag">Default</span>{/if}
+          </span>
+        </div>
+        <div class="hint">Only draw connection lines touching currently selected or focused nodes, greatly improving performance on large maps with hundreds of areas.</div>
+        <label class="setting-check-row" style="margin-top:6px;display:flex;align-items:center;gap:10px;cursor:pointer">
+          <input
+            type="checkbox"
+            checked={$settings.hideLinesUnlessFocused}
+            on:change={(e) => updateSettings((s) => (s.hideLinesUnlessFocused = e.target.checked))}
+          />
+          <span style="font-size:12px;color:var(--text-strong)">Hide connection lines unless node or edge is selected/focused</span>
+        </label>
+      </div>
+
       <!-- Live preview of line thickness, glow, and style -->
       <div class="preview-box">
         <div class="hint" style="margin-bottom:6px">Line appearance live preview:</div>

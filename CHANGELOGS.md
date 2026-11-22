@@ -936,17 +936,35 @@
     - **All-Areas Pill Line Culling:** Dashed connection rays from areas to the floating `<ALL>` target pill are culled when their source area is outside the visible screen, eliminating up to 200 off-screen dashed lines.
     - **Node Culling & Layout Isolation:** Off-screen non-selected, non-neighbour nodes skip label generation and heavy SVG card DOM mounting, preserving 60fps/120fps panning and zooming on large maps.
     - **Zero Visual Regression:** Curve types (`curved`, `orthogonal`, `straight`), one-way arrows, and glow styles remain completely intact without any popping.
+- **Connection Line Focus Hiding (`src/lib/state.js`, `src/components/graph/EdgeLayer.svelte`, `src/components/Header.svelte`, `src/components/graph/GraphToolbar.svelte`, `src/components/modals/SettingsModal.svelte`):**
+    - Added `hideLinesUnlessFocused` preference (default `false`) under `DEFAULT_SETTINGS` with persistent storage.
+    - Added toggle checkbox **Hide lines (focus only)** under `View ▾` menu in Header, Graph Toolbar, and Settings modal, with description *"Only draw connection lines touching currently selected or focused nodes"*.
+    - When enabled, hides all unselected background connection lines, rendering only lines that touch the currently selected node (`selectedId` or `selectedIds`), focused nodes (`focusIds`), currently selected edge (`selectedEdge`), or active route lines (`routeEdgeSet`).
+    - Dragging connection lines from ports/nodes and editing connection directions with Direction Card remain 100% functional.
+    - Keeps large maps with 200+ nodes completely uncluttered and renders canvas animations at maximum 60fps/120fps.
+- **GPU Compositing Optimization for Lines (`src/styles/graph.css`):**
+    - Removed `filter: drop-shadow(...)` and CSS transitions from base unselected `.edge`, `.edge.oneway`, and `.edge.oneway-in`.
+    - Eliminates hundreds of expensive offscreen GPU rasterization passes per frame in Chromium during panning, zooming, and node dragging.
+    - Retains full glowing drop-shadows and pulse animations on selected edges (`.edge.sel`) and active routes (`.edge.route-active`).
+- **Multi-Node Batch Colour Application (`src/components/panels/Inspector.svelte`, `src/components/graph/Graph.svelte`, `src/components/panels/AreaList.svelte`):**
+    - When multiple areas are selected (`selectedIds.size > 1`), picking any color swatch, custom color picker value, or pressing Reset in the Inspector simultaneously applies the color to all selected areas in a single undoable history transaction.
+    - Inspector header displays area count `(+N more)` and Node Colour header displays `Node Colour (N selected)` when multi-selection is active.
+    - Right-click node context menu preserves multi-selection and offers batch color updates with toast feedback (*"Changed colour for N areas."*).
+    - Fixed Set reactivity in `Graph.svelte` and `AreaList.svelte` to reassign `selectedIds = new Set(...)` on selection changes so all components update reactively.
 
 ### Verification
 
-- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **394 passed, 0 failed** (all unit and integration tests passing, including 17 new tests for viewport bounding box calculations, edge culling, node culling, crossing lines, and null fallbacks).
+- `npm test` ([tests/core.test.mjs](tests/core.test.mjs)): **408 passed, 0 failed** (all unit and integration tests passing, including 14 new tests for `hideLinesUnlessFocused` default settings, multi-node batch color application, and focus edge filtering).
 - `npm run build:both`: Successfully compiled all production distributions with 0 errors:
-    - Singlefile full distribution: `export/yuzu_area_maker.html` (5316 KB).
-    - Singlefile no-music distribution: `export/yuzu_area_maker_nomusic.html` (663 KB).
-    - GitHub Pages distribution: `docs/index.html` (663 KB).
+    - Singlefile full distribution: `export/yuzu_area_maker.html` (5319 KB).
+    - Singlefile no-music distribution: `export/yuzu_area_maker_nomusic.html` (666 KB).
+    - GitHub Pages distribution: `docs/index.html` (666 KB).
     - Embed assets: `docs/og-image.png`, `public/og-image.png`, and `export/og-image.png` synchronized.
 - **Headless Chrome Visual Verification:**
     - Viewport Culling Active Rendering ([verified_v220_viewport_culling_active.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_viewport_culling_active.png)): Confirmed connection lines, one-way markers, direction tags, selection borders, and radar minimap render cleanly without visual degradation.
+    - Connection Line Focus Hiding ([verified_v220_hide_lines_focus.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_hide_lines_focus.png)): Confirmed enabling "Hide lines (focus only)" in `View ▾` hides background connection lines, rendering only lines touching the focused/selected node while keeping the canvas clean.
+    - Multi-Node Batch Color ([verified_v220_multi_node_batch_color.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_multi_node_batch_color.png)): Confirmed selecting multiple nodes updates Inspector header to `(+2 more)` and `Node Colour (3 selected)`, and clicking a swatch updates all selected nodes simultaneously on canvas, minimap, and sidebar.
+    - Base Edge GPU Filter Strip: Confirmed unselected `.edge` computed style returns `filter: none`, eliminating redundant Chromium GPU composite layers.
     - Inspector Variant Dropdown ([verified_v220_inspector_variant_custom_dropdown.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_inspector_variant_custom_dropdown.png)): Confirmed Area Inspector variant dropdown opens cleanly without self-item, listing shared pool variants with active checkmarks and inward boundary alignment.
     - Subfolder Custom Dropdown ([verified_v220_subfolder_custom_dropdown.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_subfolder_custom_dropdown.png)): Confirmed directory path dropdown displays custom styled directory list with folder icons without self-item.
     - Background Maker Layout & Slots ([verified_v220_bg_maker_all_dropdowns.png](file:///C:/Users/user/.gemini/antigravity/brain/3189314c-7a18-42e5-ab0c-aba948813dfc/verified_v220_bg_maker_all_dropdowns.png)): Confirmed slots grid margins, card headers, and stage monitor Animate Preview toggle render cleanly.

@@ -31,7 +31,14 @@
   let linkMenuOpen = false;
   let viewMenuOpen = false;
 
-  $: activeViewCount = ($state.focus ? 1 : 0) + ($state.isolateSelection ? 1 : 0) + (hideHub ? 1 : 0) + (hideAll ? 1 : 0) + (showAllMesh ? 1 : 0) + ($settings.showAllPill ? 1 : 0);
+  $: activeViewCount =
+    ($state.focus ? 1 : 0) +
+    ($state.isolateSelection ? 1 : 0) +
+    (hideHub ? 1 : 0) +
+    (hideAll ? 1 : 0) +
+    (showAllMesh ? 1 : 0) +
+    ($settings.showAllPill ? 1 : 0) +
+    ($settings.hideLinesUnlessFocused ? 1 : 0);
 
   function saveClick() {
     const name = layoutName;
@@ -156,6 +163,18 @@
           <div class="check-text">
             <b>&lt;ALL&gt; target pill</b>
             <span class="check-desc">Show floating ALL AREAS indicator</span>
+          </div>
+        </label>
+
+        <label class="view-check-row" title="Only show connection lines for selected or focused nodes to optimize performance">
+          <input
+            type="checkbox"
+            checked={$settings.hideLinesUnlessFocused}
+            on:change={(e) => updateSettings((s) => (s.hideLinesUnlessFocused = e.target.checked))}
+          />
+          <div class="check-text">
+            <b>Hide lines (focus only)</b>
+            <span class="check-desc">Only draw lines touching selected nodes</span>
           </div>
         </label>
       </div>

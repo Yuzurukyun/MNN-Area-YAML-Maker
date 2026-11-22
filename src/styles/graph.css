@@ -192,27 +192,24 @@ rect.mask {
   fill: none !important;
   stroke: var(--edge-both);
   stroke-width: var(--edge-thickness, 1.6px);
-  filter: drop-shadow(0 0 var(--edge-glow, 0px) var(--edge-both));
   pointer-events: none;
-  transition: opacity 0.2s ease, stroke-width 0.15s ease, filter 0.15s ease;
 }
 
 .edge.sel {
   stroke: var(--edge-sel);
   stroke-width: calc(var(--edge-thickness, 1.6px) * 1.6);
   filter: drop-shadow(0 0 calc(var(--edge-glow, 0px) + 2px) var(--edge-sel));
+  transition: stroke-width 0.15s ease, filter 0.15s ease;
 }
 
 .edge.oneway {
   stroke: var(--edge-oneway);
   stroke-width: calc(var(--edge-thickness, 1.6px) * 1.2);
-  filter: drop-shadow(0 0 var(--edge-glow, 0px) var(--edge-oneway));
 }
 
 .edge.oneway-in {
   stroke: var(--edge-oneway-in);
   stroke-width: calc(var(--edge-thickness, 1.6px) * 1.2);
-  filter: drop-shadow(0 0 var(--edge-glow, 0px) var(--edge-oneway-in));
 }
 
 .edge.derived {

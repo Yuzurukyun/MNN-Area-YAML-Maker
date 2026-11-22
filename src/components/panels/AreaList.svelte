@@ -60,16 +60,21 @@
       if (e.shiftKey && lastPickedIdx !== null) {
         const start = Math.min(lastPickedIdx, i);
         const end = Math.max(lastPickedIdx, i);
+        const nextIds = new Set(s.selectedIds);
         for (let idx = start; idx <= end; idx++) {
-          if (P.areas[idx]) s.selectedIds.add(P.areas[idx].id);
+          if (P.areas[idx]) nextIds.add(P.areas[idx].id);
         }
+        s.selectedIds = nextIds;
         s.selectedId = a.id;
       } else if (e.ctrlKey || e.metaKey) {
-        if (s.selectedIds.has(a.id) && s.selectedIds.size > 1) {
-          s.selectedIds.delete(a.id);
-          s.selectedId = [...s.selectedIds][0];
+        const nextIds = new Set(s.selectedIds);
+        if (nextIds.has(a.id) && nextIds.size > 1) {
+          nextIds.delete(a.id);
+          s.selectedIds = nextIds;
+          s.selectedId = [...nextIds][0];
         } else {
-          s.selectedIds.add(a.id);
+          nextIds.add(a.id);
+          s.selectedIds = nextIds;
           s.selectedId = a.id;
         }
       } else {

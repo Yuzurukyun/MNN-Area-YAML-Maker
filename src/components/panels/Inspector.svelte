@@ -89,6 +89,24 @@
     : 0;
   $: permMod = a ? permFields.filter(([k, , d]) => a[k] !== d).length : 0;
 
+  $: multiCount = $state.selectedIds && $state.selectedIds.size > 1 && $state.selectedIds.has($state.selectedId)
+    ? $state.selectedIds.size
+    : 1;
+  $: isMulti = multiCount > 1;
+
+  function setNodeColor(c) {
+    update((s) => {
+      const targetIds = s.selectedIds && s.selectedIds.size > 1 && s.selectedIds.has(s.selectedId)
+        ? s.selectedIds
+        : new Set([s.selectedId]);
+      s.project.areas.forEach((ar) => {
+        if (targetIds.has(ar.id)) {
+          ar.color = c;
+        }
+      });
+    });
+  }
+
   const withArea = (fn) =>
     update((s) => {
       const ar = s.project.areas.find((x) => x.id === s.selectedId);
@@ -207,7 +225,9 @@
   <div class="insp-head">
     <div class="insp-title">
       <span class="insp-id" title="Area ID (list index)">#{P.areas.indexOf(a)}</span>
-      <h2 title="Currently selected area" use:autoscroll>{a.area || 'Unnamed'}</h2>
+      <h2 title="Currently selected area" use:autoscroll>
+        {a.area || 'Unnamed'}{#if isMulti} <span style="font-size:12px;opacity:0.75;font-weight:normal">(+{multiCount - 1} more)</span>{/if}
+      </h2>
     </div>
     <div class="hint" title="Template snapshot last applied to this area">
       {#if tpl}Template: <b style="color:var(--text)">{tpl.name}</b>{:else}No template assigned{/if}
@@ -246,9 +266,11 @@
 
     <div class="node-style-row" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--line)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <span class="hint" title="Custom color for this area node on the map">Node Colour</span>
+        <span class="hint" title="Custom color for this area node on the map">
+          Node Colour{isMulti ? ` (${multiCount} selected)` : ''}
+        </span>
         {#if a.color}
-          <button class="mini-btn" title="Reset to current theme default" on:click={() => withArea((s, ar) => (ar.color = ''))}>Reset</button>
+          <button class="mini-btn" title="Reset to current theme default" on:click={() => setNodeColor('')}>Reset</button>
         {/if}
       </div>
       <div class="swatch-bar">
@@ -266,15 +288,15 @@
           <button
             class="c-swatch {a.color === c ? 'active' : ''}"
             style="background:{c}"
-            title={cname}
-            on:click={() => withArea((s, ar) => (ar.color = c))}
+            title="{cname}{isMulti ? ` (apply to all ${multiCount} areas)` : ''}"
+            on:click={() => setNodeColor(c)}
           ></button>
         {/each}
-        <label class="c-swatch-custom" title="Custom color picker">
+        <label class="c-swatch-custom" title="Custom color picker{isMulti ? ` (apply to all ${multiCount} areas)` : ''}">
           <input
             type="color"
             value={a.color || '#64748b'}
-            on:input={(e) => withArea((s, ar) => (ar.color = e.target.value))}
+            on:input={(e) => setNodeColor(e.target.value)}
           />
           <Icon name="palette" />
         </label>

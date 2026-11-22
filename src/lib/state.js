@@ -105,6 +105,7 @@ export const DEFAULT_SETTINGS = {
   arrangeFitView: true,    // bool, default true (auto-fits camera after arrange)
   arrangeGroupsOnly: false,// bool, default false (only move groups, leaving loose areas untouched)
   autoscrollLongLabels: false, // bool, default false ("autoscroll long labels when not focused")
+  hideLinesUnlessFocused: false, // bool, default false (hide connection lines unless node or edge is focused/selected)
 };
 
 function loadSettings() {

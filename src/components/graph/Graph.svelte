@@ -885,19 +885,28 @@
   }
 
   function onNodeMenu(e, a) {
-    update((s) => selectOnly(s, a.id), { skipHistory: true });
+    update((s) => {
+      if (!s.selectedIds || !s.selectedIds.has(a.id)) {
+        selectOnly(s, a.id);
+      }
+    }, { skipHistory: true });
+    const count = $state.selectedIds && $state.selectedIds.has(a.id) ? $state.selectedIds.size : 1;
     openMenu(e, [
       {
         type: 'swatches',
-        label: 'Node colour',
+        label: count > 1 ? `Node colour (${count} selected)` : 'Node colour',
         current: a.color || '',
         colors: COLOR_PALETTE,
         onSelect: (c) => {
           update((s) => {
-            const x = s.project.areas.find((ar) => ar.id === a.id);
-            if (x) x.color = c;
+            const targetIds = s.selectedIds && s.selectedIds.has(a.id) && s.selectedIds.size > 1
+              ? s.selectedIds
+              : new Set([a.id]);
+            s.project.areas.forEach((ar) => {
+              if (targetIds.has(ar.id)) ar.color = c;
+            });
           });
-          notify(c ? 'Changed node colour.' : 'Reset node colour.', 'ok');
+          notify(c ? `Changed colour for ${count} area${count > 1 ? 's' : ''}.` : `Reset colour for ${count} area${count > 1 ? 's' : ''}.`, 'ok');
         },
       },
       { label: 'Center camera here (C)', run: () => centerOnNode(a.id, true) },
@@ -1078,7 +1087,7 @@
       update(
         (s) => {
           s.selectedEdge = null;
-          if (e.ctrlKey || e.metaKey) s.selectedIds.add(a.id);
+          if (e.ctrlKey || e.metaKey) s.selectedIds = new Set([...s.selectedIds, a.id]);
           else if (!keepGroup) s.selectedIds = new Set([a.id]);
           s.selectedId = a.id;
           refocusView(s);
@@ -1452,11 +1461,13 @@
         pairs={visibleEdgePairs}
         {byId}
         selectedId={$state.selectedId}
+        selectedIds={$state.selectedIds}
         selectedEdge={$state.selectedEdge}
         {focusOn}
         allAreas={shownAllAreas}
         {pill}
         {inFocus}
+        {focusIds}
         {showAllMesh}
         {drag}
         {tempTo}
@@ -1466,6 +1477,7 @@
         routeEdgeSet={activeRouteEdgeSet}
         {view}
         {wrapBounds}
+        hideLinesUnlessFocused={$settings.hideLinesUnlessFocused}
       />
       <NodeLayer
         {P}

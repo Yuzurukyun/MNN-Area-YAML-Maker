@@ -66,7 +66,8 @@
     ($graphView.hideAll ? 1 : 0) +
     ($graphView.showAllMesh ? 1 : 0) +
     ($settings.showAllPill ? 1 : 0) +
-    ($settings.showMinimap ? 1 : 0);
+    ($settings.showMinimap ? 1 : 0) +
+    ($settings.hideLinesUnlessFocused ? 1 : 0);
 
 
 
@@ -468,6 +469,18 @@
                 <div class="check-text">
                   <b>RADAR</b>
                   <span class="check-desc">Show mini-radar navigator</span>
+                </div>
+              </label>
+
+              <label class="menu-check-row" title="Only show connection lines for selected or focused nodes to optimize performance">
+                <input
+                  type="checkbox"
+                  checked={$settings.hideLinesUnlessFocused}
+                  on:change={(e) => updateSettings((s) => (s.hideLinesUnlessFocused = e.target.checked))}
+                />
+                <div class="check-text">
+                  <b>Hide lines (focus only)</b>
+                  <span class="check-desc">Only show lines for selected/focused nodes</span>
                 </div>
               </label>
 
